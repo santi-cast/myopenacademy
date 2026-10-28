@@ -14,7 +14,7 @@ Academia web para estudiar programación, empezando por Java, y proyecto de port
 
 Necesitás Java 25, Docker con Compose y su motor activo, fnm con Node 24.22.1 y npm 11.19.1. No hace falta Maven global: el Wrapper usa Maven 3.10.0.
 
-Primero seguí la [preparación de configuración privada](docs/desarrollo-local.md). La persona crea `.env` en la raíz; no se incluye una contraseña ni se necesita copiar una plantilla no versionada.
+Primero seguí la [preparación de configuración privada](docs/desarrollo-local.md). Para una configuración nueva, copiá vos la plantilla versionada `.env.example` a `.env` en la raíz y completá la contraseña en privado. No sobrescribas un `.env` existente.
 
 Abrí tres terminales desde la raíz del proyecto, en este orden:
 

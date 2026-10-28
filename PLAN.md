@@ -203,7 +203,7 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 - Git inicializado en rama `main`; el primer commit `29399a1` ya registra `PLAN.md` y `.gitignore` mínimo.
 - Sin remotos configurados ni contenido publicado en GitHub. No se crean remotos en este cierre.
 - El segundo commit documental `a6f5206` ya cerró H2 y separó los contratos en `docs/api.md` y `docs/manifiesto.md`, con el mensaje `docs: close H2 design and split API and manifest contracts`.
-- Una sola rama `feat/h3-base`, con commits locales pequeños y coherentes como unidades de revisión; sin cadenas de ramas ni PR. No hay autorización de merge a `main` ni de publicación. Pruebas/documentación acompañan al comportamiento; no versionar secretos, datos personales ni temporales.
+- Trabajo de H3 en `feat/h3-base`, con commits locales pequeños y coherentes como unidades de revisión; sin cadenas de ramas ni PR. El propietario autorizó integrarlo en `main` tras superar las pruebas, con `--no-ff` y el mensaje `Merge H3: technical foundation`. No se autoriza publicar ni crear remotos. Pruebas/documentación acompañan al comportamiento; no versionar secretos, datos personales ni temporales.
 - Antes de publicar, decidir visibilidad, licencias y material del curso distribuible. Portfolio distinguirá autoría educativa y contribuciones de plataforma.
 - Desarrollo con agentes de IA, sin exigir dominar previamente React, TypeScript o Spring ni convertir cada implementación en una clase. Aprendizaje gradual sin bloquear entregas.
 - Otro modelo podrá actuar como asesor; sus recomendaciones se evaluarán, sin otorgarle escritura ni autoridad para cambiar alcance por sí solo.
@@ -211,11 +211,15 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 
 ## 8. Próximo paso
 
-**H3 completado y versionado en `feat/h3-base`.** El [archivo único de tareas y comprobaciones](odd/tasks/h3-base.md) conserva la evidencia de las cinco tareas. La revisión independiente de seguridad y entorno está completada. La evaluación nativa no estuvo disponible por alcance no evaluable con archivos sin seguimiento, incluso al solicitar rangos comprometidos; no se declara un veredicto ni aprobación nativa.
+**H3 completado y versionado en Git.** El [archivo único de tareas y comprobaciones](odd/tasks/h3-base.md) conserva la evidencia de las cinco tareas. La revisión independiente de seguridad y entorno está completada. La evaluación nativa no estuvo disponible por alcance no evaluable con archivos sin seguimiento, incluso al solicitar rangos comprometidos; no se declara un veredicto ni aprobación nativa.
 
-Los servicios quedaron detenidos normalmente, con el volumen propio conservado. El perfil local del backend carga la configuración humana sin exportaciones manuales. El agente no lee ni modifica `.env` o `.env.example`; no se cambian credenciales ni se borran volúmenes inicializados. Se conserva una sola rama `feat/h3-base` y commits coherentes, sin cadenas de ramas/PR, merge a `main`, remotos ni publicación.
+Los servicios quedaron detenidos normalmente, con el volumen propio conservado. El perfil local del backend carga la configuración humana sin exportaciones manuales. El agente no lee ni modifica `.env` o `.env.example`; no se cambian credenciales ni se borran volúmenes inicializados. Se conservan los commits coherentes de `feat/h3-base`, sin cadenas de ramas/PR, remotos ni publicación; su integración local en `main` está autorizada bajo las condiciones de la sección 7.
 
 **Próximo paso: conversar y autorizar H4 antes de implementarlo.** Concretar el primer recorrido real: cuentas, primera lección en copia controlada y progreso persistente, con la comprobación futura de dos usuarios sin acceso cruzado. H4 no está iniciado y este cierre no autoriza acceder al curso de origen ni importar contenido automáticamente.
+
+### Pendiente de seguridad para H4
+
+El `accessDeniedHandler` debe distinguir `CsrfException` de los demás errores 403: solo los fallos de CSRF deben responder `CSRF_REJECTED`. Al incorporar usuarios y autorización, definir el código correspondiente a los otros accesos denegados en el contrato de API. Es seguimiento de H4; no cambia el comportamiento de H3.
 
 Los contratos de H2 siguen siendo diseño para ese recorrido: política de contraseñas, versión de credenciales por solicitud, recuperación por consola, ejercicios separados, continuación condicionada y procedencia por hash completo. La base técnica validada no equivale a esas funciones ya disponibles.
 

@@ -18,7 +18,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class MissingPasswordBindingProbeTest {
+class LocalDatabasePasswordValidationTest {
 
 	@TempDir Path directory;
 

@@ -11,17 +11,15 @@ Esta guía arranca la base técnica H3, validada y completada. Todavía no permi
 
 ## Preparar la configuración privada una sola vez
 
-La persona crea manualmente `.env` en la raíz con estas claves:
+La plantilla `.env.example` está versionada. Solo para una configuración nueva, copiala vos a `.env` desde la raíz, sin sobrescribir un archivo existente:
 
-```properties
-DB_NAME=code_academy
-DB_USERNAME=code_academy
-DB_PASSWORD=
+```sh
+cp -n .env.example .env
 ```
 
 **No arranques con la contraseña vacía.** Completala en privado con una contraseña larga y alfanumérica, sin comillas, compatible con Compose y el lector de propiedades. No la pegues en comandos, registros, chats ni documentación; ningún agente debe leerla o escribirla.
 
-`.env` está ignorado por Git y no se versiona. Una plantilla personal `.env.example` es opcional y de propiedad humana; no se presupone versionada ni disponible en un clon nuevo.
+`.env` está ignorado por Git y no se versiona. `.env.example` es la plantilla compartida; nunca guardes contraseñas reales en ella. Si ya tenés `.env` configurado, conservá sus valores.
 
 Compose consume `.env` desde la raíz. El backend con perfil `local`, ejecutado desde `backend/`, importa obligatoriamente `../.env`, sin exportar variables a mano. Si falta el archivo o `DB_PASSWORD` está ausente o vacío, el arranque debe fallar explícitamente. Las pruebas de Testcontainers no activan ese perfil ni necesitan ese archivo.
 
