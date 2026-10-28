@@ -3,12 +3,13 @@
   "chosen": "04-mezcla.html",
   "handoffs": {
     "04-mezcla.html": {
-      "status": "sent",
+      "status": "implemented",
       "queued": false,
       "sentAt": "2026-10-28T17:25:14.413Z",
-      "startedAt": null,
-      "implementedAt": null,
-      "feature": "odd/tasks/h4-first-journey.md"
+      "startedAt": "2026-10-28T17:25:19.691Z",
+      "implementedAt": "2026-10-28T20:42:45.745Z",
+      "feature": "odd/tasks/h4-first-journey.md",
+      "note": "Implemented in T9a/T9b (f66bf51, 66a7141 + fixes); verified by the two-user E2E journey. No app is running now; start it with docs/desarrollo-local.md."
     }
   }
 }
