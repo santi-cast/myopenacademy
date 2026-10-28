@@ -11,7 +11,7 @@ El conjunto mínimo de H4 tendrá metadatos del temario entero, incluidas entrad
 
 Otras entradas, incluso escritas en origen, pueden seguir sin importar en H4. No se afirmará que ya se importó todo el material escrito. Las pendientes no tienen cuerpo ni ejercicios importados.
 
-`source.versionRef` es el **hash completo del commit del repositorio Curso Java Completo desde el que se importa**, correspondiente a la revisión usada para el índice y el contenido. No es una fecha, rama, etiqueta ni referencia abreviada. No se ha inspeccionado el origen ni obtenido un hash en esta actualización documental.
+`source.versionRef` es el **hash completo del commit del repositorio Curso Java Completo desde el que se importa**, correspondiente a la revisión usada para el índice y el contenido. No es una fecha, rama, etiqueta ni referencia abreviada. La primera copia controlada de H4 fija su hash completo en `content/java/manifest.json`.
 
 ## Ejemplo ilustrativo
 
@@ -76,7 +76,9 @@ Extracto diminuto, no manifiesto completo ni medición del curso. Números de ca
 - IDs de curso, lección, ejercicio y recurso globalmente únicos, permanentes y coherentes con namespace y pertenencia. Los IDs del contenido usan prefijo permanente del curso; no se derivan del título ni se renumeran al reorganizar el origen. El número de origen no es fuente de identidad.
 - El cuerpo controlado conserva el material de los ejercicios y su asociación explícita con los IDs permanentes declarados para su lección. Al procesarlo se extrae la sección exacta «Ejercicios prácticos resueltos»: enunciados a `Exercise.statementHtml`, soluciones en `<details>` a `Exercise.solutionHtml`, saneados por separado. Esa sección se excluye de `bodyHtml` para evitar duplicación. No usar el ordinal transitorio como identidad ni adivinar asociaciones al reorganizar. Es política documental, no extracción ya ejecutada.
 - `bodyPath`/`localPath` son relativos a la raíz de copia controlada; `sourcePath` aporta solo procedencia y resolución relativa desde el documento de origen. Ninguna ruta habilita lecturas del origen al servir contenido.
-- `sourceToId` cubre documentos, recursos y fragmentos referenciados. Resolver cada enlace relativo respecto a su documento de origen, convertirlo a destino por ID y conservar/mapear su fragmento al ID final compatible con GitHub, incluidos duplicados, acentos y puntuación.
+- Una carpeta enlazada (por ejemplo, la de código de un ejemplo) se declara en `sourceToId` con `sourcePath` terminado en `/` y la lista explícita y ordenada de sus archivos: `{ "sourcePath": "01/codigo/ejemplo/", "resourceIds": ["java-resource-a", "java-resource-b"] }`. Cada archivo es además un recurso registrado con su propia entrada. En la lección, el enlace a la carpeta se conserva y va seguido de un enlace por archivo a su recurso, servido como texto plano.
+- El índice del curso de origen se declara en `sourceToId` con `courseId`: `{ "sourcePath": "00-indice.md", "courseId": "java" }`. Sus enlaces llevan a la pantalla de índice del curso, no a un documento importado.
+- `sourceToId` cubre documentos, carpetas, recursos y fragmentos referenciados. Resolver cada enlace relativo respecto a su documento de origen, convertirlo a destino por ID y conservar/mapear su fragmento al ID final compatible con GitHub, incluidos duplicados, acentos y puntuación.
 - Validar enlaces locales, cruzados, recursos y fragmentos tras separar contenido, reescribir y sanear, también en `statementHtml` y `solutionHtml`. Solo IDs de encabezados generados, no arbitrarios. Un enlace sin fragmento a entrada pendiente lleva a «todavía no disponible»; no fingir fragmento validado si falta el cuerpo de destino. Una referencia no resuelta nunca se sustituye por un destino adivinado.
 
 ## Validación y entrega segura
@@ -91,4 +93,4 @@ La entrega aplica la [política de contenido de la API](api.md#contenido-ejercic
 
 H4 comprobará primera lección, extracción sin duplicación, enlaces y fragmentos resultantes, recursos seguros y fallback Mermaid escapado, además de aislamiento y persistencia entre dos usuarios. Son comprobaciones pendientes de implementación, no pruebas ya realizadas.
 
-H5 conserva importación completa, comparación, actualización y reconciliación. Este contrato mínimo no resuelve retiradas ni divisiones: ninguna actualización borrará o reasignará progreso silenciosamente.
+H5 conserva importación completa, comparación, actualización y reconciliación. Mejoras futuras anotadas para H5: descargar una carpeta de código completa como `.zip` y añadir `commonmark-ext-gfm-strikethrough`, porque el tachado `~~` aparece en 5 lecciones. Este contrato mínimo no resuelve retiradas ni divisiones: ninguna actualización borrará o reasignará progreso silenciosamente.
