@@ -1,58 +1,33 @@
-import { useEffect, useState } from 'react'
+import { Route, Routes } from 'react-router'
+import { PrivateLayout, PublicLayout } from './layout/Layouts'
+import { CatalogPage } from './pages/CatalogPage'
+import { CourseIndexPage } from './pages/CourseIndexPage'
+import { LessonPage } from './pages/LessonPage'
+import { LoginPage } from './pages/LoginPage'
+import { MyCoursesPage } from './pages/MyCoursesPage'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { RegisterPage } from './pages/RegisterPage'
+import { SessionProvider } from './session/SessionProvider'
 import './App.css'
 
-type HealthState = 'loading' | 'healthy' | 'unavailable'
-
-const healthMessages: Record<HealthState, string> = {
-  loading: 'Comprobando conexión con el backend…',
-  healthy: 'Backend disponible.',
-  unavailable: 'Backend no disponible.',
-}
-
+/** Rendered inside a router: BrowserRouter in main.tsx, MemoryRouter in tests. */
 function App() {
-  const [health, setHealth] = useState<HealthState>('loading')
-
-  useEffect(() => {
-    let active = true
-
-    async function checkHealth() {
-      let nextHealth: HealthState = 'unavailable'
-
-      try {
-        const response = await fetch('/actuator/health', { method: 'GET' })
-        if (response.ok) {
-          const payload: unknown = await response.json()
-          if (
-            typeof payload === 'object'
-            && payload !== null
-            && !Array.isArray(payload)
-            && 'status' in payload
-            && payload.status === 'UP'
-          ) {
-            nextHealth = 'healthy'
-          }
-        }
-      } catch {
-        nextHealth = 'unavailable'
-      }
-
-      if (active) {
-        setHealth(nextHealth)
-      }
-    }
-
-    void checkHealth()
-    return () => {
-      active = false
-    }
-  }, [])
-
   return (
-    <main className="technical-shell">
-      <h1>Code Academy</h1>
-      <p>Base técnica. Todavía no hay cursos disponibles.</p>
-      <p className="health-status" role="status">{healthMessages[health]}</p>
-    </main>
+    <SessionProvider>
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
+        <Route element={<PrivateLayout />}>
+          <Route index element={<MyCoursesPage />} />
+          <Route path="/courses" element={<CatalogPage />} />
+          <Route path="/courses/:courseId" element={<CourseIndexPage />} />
+          <Route path="/lessons/:lessonId" element={<LessonPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </SessionProvider>
   )
 }
 

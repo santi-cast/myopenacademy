@@ -1,6 +1,6 @@
 # Desarrollo local
 
-Esta guía arranca la base técnica H3, validada y completada. Todavía no permite estudiar ni crear cuentas: H4 no está iniciado y requiere aprobación del propietario. Los resultados y pendientes viven en el [archivo único de tareas](../odd/tasks/h3-base.md), no en esta guía.
+Esta guía arranca la academia en local tal como quedó en H4: cuentas, la lección 02.01 y progreso por usuario. Los resultados y pendientes viven en las tareas de [H3](../odd/tasks/h3-base.md) y [H4](../odd/tasks/h4-first-journey.md), no en esta guía.
 
 ## Requisitos
 
@@ -23,7 +23,7 @@ cp -n .env.example .env
 
 Compose consume `.env` desde la raíz. El backend con perfil `local`, ejecutado desde `backend/`, importa obligatoriamente `../.env`, sin exportar variables a mano. Si falta el archivo o `DB_PASSWORD` está ausente o vacío, el arranque debe fallar explícitamente. Las pruebas de Testcontainers no activan ese perfil ni necesitan ese archivo.
 
-**Después de inicializar el volumen, no cambies `DB_NAME`, `DB_USERNAME` ni `DB_PASSWORD`.** PostgreSQL conserva la configuración inicial: editar `.env` no cambia las credenciales almacenadas. No soluciones un error de autenticación borrando el volumen. Un cambio requiere mantenimiento y recuperación coordinados, fuera de H3.
+**Después de inicializar el volumen, no cambies `DB_NAME`, `DB_USERNAME` ni `DB_PASSWORD`.** PostgreSQL conserva la configuración inicial: editar `.env` no cambia las credenciales almacenadas. No soluciones un error de autenticación borrando el volumen. Un cambio requiere mantenimiento y recuperación coordinados.
 
 ## Arrancar en tres terminales
 
@@ -46,6 +46,10 @@ cd backend
 
 La salud mínima en http://127.0.0.1:8080/actuator/health debe responder `{"status":"UP"}` antes de continuar.
 
+Las migraciones crean las tablas en el esquema `code_academy`, y el historial de Flyway (`flyway_schema_history`) queda siempre en `public` (`spring.flyway.default-schema=public`). Así el backend arranca igual las veces que haga falta, aunque el usuario de la base se llame `code_academy`, y las bases ya migradas conservan su historial sin repetir ninguna migración.
+
+Al arrancar, el backend carga y valida el contenido de `code-academy.content-dir` (por defecto `../content`, relativo al directorio desde el que se ejecuta el backend, o sea `backend/`) y sincroniza el catálogo de la base en una sola transacción: añade cursos, lecciones y ejercicios nuevos y actualiza títulos, posiciones y disponibilidad, sin borrar filas. Si el contenido no es válido, o si un ID ya guardado desapareció del manifiesto o cambió de curso o de lección, el servidor no arranca y el mensaje indica el problema; la base queda sin cambios. Para usar otra copia del contenido, pasá `--code-academy.content-dir=<ruta>` al arrancar. La recuperación de contraseña por consola no carga el contenido, así que funciona aunque esté roto.
+
 **3. Frontend — desde `frontend/`**
 
 ```sh
@@ -56,6 +60,8 @@ npm run dev
 ```
 
 Abrí http://127.0.0.1:5173. Vite fija loopback y puerto estricto: si está ocupado, falla en vez de elegir otro. El proxy conserva el prefijo `/api` y también reenvía `/actuator/health` al backend. No hace falta abrir CORS; el proxy no sustituye autorización ni CSRF. El frontend no carga el `.env` de la raíz ni recibe sus secretos.
+
+La primera vez, creá una cuenta en la pantalla de registro y después iniciá sesión.
 
 ## Ejecutar pruebas
 
@@ -84,6 +90,35 @@ npm run test:e2e
 
 Si Chromium necesita bibliotecas del sistema, **detenete y pedí aprobación explícita**. No uses `--with-deps`, instalaciones globales ni paquetes del sistema como arreglo automático.
 
+**Recorrido de dos usuarios.** No necesita la base ni el backend de las tres terminales, ni toca `.env` ni el volumen `code-academy_postgres_data`. Requiere Docker activo con la imagen `postgres:18.6` ya descargada y el jar del backend construido (`./mvnw -B package -DskipTests` desde `backend/`). Desde `frontend/`:
+
+```sh
+npm run test:e2e:journey
+```
+
+El script crea un contenedor `code-academy-e2e-<aleatorio>` con datos en memoria y una contraseña generada que no se muestra, arranca el jar con el perfil por defecto y Vite apuntando a ese backend (variable `CODE_ACADEMY_BACKEND_URL`, que por defecto sigue siendo `http://127.0.0.1:8080`), todo en puertos libres de `127.0.0.1`. Al terminar, también ante un fallo o Ctrl+C, detiene el backend y el contenedor, que se borra solo. Los resultados quedan en `frontend/test-results/journey/<fecha>/`: capturas, registros del backend y `summary.json` con tiempos y el reinicio.
+
+## Recuperar una contraseña
+
+No hay recuperación por la web ni cuenta de administración: se cambia desde una consola local. Con la base sana, compilá el jar desde `backend/` (o reutilizá uno ya construido):
+
+```sh
+cd backend
+./mvnw -B package -DskipTests
+```
+
+Después, **en una terminal real** y desde `backend/`, para que el perfil `local` encuentre `../.env`:
+
+```sh
+java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --reset-password=<usuario>
+```
+
+El usuario no distingue mayúsculas. La herramienta pide la contraseña nueva dos veces sin mostrarla; nunca la pases como argumento. Debe tener entre 15 y 128 caracteres y se guarda tal cual, con sus espacios. Si las dos no coinciden, la contraseña no cumple la regla o el usuario no existe, no cambia nada y termina con error.
+
+Si no hay terminal interactiva (entrada redirigida, scripts o `./mvnw spring-boot:run`, que arranca Java en otro proceso sin terminal propia), se niega antes de arrancar: no pregunta ni cambia nada. Por eso no funciona con `./mvnw spring-boot:run`. Este modo no levanta el servidor web, así que puede ejecutarse con el backend en marcha.
+
+El hash nuevo y la versión de credenciales se guardan juntos en una sola operación, conservando la cuenta y su progreso. Las sesiones ya abiertas de ese usuario se cierran en su siguiente solicitud y hay que volver a iniciar sesión.
+
 ## Parar sin perder datos
 
 Usá `Ctrl+C` en las terminales del frontend y backend. Después, desde la raíz:
@@ -92,4 +127,4 @@ Usá `Ctrl+C` en las terminales del frontend y backend. Después, desde la raíz
 docker compose stop db
 ```
 
-Los servicios quedaron detenidos así al cerrar las comprobaciones de H3, con el volumen conservado. Nunca uses `down -v` ni limpiezas `prune` como parte de este flujo. No hay despliegue de producción en H3; se abordará en H7.
+El volumen se conserva: cuentas y progreso siguen ahí al volver a arrancar. Nunca uses `down -v` ni limpiezas `prune` como parte de este flujo. No hay despliegue de producción; se abordará en H7.

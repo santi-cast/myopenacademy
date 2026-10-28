@@ -2,7 +2,16 @@
 
 Academia web para estudiar programación, empezando por Java, y proyecto de portfolio para aprender construyendo una aplicación real.
 
-**Estado:** base técnica H3 validada y completada. Hay una interfaz técnica y un backend con comprobación de salud, pero todavía no hay cuentas, cursos para estudiar ni progreso guardado. H4 no está iniciado y requiere aprobación del propietario.
+**Estado:** H4 cerrado en la rama `feat/h4-first-journey`, pendiente de merge a `main`. Ver el [plan](PLAN.md).
+
+## Qué hace hoy
+
+- Registro e inicio de sesión con usuario y contraseña.
+- Mis cursos, con el avance y «Continuar» en la última lección abierta.
+- Catálogo, para añadir el curso Java.
+- Índice del curso con sus 21 fases; las lecciones pendientes se ven pero no se abren.
+- Lección 02.01 «Tu primer programa», con sus ejercicios y soluciones desplegables, diagramas, código resaltado y archivos descargables.
+- Estados manuales de lección y ejercicio, y avance guardado por persona: cada alumno ve solo su progreso.
 
 ## Tecnologías
 
@@ -12,49 +21,21 @@ Academia web para estudiar programación, empezando por Java, y proyecto de port
 
 ## Ejecutar en local
 
-Necesitás Java 25, Docker con Compose y su motor activo, fnm con Node 24.22.1 y npm 11.19.1. No hace falta Maven global: el Wrapper usa Maven 3.10.0.
+Requisitos, configuración privada (`.env`) y arranque en tres terminales (base, backend y frontend) en la [guía local](docs/desarrollo-local.md). Después, abrí http://127.0.0.1:5173. Todo escucha solo en este equipo.
 
-Primero seguí la [preparación de configuración privada](docs/desarrollo-local.md). Para una configuración nueva, copiá vos la plantilla versionada `.env.example` a `.env` en la raíz y completá la contraseña en privado. No sobrescribas un `.env` existente.
-
-Abrí tres terminales desde la raíz del proyecto, en este orden:
-
-**1. Base de datos**
-
-```sh
-docker compose up -d --wait db
-```
-
-**2. Backend**
-
-```sh
-cd backend
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
-```
-
-**3. Frontend**
-
-```sh
-cd frontend
-fnm use 24.22.1
-npm ci
-npm run dev
-```
-
-Abrí http://127.0.0.1:5173. El backend expone salud técnica en http://127.0.0.1:8080/actuator/health. Todo escucha solo en este equipo.
+Para cambiar una contraseña olvidada se usa la [herramienta de consola](docs/desarrollo-local.md#recuperar-una-contraseña); no hay recuperación por la web.
 
 ## Pruebas
 
-En `backend/`, con Docker activo: `./mvnw -B verify` (Testcontainers usa una base aislada).
-
-En `frontend/`: `npm run test -- --run`, `npm run lint` y `npm run build`.
-Para Chromium y pruebas de navegador, seguí la [guía local](docs/desarrollo-local.md).
-Los resultados y pendientes se registran solo en [las tareas de H3](odd/tasks/h3-base.md).
+- En `backend/`, con Docker activo: `./mvnw -B verify` (Testcontainers usa una base aislada).
+- En `frontend/`: `npm run test -- --run`, `npm run lint` y `npm run build`.
+- Recorrido de dos usuarios en navegador, en un entorno propio y desechable: `npm run test:e2e:journey` desde `frontend/` ([requisitos](docs/desarrollo-local.md#ejecutar-pruebas)).
 
 ## Documentación
 
 - [Plan y próximos hitos](PLAN.md).
 - [Desarrollo local, configuración y parada segura](docs/desarrollo-local.md).
-- [Contrato de API](docs/api.md) y [manifiesto de contenido](docs/manifiesto.md): diseño del recorrido futuro, no funciones ya disponibles.
-- [Directorio de contenido](content/README.md).
+- [Contrato de API](docs/api.md) y [manifiesto de contenido](docs/manifiesto.md).
+- [Frontend](frontend/README.md) y [directorio de contenido](content/README.md).
 
 No hay instrucciones de despliegue: la publicación se abordará en H7.

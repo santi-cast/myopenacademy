@@ -1,0 +1,159 @@
+package dev.codeacademy.catalog;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+
+import dev.codeacademy.api.ApiException;
+import dev.codeacademy.catalog.Catalog.LessonRef;
+import dev.codeacademy.catalog.Catalog.ResourceRef;
+import dev.codeacademy.content.CourseContent;
+import dev.codeacademy.content.ExerciseContent;
+import dev.codeacademy.content.LessonContent;
+import dev.codeacademy.content.Manifest;
+import dev.codeacademy.content.Manifest.Lesson;
+
+/** Shared catalog and content for any authenticated user (docs/api.md); nothing here reads or writes progress. */
+@RestController
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+class CatalogController {
+
+	record CourseView(String id, String title) {
+		static CourseView of(Manifest.Course course) {
+			return new CourseView(course.id(), course.title());
+		}
+	}
+
+	record PhaseView(String id, String title, int position) {
+		static PhaseView of(Manifest.Phase phase) {
+			return new PhaseView(phase.id(), phase.title(), phase.position());
+		}
+	}
+
+	record LessonEntry(String id, String courseId, String title, int position, String phaseId, boolean available) {
+		static LessonEntry of(LessonRef ref) {
+			Lesson lesson = ref.lesson();
+			return new LessonEntry(lesson.id(), ref.course().manifest().course().id(), lesson.title(), lesson.position(),
+					lesson.phaseId(), lesson.available());
+		}
+	}
+
+	record ExerciseView(String id, String lessonId, String courseId, String title, String statementHtml,
+			String solutionHtml) {
+		static ExerciseView of(ExerciseContent exercise) {
+			return new ExerciseView(exercise.id(), exercise.lessonId(), exercise.courseId(), exercise.title(),
+					exercise.statementHtml(), exercise.solutionHtml());
+		}
+	}
+
+	/** fileName is the original file name, the one to show and to save the download as (S14). */
+	record ResourceView(String resourceId, String url, String mediaType, String fileName) {
+	}
+
+	record CoursesView(List<CourseView> courses) {
+	}
+
+	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons) {
+	}
+
+	record LessonView(LessonEntry lesson, String bodyHtml, List<ExerciseView> exercises, List<ResourceView> resources,
+			String previousLessonId, String nextLessonId) {
+	}
+
+	private static final Logger log = LoggerFactory.getLogger(CatalogController.class);
+
+	private final Catalog catalog;
+
+	CatalogController(Catalog catalog) {
+		this.catalog = catalog;
+	}
+
+	@GetMapping(path = "/api/courses", produces = MediaType.APPLICATION_JSON_VALUE)
+	CoursesView courses() {
+		return new CoursesView(catalog.courses().stream().map(course -> CourseView.of(course.manifest().course()))
+				.toList());
+	}
+
+	@GetMapping(path = "/api/courses/{courseId}", produces = MediaType.APPLICATION_JSON_VALUE)
+	SyllabusView course(@PathVariable String courseId) {
+		CourseContent course = catalog.course(courseId).orElseThrow(CatalogController::notFound);
+		return new SyllabusView(CourseView.of(course.manifest().course()),
+				Catalog.phases(course).stream().map(PhaseView::of).toList(), Catalog.syllabus(course).stream()
+					.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList());
+	}
+
+	/** Pending lessons keep their syllabus entry but never open; neighbours skip them. */
+	@GetMapping(path = "/api/lessons/{lessonId}", produces = MediaType.APPLICATION_JSON_VALUE)
+	LessonView lesson(@PathVariable String lessonId) {
+		LessonRef ref = catalog.lesson(lessonId).orElseThrow(CatalogController::notFound);
+		if (!ref.lesson().available()) {
+			throw new ApiException(HttpStatus.CONFLICT, "LESSON_UNAVAILABLE", "Lesson is not available.");
+		}
+		LessonContent content = ref.course().lessons().get(lessonId);
+		List<Lesson> available = Catalog.syllabus(ref.course()).stream().filter(Lesson::available).toList();
+		int index = available.indexOf(ref.lesson());
+		List<ResourceView> resources = ref.course().manifest().resources().stream()
+				.filter(resource -> resource.lessonId().equals(lessonId))
+				.map(resource -> new ResourceView(resource.resourceId(), "/api/resources/" + resource.resourceId(),
+						resource.mediaType(), ref.course().resources().get(resource.resourceId()).originalFileName()))
+				.toList();
+		return new LessonView(LessonEntry.of(ref), content.bodyHtml(),
+				content.exercises().stream().map(ExerciseView::of).toList(), resources,
+				index > 0 ? available.get(index - 1).id() : null,
+				index < available.size() - 1 ? available.get(index + 1).id() : null);
+	}
+
+	/**
+	 * The bytes of a registered resource of an available lesson, as a download under its original name. Not JSON and
+	 * not negotiated: a browser's Accept header never blocks it. Unknown, unauthorized or unreadable IDs are 404.
+	 */
+	@GetMapping("/api/resources/{resourceId}")
+	void resource(@PathVariable String resourceId, HttpServletResponse response) throws IOException {
+		ResourceRef ref = catalog.resource(resourceId).orElseThrow(CatalogController::notFound);
+		boolean lessonAvailable = catalog.lesson(ref.resource().lessonId()).map(lesson -> lesson.lesson().available())
+				.orElse(false);
+		if (!lessonAvailable) throw notFound();
+		byte[] bytes = catalog.read(ref).orElseThrow(() -> {
+			log.warn("Registered resource {} failed its serve-time file check", resourceId);
+			return notFound();
+		});
+		response.setStatus(HttpServletResponse.SC_OK);
+		response.setContentType(ref.resource().mediaType());
+		response.setHeader("Content-Disposition", attachment(ref.file().originalFileName()));
+		response.setHeader("X-Content-Type-Options", "nosniff");
+		response.setHeader("Content-Security-Policy", "sandbox");
+		response.setHeader("Cache-Control", "private, no-store");
+		response.setContentLength(bytes.length);
+		response.getOutputStream().write(bytes);
+	}
+
+	/** RFC 6266: an ASCII-safe quoted name for old clients and the exact UTF-8 name in filename*. */
+	static String attachment(String fileName) {
+		String fallback = fileName.replaceAll("[^A-Za-z0-9._-]", "_");
+		StringBuilder encoded = new StringBuilder();
+		for (byte b : fileName.getBytes(StandardCharsets.UTF_8)) {
+			char c = (char) (b & 0xff);
+			if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || "!#$&+-.^_`|~".indexOf(c) >= 0) {
+				encoded.append(c);
+			}
+			else {
+				encoded.append('%').append(String.format("%02X", b & 0xff));
+			}
+		}
+		return "attachment; filename=\"" + fallback + "\"; filename*=UTF-8''" + encoded;
+	}
+
+	private static ApiException notFound() {
+		return new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource was not found.");
+	}
+}

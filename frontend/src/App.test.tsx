@@ -1,84 +1,41 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import App from './App'
+import { screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import { ana, apiCalls, error, installFakeBackend } from './test/fakeBackend'
+import { renderApp } from './test/renderApp'
 
-const loading = 'Comprobando conexión con el backend…'
-const healthy = 'Backend disponible.'
-const unavailable = 'Backend no disponible.'
+// H3's health-screen tests were removed with the screen: the main UI no longer shows the
+// backend status. The last test below pins that removal.
 
-function mockHealthResponse(body: string, status = 200) {
-  const fetchMock = vi.fn().mockResolvedValue(
-    new Response(body, {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  )
-  vi.stubGlobal('fetch', fetchMock)
-  return fetchMock
-}
+describe('app routes', () => {
+  it('the lesson route shows the lesson title', async () => {
+    installFakeBackend({ loggedInAs: ana })
+    renderApp('/lessons/java-02.01')
 
-function expectOnlyHealthGet(fetchMock: ReturnType<typeof vi.fn>) {
-  expect(fetchMock).toHaveBeenCalledTimes(1)
-  expect(fetchMock).toHaveBeenCalledWith('/actuator/health', {
-    method: 'GET',
-  })
-}
-
-describe('technical foundation', () => {
-  it('shows the technical-only notice and loading state while health is pending', () => {
-    const fetchMock = vi.fn(() => new Promise<Response>(() => {}))
-    vi.stubGlobal('fetch', fetchMock)
-
-    render(<App />)
-
-    expect(screen.getByRole('heading', { level: 1, name: 'Code Academy' })).toBeVisible()
-    expect(screen.getByText('Base técnica. Todavía no hay cursos disponibles.')).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent(loading)
-    expect(screen.queryByText(healthy)).not.toBeInTheDocument()
-    expect(screen.queryByText(unavailable)).not.toBeInTheDocument()
-    expectOnlyHealthGet(fetchMock)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Tu primer programa' })).toBeVisible()
   })
 
-  it('reports available only after a successful UP response', async () => {
-    const fetchMock = mockHealthResponse('{"status":"UP"}')
-    render(<App />)
+  it('a pending lesson by URL shows «todavía no disponible»', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    backend.route('GET /api/lessons/java-02.02', error(409, 'LESSON_UNAVAILABLE'))
+    renderApp('/lessons/java-02.02')
 
-    expect(screen.getByRole('status')).toHaveTextContent(loading)
-    expect(await screen.findByText(healthy)).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent(healthy)
-    expect(screen.queryByText(loading)).not.toBeInTheDocument()
-    expect(screen.queryByText(unavailable)).not.toBeInTheDocument()
-    expectOnlyHealthGet(fetchMock)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Esta lección todavía no está disponible.' })).toBeVisible()
   })
 
-  it.each([
-    ['HTTP error even with UP', '{"status":"UP","detail":"private-diagnostic"}', 503],
-    ['non-UP status', '{"status":"DOWN","detail":"private-diagnostic"}', 200],
-    ['missing status', '{"detail":"private-diagnostic"}', 200],
-    ['null payload', 'null', 200],
-    ['invalid JSON', 'private-diagnostic', 200],
-  ])('reports unavailable without exposing response content: %s', async (_name, body, status) => {
-    const fetchMock = mockHealthResponse(body, status)
-    render(<App />)
+  it('an unknown route shows «No encontrado»', async () => {
+    installFakeBackend({ loggedInAs: ana })
+    renderApp('/esto/no/existe')
 
-    expect(await screen.findByText(unavailable)).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent(unavailable)
-    expect(screen.queryByText(loading)).not.toBeInTheDocument()
-    expect(screen.queryByText(healthy)).not.toBeInTheDocument()
-    expect(document.body).not.toHaveTextContent('private-diagnostic')
-    expectOnlyHealthGet(fetchMock)
+    expect(await screen.findByRole('heading', { level: 1, name: 'No encontrado' })).toBeVisible()
   })
 
-  it('reports unavailable on network failure without exposing error details', async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error('private-diagnostic'))
-    vi.stubGlobal('fetch', fetchMock)
-    render(<App />)
+  it('the H3 technical health screen is gone from the main UI', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    renderApp('/')
 
-    expect(await screen.findByText(unavailable)).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent(unavailable)
-    expect(screen.queryByText(loading)).not.toBeInTheDocument()
-    expect(screen.queryByText(healthy)).not.toBeInTheDocument()
-    expect(document.body).not.toHaveTextContent('private-diagnostic')
-    expectOnlyHealthGet(fetchMock)
+    await screen.findByRole('heading', { level: 1, name: 'Mis cursos' })
+    expect(document.body).not.toHaveTextContent('Backend disponible.')
+    expect(document.body).not.toHaveTextContent('Base técnica.')
+    expect(apiCalls(backend)).not.toContain('GET /actuator/health')
   })
 })

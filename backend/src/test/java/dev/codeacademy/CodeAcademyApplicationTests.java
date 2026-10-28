@@ -96,30 +96,27 @@ class CodeAcademyApplicationTest {
 		assertThat(token.orElseThrow().isHttpOnly()).isFalse();
 		assertThat(token.orElseThrow().getValue()).isNotBlank();
 		assertError(request("POST", "/api/auth/login", "invalid-token"), 403, "CSRF_REJECTED");
-		for (String path : List.of("/api/auth/register", "/api/auth/login", "/api/auth/logout")) {
-			assertError(request("POST", path, token.orElseThrow().getValue()), 401, "AUTHENTICATION_REQUIRED");
+		// A valid token passes CSRF; the public routes then handle the request themselves.
+		for (String path : List.of("/api/auth/register", "/api/auth/login")) {
+			assertError(request("POST", path, token.orElseThrow().getValue()), 400, "INVALID_REQUEST");
 		}
 		for (String method : List.of("PUT", "PATCH", "DELETE")) {
 			assertError(request(method, "/api/me/courses/java", token.orElseThrow().getValue()),
 					401, "AUTHENTICATION_REQUIRED");
 		}
+		assertThat(request("POST", "/api/auth/logout", token.orElseThrow().getValue()).statusCode()).isEqualTo(204);
 		assertThat(databaseSnapshot()).isEqualTo(before);
 	}
 
 	@Test
-	void flywayHasSuccessfulTechnicalSqlMigrationWithoutLearnerTables() {
+	void flywayHasOnlySuccessfulSqlMigrations() {
 		var history = jdbc.queryForList("select version, type, success from flyway_schema_history where version is not null");
-		assertThat(history).as("At least one versioned technical SQL migration").isNotEmpty();
+		assertThat(history).as("At least one versioned SQL migration").isNotEmpty();
 		assertThat(history).allSatisfy(row -> {
 			assertThat(row.get("type")).isEqualTo("SQL");
 			assertThat(row.get("success")).isEqualTo(true);
 		});
 		assertThat(jdbc.queryForObject("show server_version", String.class)).startsWith("18.6");
-		assertThat(jdbc.queryForList("""
-				select table_name from information_schema.tables
-				where table_schema not in ('pg_catalog', 'information_schema')
-				""", String.class)).doesNotContain("users", "accounts", "courses", "lessons", "exercises",
-				"enrollments", "lesson_states", "exercise_states", "usuario", "curso", "inscripcion");
 	}
 
 	@Test
