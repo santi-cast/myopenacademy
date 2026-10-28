@@ -2,7 +2,7 @@
 
 Academia web para estudiar programación, empezando por Java. El objetivo es usarla personalmente cuando esté funcionando y presentarla como proyecto de portfolio, con apoyo de agentes de IA para desarrollarla.
 
-**Estado:** H1 y H2 cerrados en definición y diseño; H3 (base técnica) es el siguiente hito, todavía no iniciado. No se ha iniciado la implementación de la aplicación. El cierre de diseño no autoriza código, instalaciones ni servicios.
+**Estado:** H1 y H2 cerrados; H3 (base técnica) autorizado y en curso en `feat/h3-base`. fnm y Node están instalados y comprobados; el backend está en preparación, sin GREEN observado todavía. Las funciones de estudio de H4 no están implementadas.
 Este archivo es el plan principal versionado; Engram complementa su continuidad, no lo reemplaza.
 
 ## 1. Decisiones confirmadas
@@ -177,7 +177,7 @@ Secuencia de trabajo con estado explícito; los hitos futuros se detallarán en 
 |---|---|---|---|
 | H1. Definición | Cerrado | Alcance, progreso y exclusiones | Requisitos y decisiones del primer recorrido resueltos |
 | H2. Diseño | Cerrado | Pantallas, modelo, API, arquitectura y manifiesto mínimo | Recorrido, separación de datos y contratos aprobados en diseño |
-| H3. Base técnica | Próximo; no iniciado | Frontend, backend, entorno local y pruebas iniciales | Arranque reproducible documentado y comprobaciones básicas ejecutables |
+| H3. Base técnica | En curso; no cerrado | Frontend, backend, entorno local y pruebas iniciales | Arranque reproducible documentado y comprobaciones básicas ejecutables |
 | H4. Primer recorrido | No completado; pendiente | Una lección real importada, cuentas y avance persistente | Dos usuarios conservan avances distintos al reiniciar, sin acceso cruzado |
 | H5. Contenido disponible | No completado; pendiente | Importación de material escrito y actualización incremental | Enlaces/recursos funcionan; nuevo módulo sin borrar avances ni complementos |
 | H6. Validación de estudio | No completado; pendiente | Uso real por el propietario | Recorrido probado y problemas registrados/priorizados |
@@ -199,7 +199,7 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 
 - Git inicializado en rama `main`; el primer commit `29399a1` ya registra `PLAN.md` y `.gitignore` mínimo.
 - Sin remotos configurados ni contenido publicado en GitHub. No se crean remotos en este cierre.
-- El segundo commit documental permanece pendiente: mostrar antes el mensaje propuesto y esperar aprobación expresa del propietario. No se ha ejecutado ni se le asigna un hash ficticio.
+- El segundo commit documental `a6f5206` ya cerró H2 y separó los contratos en `docs/api.md` y `docs/manifiesto.md`, con el mensaje `docs: close H2 design and split API and manifest contracts`.
 - Cambios pequeños, con pruebas/documentación junto al comportamiento correspondiente. No versionar secretos, datos personales ni temporales.
 - Antes de publicar, decidir visibilidad, licencias y material del curso distribuible. Portfolio distinguirá autoría educativa y contribuciones de plataforma.
 - Desarrollo con agentes de IA, sin exigir dominar previamente React, TypeScript o Spring ni convertir cada implementación en una clase. Aprendizaje gradual sin bloquear entregas.
@@ -208,9 +208,9 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 
 ## 8. Próximo paso
 
-**H3: preparación de la base técnica, todavía no iniciada.** Preparar su alcance y las verificaciones de disponibilidad/compatibilidad, documentación oficial de CSRF y coste Argon2id. Este cierre solo modifica documentación: no autoriza generar código, instalar dependencias, arrancar servicios, acceder al curso fuente, configurar remotos ni publicar.
+**H3: base técnica autorizada y en curso.** Continuar desde el [archivo único de tareas y comprobaciones](odd/tasks/h3-base.md). El propietario confirmó la creación manual de `.env.example` y `.env` y pidió retomar: el backend leerá la configuración en su perfil local sin exportaciones manuales. El agente no accede al contenido de esos archivos ni cambia la contraseña; no se borran volúmenes inicializados.
 
-Antes de cualquier commit, mostrar al propietario el mensaje propuesto del segundo commit documental y esperar autorización. La aprobación de H2 no sustituye ese punto de control ni permisos independientes para implementar o instalar en H3.
+El segundo commit documental ya está realizado (`a6f5206`); su corrección de estado se incluye en el primer commit de H3. Guardar primero la preparación de fnm/Node y el seguimiento comprobados, sin presentar el backend pendiente de GREEN como terminado. Después verificar backend, frontend e integración. Commits locales en `feat/h3-base`; sin merge a `main`, remotos, publicación, sudo ni paquetes del sistema.
 
 **Última confirmación:** H1/H2 cerrados; login sin mínimo de política y con máximo operativo de 128 puntos de código; registro/consola mantienen 15–128; ejercicios extraídos sin duplicación, continuación condicionada y procedencia por hash completo de commit fuente. Los contratos enlazados son diseño aprobado, no pruebas de salvaguardas implementadas. El inventario y recuentos del asesor no se verificaron aquí.
 

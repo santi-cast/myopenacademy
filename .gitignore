@@ -9,3 +9,11 @@
 ._*
 Thumbs.db
 Desktop.ini
+
+# Build and test output
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+backend/target/
