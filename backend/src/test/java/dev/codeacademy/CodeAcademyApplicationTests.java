@@ -109,19 +109,14 @@ class CodeAcademyApplicationTest {
 	}
 
 	@Test
-	void flywayHasOnlySuccessfulSqlMigrationsWithoutProgressTables() {
+	void flywayHasOnlySuccessfulSqlMigrations() {
 		var history = jdbc.queryForList("select version, type, success from flyway_schema_history where version is not null");
-		assertThat(history).as("At least one versioned technical SQL migration").isNotEmpty();
+		assertThat(history).as("At least one versioned SQL migration").isNotEmpty();
 		assertThat(history).allSatisfy(row -> {
 			assertThat(row.get("type")).isEqualTo("SQL");
 			assertThat(row.get("success")).isEqualTo(true);
 		});
 		assertThat(jdbc.queryForObject("show server_version", String.class)).startsWith("18.6");
-		assertThat(jdbc.queryForList("""
-				select table_name from information_schema.tables
-				where table_schema not in ('pg_catalog', 'information_schema')
-				""", String.class)).doesNotContain("enrollments", "lesson_states", "exercise_states",
-				"inscripcion");
 	}
 
 	@Test

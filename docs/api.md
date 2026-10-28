@@ -6,7 +6,7 @@ Contrato aprobado en diseño, no implementado ni verificado. Mantiene las 14 rut
 
 Todas las rutas de catálogo, contenido, recursos y progreso requieren sesión. Registro e inicio de sesión son accesibles sin autenticar. Las rutas `/me` obtienen el propietario de la sesión; no aceptan `userId`/`usuario_id` para elegir de quién son los datos. Toda lectura y escritura personal se limita al usuario autenticado, también por identificador directo. Un dato personal ajeno no se devuelve ni se modifica.
 
-Ningún GET modifica estados, inscripción o continuación. Obtener un token CSRF podrá crear una sesión técnica, nunca progreso de aprendizaje. No hay DELETE de inscripción ni endpoint de recuperación web.
+Ningún GET modifica estados, inscripción o continuación. Obtener un token CSRF podrá crear una sesión técnica, nunca progreso de aprendizaje. No hay DELETE de inscripción ni endpoint de recuperación web. H4 tampoco tiene borrado de usuarios: las claves foráneas del progreso no tienen cascada, así que borrar un usuario con progreso no está soportado y la base de datos lo rechaza.
 
 Los nombres de formas siguientes son abreviaturas documentales, no envoltorios adicionales. Fechas `updatedAt` en UTC ISO 8601 (por ejemplo, `2026-01-01T12:00:00Z`); null si no existe estado guardado. IDs globales y permanentes, opacos para el cliente, con namespace permanente de curso para contenido. No devolver contraseñas, hashes ni versiones de credenciales.
 
@@ -40,8 +40,8 @@ Sin cuerpo de entrada salvo el indicado; arrays vacíos válidos. El cliente usa
 | GET /api/courses/{courseId} | — | 200, `{ "course": Course, "lessons": LessonEntry[] }`, temario completo ordenado. |
 | GET /api/lessons/{lessonId} | — | 200, `{ "lesson": LessonEntry, "bodyHtml": string, "exercises": Exercise[], "resources": Resource[], "previousLessonId": ID o null, "nextLessonId": ID o null }`; vecinos disponibles del mismo curso. |
 | GET /api/resources/{resourceId} | — | 200, bytes con tipo seguro del recurso, no JSON; HTML solo descarga/texto escapado y SVG con sandbox según política de contenido. Solo recursos del manifiesto cuya lección está disponible; el resto, 404. El encabezado `Accept` no la bloquea. |
-| GET /api/me/courses | — | 200, `{ "courses": [{ "course": Course, "enrollment": Enrollment }] }`. |
-| PUT /api/me/courses/{courseId} | Sin cuerpo | 200, Enrollment con `added: true`; repetición no reinicia continuación ni estados. |
+| GET /api/me/courses | — | 200, `{ "courses": [{ "course": Course, "enrollment": Enrollment }] }`; solo los cursos añadidos, ordenados por ID de curso; lista vacía si no hay ninguno. |
+| PUT /api/me/courses/{courseId} | Sin cuerpo; cualquier cuerpo, incluso `{}`, es 400 `INVALID_REQUEST` | 200, Enrollment con `added: true`; repetición no reinicia continuación ni estados. |
 | GET /api/me/courses/{courseId}/progress | — | 200, Progress incluso sin inscripción; 404 si el curso no existe. |
 | PUT /api/me/lessons/{lessonId}/state | `{ "state": "completed" }` | 200, StateResult de lección. |
 | PUT /api/me/exercises/{exerciseId}/state | `{ "state": "in_progress" }` | 200, StateResult de ejercicio. |
@@ -80,6 +80,7 @@ Ejemplo ilustrativo de un curso existente no añadido, con dos entradas y una di
 ## Validaciones de entrada y credenciales
 
 - JSON estricto: rechazar tipos incorrectos, campos desconocidos, claves duplicadas, obligatorios ausentes, null no permitido, enums desconocidos y JSON malformado. IDs deben resolver al catálogo; no aceptar rutas como IDs. Cuerpos ausentes donde se exige objeto son inválidos; escrituras sin cuerpo no aceptan campos extra.
+- En los cuerpos de estado, un error de forma (tipo, campo, null, cuerpo ausente o malformado) es 400 `INVALID_REQUEST`; una cadena que no es un estado de ese tipo es 400 `INVALID_STATE`, también un estado del otro tipo (`solved` para una lección, `completed` para un ejercicio) o con otra grafía (`Completed`). Un segmento de ruta no normalizado (`..`, `%2e%2e`) se rechaza con 400 `INVALID_REQUEST` antes de llegar a ninguna ruta; un ID que no existe tal cual, sin recortar ni ignorar mayúsculas, es 404 `NOT_FOUND`.
 - Usuario: 3–32 caracteres ASCII `[A-Za-z0-9_]`, sin recortar espacios. Conservar presentación y comparar unicidad/acceso sin distinguir mayúsculas mediante representación canónica en minúsculas; no normalizar la contraseña. Esta regla queda aprobada con el cierre de H2.
 - Registro y recuperación por consola: contraseña de 15–128 puntos de código Unicode, admitiendo espacios y frases, sin exigir composición. No recortar espacios, normalizar ni truncar silenciosamente. Un sustituto UTF-16 sin pareja no es texto Unicode válido: registro y consola lo rechazan por política y login responde el 401 genérico, sin calcular su hash.
 - Login: no se aplica ningún mínimo de política de contraseña, ni se exige contraseña no vacía como regla de longitud. Solo se rechaza por longitud lo que supere 128 puntos de código Unicode, contados antes del hash. Es una protección operativa del uso de Argon2, no un máximo inherente del algoritmo. Así, un futuro cambio del mínimo no bloquea cuentas existentes. No recortar, normalizar ni truncar la entrada.
