@@ -20,6 +20,33 @@ class ProgressConcurrencyTest extends ProgressTestSupport {
 	private static final int REQUESTS = 8;
 
 	@RepeatedTest(3)
+	void mixedFirstMarksOfEveryExerciseAndTheLessonTwiceCreateOneEnrollment() throws Exception {
+		var browser = ready(learner());
+		String user = userId(browser);
+
+		List<Callable<HttpResponse<String>>> calls = new ArrayList<>();
+		for (int i = 1; i <= 9; i++) {
+			String exercise = "java-02.01-e0" + i;
+			calls.add(() -> exerciseState(browser, exercise, "solved"));
+		}
+		calls.add(() -> lessonState(browser, JAVA_LESSON, "completed"));
+		calls.add(() -> lessonState(browser, JAVA_LESSON, "completed"));
+		List<JsonNode> results = parallel(calls).stream().map(ProgressTestSupport::ok).toList();
+
+		assertThat(results).filteredOn(result -> result.path("courseAutoAdded").asBoolean()).hasSize(1);
+		assertThat(results).allSatisfy(result -> assertContinuation(result.path("continuation"), JAVA_LESSON));
+		var enrollments = enrollmentsOf(user);
+		assertThat(enrollments).hasSize(1);
+		Object enrollment = enrollments.getFirst().get("id");
+		assertThat(jdbc.queryForObject("select count(*) from code_academy.exercise_states where enrollment_id = ?",
+				Integer.class, enrollment)).isEqualTo(9);
+		assertThat(jdbc.queryForObject("select count(*) from code_academy.lesson_states where enrollment_id = ?",
+				Integer.class, enrollment)).isEqualTo(1);
+		JsonNode progress = ok(progress(browser, "java"));
+		assertThat(progress.path("progress").path("completedLessons").asInt()).isEqualTo(1);
+	}
+
+	@RepeatedTest(3)
 	void parallelFirstMarksCreateExactlyOneEnrollment() throws Exception {
 		var browser = ready(learner());
 		String user = userId(browser);
