@@ -46,6 +46,8 @@ cd backend
 
 La salud mínima en http://127.0.0.1:8080/actuator/health debe responder `{"status":"UP"}` antes de continuar.
 
+Las migraciones crean las tablas en el esquema `code_academy`, y el historial de Flyway (`flyway_schema_history`) queda siempre en `public` (`spring.flyway.default-schema=public`). Así el backend arranca igual las veces que haga falta, aunque el usuario de la base se llame `code_academy`, y las bases ya migradas conservan su historial sin repetir ninguna migración.
+
 Al arrancar, el backend carga y valida el contenido de `code-academy.content-dir` (por defecto `../content`, relativo al directorio desde el que se ejecuta el backend, o sea `backend/`) y sincroniza el catálogo de la base en una sola transacción: añade cursos, lecciones y ejercicios nuevos y actualiza títulos, posiciones y disponibilidad, sin borrar filas. Si el contenido no es válido, o si un ID ya guardado desapareció del manifiesto o cambió de curso o de lección, el servidor no arranca y el mensaje indica el problema; la base queda sin cambios. Para usar otra copia del contenido, pasá `--code-academy.content-dir=<ruta>` al arrancar. La recuperación de contraseña por consola no carga el contenido, así que funciona aunque esté roto.
 
 **3. Frontend — desde `frontend/`**
@@ -85,6 +87,14 @@ npm run test:e2e
 ```
 
 Si Chromium necesita bibliotecas del sistema, **detenete y pedí aprobación explícita**. No uses `--with-deps`, instalaciones globales ni paquetes del sistema como arreglo automático.
+
+**Recorrido de dos usuarios.** No necesita la base ni el backend de las tres terminales, ni toca `.env` ni el volumen `code-academy_postgres_data`. Requiere Docker activo con la imagen `postgres:18.6` ya descargada y el jar del backend construido (`./mvnw -B package -DskipTests` desde `backend/`). Desde `frontend/`:
+
+```sh
+npm run test:e2e:journey
+```
+
+El script crea un contenedor `code-academy-e2e-<aleatorio>` con datos en memoria y una contraseña generada que no se muestra, arranca el jar con el perfil por defecto y Vite apuntando a ese backend (variable `CODE_ACADEMY_BACKEND_URL`, que por defecto sigue siendo `http://127.0.0.1:8080`), todo en puertos libres de `127.0.0.1`. Al terminar, también ante un fallo o Ctrl+C, detiene el backend y el contenedor, que se borra solo. Los resultados quedan en `frontend/test-results/journey/<fecha>/`: capturas, registros del backend y `summary.json` con tiempos y el reinicio.
 
 ## Recuperar una contraseña
 

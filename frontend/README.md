@@ -15,10 +15,13 @@ Desde `frontend/`, con Node 24.22.1 y npm 11.19.1:
 | `npm run dev` | Servidor local en `127.0.0.1:5173`, sin cambiar de puerto si está ocupado. |
 | `npm run preview` | Previsualización del build, solo loopback. |
 | `npm run test:e2e` | Smoke Chromium con backend real ya iniciado en `127.0.0.1:8080`. |
+| `npm run test:e2e:journey` | Recorrido de dos usuarios con reinicio del backend, en un entorno propio y desechable. |
 
 Los resultados y pendientes se registran en [las tareas de H4](../odd/tasks/h4-first-journey.md).
 
 El smoke comprueba que una visita anónima llega al backend real por el proxy (`GET /api/me` → 401 `AUTHENTICATION_REQUIRED`) y termina en la pantalla de acceso; el recorrido completo es la T10. Requiere Chromium de Playwright previamente instalado; no instala navegadores, no inicia el backend ni usa respuestas simuladas. Puede reutilizar el servidor Vite local existente. Detenerse si el navegador requiere paquetes del sistema.
+
+El recorrido (`e2e/journey/two-users.spec.ts`, lanzado por `scripts/e2e-journey.mjs`) no usa la base ni el backend de desarrollo: crea su propio contenedor PostgreSQL, arranca el jar del backend con el perfil por defecto (sin `.env`) y Vite con `CODE_ACADEMY_BACKEND_URL` apuntando a ese backend, todo en puertos loopback libres, y lo retira al terminar, también si falla. Ana y Bruno se registran, marcan estados distintos, se comprueba que ninguno accede a los datos del otro, se reinicia el backend (las sesiones caducan, el progreso queda) y se revisan en Chromium real Mermaid, resaltado, descarga, portapapeles, enlaces, modo enfoque, anchos e impresión. Sin respuestas simuladas: solo se retiene una petición real para ver la interfaz antes de la confirmación. Capturas, registros y `summary.json` quedan en `test-results/journey/<fecha>/`, ignorado por Git.
 
 ## Pantallas y rutas
 

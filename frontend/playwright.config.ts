@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e',
+  // The two-user journey needs its own database and backend: npm run test:e2e:journey.
+  testIgnore: 'journey/**',
   fullyParallel: false,
   retries: 0,
   reporter: 'list',

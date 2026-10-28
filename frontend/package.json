@@ -12,6 +12,7 @@
     "dev": "vite",
     "test": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:journey": "node scripts/e2e-journey.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
