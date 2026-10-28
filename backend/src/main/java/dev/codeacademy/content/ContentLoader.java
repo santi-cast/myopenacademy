@@ -1,15 +1,21 @@
 package dev.codeacademy.content;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadFeature;
@@ -33,15 +39,59 @@ public final class ContentLoader {
 	private ContentLoader() {
 	}
 
-	/** manifestPath is relative to contentRoot, as are the bodyPath and localPath entries of the manifest. */
-	public static CourseContent load(Path contentRoot, String manifestPath) {
-		Path root;
-		try {
-			root = contentRoot.toRealPath();
+	/**
+	 * Every course of the content root, one directory per course with its manifest.json, in directory name order.
+	 * IDs must also be unique across courses; any problem in any course aborts the whole load.
+	 */
+	public static List<CourseContent> loadAll(Path contentRoot) {
+		Path root = realRoot(contentRoot);
+		List<String> manifests;
+		try (Stream<Path> entries = Files.list(root)) {
+			manifests = entries.filter(Files::isDirectory).map(dir -> dir.getFileName() + "/manifest.json").sorted()
+				.toList();
 		}
 		catch (IOException ex) {
 			throw new ContentValidationException("content root " + contentRoot + " cannot be read");
 		}
+		if (manifests.isEmpty()) throw new ContentValidationException("content root " + contentRoot + " has no course");
+		List<CourseContent> courses = manifests.stream().map(manifest -> load(root, manifest)).toList();
+		List<String> problems = new ArrayList<>();
+		Set<String> ids = new HashSet<>();
+		for (CourseContent course : courses) {
+			Manifest manifest = course.manifest();
+			List<String> courseIds = new ArrayList<>(List.of(manifest.course().id()));
+			manifest.lessons().forEach(lesson -> {
+				courseIds.add(lesson.id());
+				lesson.exercises().forEach(exercise -> courseIds.add(exercise.id()));
+			});
+			manifest.resources().forEach(resource -> courseIds.add(resource.resourceId()));
+			courseIds.stream().filter(id -> !ids.add(id))
+				.forEach(id -> problems.add("id " + id + " is used by more than one course"));
+		}
+		failIfAny(problems);
+		return courses;
+	}
+
+	/**
+	 * Reads a registered resource when it is served, re-checking the manifest localPath against the content root: empty
+	 * if it is no longer the same contained regular file reached without symbolic links.
+	 */
+	public static Optional<byte[]> readResource(Path contentRoot, String localPath, Path loadedPath) {
+		try {
+			Path checked = ContentPaths.file(contentRoot.toRealPath(), localPath, "resource", new ArrayList<>());
+			if (checked == null || !checked.equals(loadedPath)) return Optional.empty();
+			try (InputStream input = Files.newInputStream(checked, LinkOption.NOFOLLOW_LINKS)) {
+				return Optional.of(input.readAllBytes());
+			}
+		}
+		catch (IOException ex) {
+			return Optional.empty();
+		}
+	}
+
+	/** manifestPath is relative to contentRoot, as are the bodyPath and localPath entries of the manifest. */
+	public static CourseContent load(Path contentRoot, String manifestPath) {
+		Path root = realRoot(contentRoot);
 		List<String> problems = new ArrayList<>();
 		Path manifestFile = ContentPaths.file(root, manifestPath, "manifest", problems);
 		failIfAny(problems);
@@ -80,6 +130,15 @@ public final class ContentLoader {
 		Map<String, LessonContent> lessons = pipeline.render();
 		failIfAny(pipeline.problems());
 		return new CourseContent(manifest, lessons, Collections.unmodifiableMap(resources));
+	}
+
+	private static Path realRoot(Path contentRoot) {
+		try {
+			return contentRoot.toRealPath();
+		}
+		catch (IOException ex) {
+			throw new ContentValidationException("content root " + contentRoot + " cannot be read");
+		}
 	}
 
 	private static Manifest read(Path manifestFile) {

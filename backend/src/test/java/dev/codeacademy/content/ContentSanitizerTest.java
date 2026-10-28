@@ -47,10 +47,43 @@ class ContentSanitizerTest {
 		assertThat(removed).isEmpty();
 		assertThat(clean).contains("<h2 id=\"qué-aprenderás\">", "<del>c</del>", "<kbd>d</kbd>", "<sup>2</sup>",
 				"<sub>i</sub>", "<br />", "<a href=\"/lessons/demo-01.02\">l</a>", "<a href=\"#qué-aprenderás\">f</a>",
-				"<a href=\"https://dev.java/\" rel=\"noopener noreferrer\">w</a>", "<ol start=\"2\">",
+				"<a href=\"https://dev.java/\" target=\"_blank\" rel=\"noopener noreferrer\">w</a>", "<ol start=\"2\">",
 				"<th align=\"left\">", "<td align=\"right\">", "<code class=\"language-c&#43;&#43;\">",
 				"<code class=\"language-mermaid\">A --&gt; B</code>", "<details>", "<summary>Ver solución</summary>",
 				"<blockquote>", "<hr />");
+		// Only absolute http/https links open a new tab; internal and fragment links stay in the page.
+		assertThat(clean.split("target=", -1)).hasSize(2);
+	}
+
+	@Test
+	void externalLinksOpenInANewTabWithoutOpenerWhileOtherLinksDoNot() {
+		Set<String> hrefs = Set.of("http://example.org/a", "https://dev.java/", "/lessons/demo-01.02", "#qué-aprenderás",
+				"/courses/demo", "/api/resources/demo-01.01-r-hello");
+		List<String> removed = new ArrayList<>();
+
+		String clean = ContentSanitizer.sanitize("""
+				<p><a href="http://example.org/a">h</a> <a href="https://dev.java/">s</a>
+				<a href="/lessons/demo-01.02">l</a> <a href="#qué-aprenderás">f</a> <a href="/courses/demo">c</a>
+				<a href="/api/resources/demo-01.01-r-hello">Hello.java</a></p>
+				""", IDS, hrefs, removed);
+
+		assertThat(removed).isEmpty();
+		assertThat(clean).contains("<a href=\"http://example.org/a\" target=\"_blank\" rel=\"noopener noreferrer\">h</a>",
+				"<a href=\"https://dev.java/\" target=\"_blank\" rel=\"noopener noreferrer\">s</a>",
+				"<a href=\"/lessons/demo-01.02\">l</a>", "<a href=\"#qué-aprenderás\">f</a>", "<a href=\"/courses/demo\">c</a>",
+				"<a href=\"/api/resources/demo-01.01-r-hello\">Hello.java</a>");
+	}
+
+	@Test
+	void sourceTargetAndRelAreDiscardedAndReplacedByThePolicy() {
+		List<String> removed = new ArrayList<>();
+
+		String clean = sanitize("<p><a href=\"https://dev.java/\" target=\"_self\" rel=\"opener\">x</a> "
+				+ "<a href=\"/lessons/demo-01.02\" target=\"_blank\">y</a></p>", removed);
+
+		assertThat(removed).isNotEmpty();
+		assertThat(clean).isEqualTo("<p><a href=\"https://dev.java/\" target=\"_blank\" rel=\"noopener noreferrer\">x</a> "
+				+ "<a href=\"/lessons/demo-01.02\">y</a></p>");
 	}
 
 	@ParameterizedTest
@@ -68,7 +101,6 @@ class ContentSanitizerTest {
 			"<a href=\"//evil.example/\">x</a>",
 			"<a href=\"/lessons/demo-01.02\" onclick=\"alert(1)\">x</a>",
 			"<a href=\"/somewhere/else\">x</a>",
-			"<a href=\"https://dev.java/\" target=\"_blank\" rel=\"opener\">x</a>",
 			"<h2 id=\"evil\">t</h2>",
 			"<p id=\"qué-aprenderás\">t</p>",
 			"<svg><script>alert(1)</script></svg>",

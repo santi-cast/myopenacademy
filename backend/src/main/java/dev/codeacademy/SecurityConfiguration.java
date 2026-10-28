@@ -76,6 +76,8 @@ class SecurityConfiguration {
 						.requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/logout")
 								.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/me").authenticated()
+						.requestMatchers(HttpMethod.GET, "/api/courses", "/api/courses/*", "/api/lessons/*",
+								"/api/resources/*").authenticated()
 						.anyRequest().denyAll())
 				.build();
 	}

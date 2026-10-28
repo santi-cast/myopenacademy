@@ -19,7 +19,7 @@ Los nombres de formas siguientes son abreviaturas documentales, no envoltorios a
 | Course | `id`, `title`. |
 | LessonEntry | `id`, `courseId`, `title`, `position`, `available` (disponibilidad importada, no promesa de que todo lo escrito en origen ya se importó). |
 | Exercise | `id`, `lessonId`, `courseId`, `title`, `statementHtml`, `solutionHtml` (campos saneados por separado; solución libremente desplegable). |
-| Resource | `resourceId`, `url`, `mediaType`; URL controlada `/api/resources/{resourceId}`, sin ruta física. |
+| Resource | `resourceId`, `url`, `mediaType`, `fileName`; URL controlada `/api/resources/{resourceId}`, sin ruta física. `fileName` (campo añadido en H4) es el nombre original del archivo, por ejemplo `Hello.java`: el que se muestra y con el que se descarga, nunca el nombre interno basado en el ID. |
 | Continuation | `lastOpenedLessonId`: ID o null. |
 | Enrollment | `courseId`, `added`, `continuation`, `progress` (Counts). |
 | LessonState / ExerciseState | `lessonId` o `exerciseId`, `state`, `updatedAt`. Lección: `not_completed`/`completed`; ejercicio: `pending`/`in_progress`/`solved`. |
@@ -39,7 +39,7 @@ Sin cuerpo de entrada salvo el indicado; arrays vacíos válidos. El cliente usa
 | GET /api/courses | — | 200, `{ "courses": Course[] }`. |
 | GET /api/courses/{courseId} | — | 200, `{ "course": Course, "lessons": LessonEntry[] }`, temario completo ordenado. |
 | GET /api/lessons/{lessonId} | — | 200, `{ "lesson": LessonEntry, "bodyHtml": string, "exercises": Exercise[], "resources": Resource[], "previousLessonId": ID o null, "nextLessonId": ID o null }`; vecinos disponibles del mismo curso. |
-| GET /api/resources/{resourceId} | — | 200, bytes con tipo seguro del recurso, no JSON; HTML solo descarga/texto escapado y SVG con sandbox según política de contenido. |
+| GET /api/resources/{resourceId} | — | 200, bytes con tipo seguro del recurso, no JSON; HTML solo descarga/texto escapado y SVG con sandbox según política de contenido. Solo recursos del manifiesto cuya lección está disponible; el resto, 404. El encabezado `Accept` no la bloquea. |
 | GET /api/me/courses | — | 200, `{ "courses": [{ "course": Course, "enrollment": Enrollment }] }`. |
 | PUT /api/me/courses/{courseId} | Sin cuerpo | 200, Enrollment con `added: true`; repetición no reinicia continuación ni estados. |
 | GET /api/me/courses/{courseId}/progress | — | 200, Progress incluso sin inscripción; 404 si el curso no existe. |
@@ -110,6 +110,8 @@ La importación extrae los ejercicios de la sección exacta «Ejercicios prácti
 - Bloques Mermaid con clases de lenguaje controladas. Frontend en modo `strict`, sin HTML arbitrario ni interacciones. Ante fallo, mostrar código fuente original escapado, nunca como HTML; el resto de la lección sigue funcionando. El SVG generado no elude controles de seguridad.
 - Servir recursos autenticados exclusivamente por `resourceId` registrado en manifiesto. Resolver rutas locales con comprobación canónica de contención, incluidos symlinks; rechazar IDs desconocidos y escapes. No aceptar rutas del cliente ni leer el origen al servir.
 - SVG educativos con tipo correcto, `X-Content-Type-Options: nosniff` y CSP `sandbox` sin permisos adicionales. HTML educativo solo como descarga o texto escapado, nunca ejecutado en el mismo origen.
+- Cada recurso se entrega con el `mediaType` del manifiesto (`text/plain; charset=utf-8` para `.java`), `Content-Disposition: attachment; filename="Hello.java"; filename*=UTF-8''Hello.java` con el nombre original, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox` y `Cache-Control: private, no-store`. El archivo se relee desde la ruta validada, comprobando de nuevo la contención canónica y la ausencia de symlinks.
+- Los enlaces absolutos `http`/`https` del HTML de lección llevan `target="_blank"` junto con `rel="noopener noreferrer"`, fijados por la política de saneamiento. Los enlaces internos, de fragmento y a `/api/resources` no llevan `target`.
 
 ## Errores estables
 

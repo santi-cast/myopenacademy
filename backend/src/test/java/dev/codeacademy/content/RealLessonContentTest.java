@@ -187,7 +187,8 @@ class RealLessonContentTest {
 		int checked = 0;
 		for (String html : allHtml()) {
 			for (String attributes : all(anchor, html)) {
-				Matcher href = Pattern.compile("^href=\"([^\"]*)\"( rel=\"noopener noreferrer\")?$").matcher(attributes);
+				Matcher href = Pattern.compile("^href=\"([^\"]*)\"( target=\"_blank\" rel=\"noopener noreferrer\")?$")
+					.matcher(attributes);
 				assertThat(href.matches()).as(attributes).isTrue();
 				String value = href.group(1);
 				boolean external = value.startsWith("https://") || value.startsWith("http://");
@@ -209,6 +210,8 @@ class RealLessonContentTest {
 			}
 		}
 		assertThat(checked).isGreaterThan(80);
+		// java-02.01 has no external links today: no anchor of the lesson opens a new tab.
+		assertThat(String.join("", allHtml())).doesNotContain("target=", "rel=");
 		assertThat(lesson.bodyHtml()).contains("<a href=\"/courses/java\">Índice</a>")
 			.contains("<a href=\"#28-ampliación-qué-main-se-ejecuta\">");
 	}

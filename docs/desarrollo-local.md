@@ -46,6 +46,8 @@ cd backend
 
 La salud mínima en http://127.0.0.1:8080/actuator/health debe responder `{"status":"UP"}` antes de continuar.
 
+Al arrancar, el backend carga y valida el contenido de `code-academy.content-dir` (por defecto `../content`, relativo al directorio desde el que se ejecuta el backend, o sea `backend/`) y sincroniza el catálogo de la base en una sola transacción: añade cursos, lecciones y ejercicios nuevos y actualiza títulos, posiciones y disponibilidad, sin borrar filas. Si el contenido no es válido, o si un ID ya guardado desapareció del manifiesto o cambió de curso o de lección, el servidor no arranca y el mensaje indica el problema; la base queda sin cambios. Para usar otra copia del contenido, pasá `--code-academy.content-dir=<ruta>` al arrancar. La recuperación de contraseña por consola no carga el contenido, así que funciona aunque esté roto.
+
 **3. Frontend — desde `frontend/`**
 
 ```sh

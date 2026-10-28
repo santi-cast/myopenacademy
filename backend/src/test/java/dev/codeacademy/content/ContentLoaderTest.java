@@ -16,6 +16,7 @@ import static dev.codeacademy.content.ContentFixture.lesson;
 import static dev.codeacademy.content.ContentFixture.link;
 import static dev.codeacademy.content.ContentFixture.resource;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** The synthetic course: what a valid manifest produces, and every fail-fast rejection. */
 class ContentLoaderTest {
@@ -44,7 +45,7 @@ class ContentLoaderTest {
 			.contains("<code>codigo/hola/</code> (<a href=\"/api/resources/demo-01.01-r-hello\">Hello.java</a>, "
 					+ "<a href=\"/api/resources/demo-01.01-r-other\">Other.java</a>)")
 			.contains("<a href=\"/api/resources/demo-01.01-r-solo\">Solo.java</a>")
-			.contains("<a href=\"https://dev.java/learn/\" rel=\"noopener noreferrer\">la web</a>")
+			.contains("<a href=\"https://dev.java/learn/\" target=\"_blank\" rel=\"noopener noreferrer\">la web</a>")
 			.contains("<code class=\"language-mermaid\">graph TD")
 			.contains("Final del cuerpo")
 			.doesNotContain("Ejercicios prácticos", "Básico", "Enunciado", "Solución", "<details");
@@ -322,5 +323,37 @@ class ContentLoaderTest {
 	void rejectsAProtocolRelativeLink() {
 		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [clic](//evil.example/x).");
 		fixture.rejected("demo-01.01: disallowed link //evil.example/x");
+	}
+
+	// --- every course of the content root ---
+
+	@Test
+	void loadAllReadsEveryCourseDirectoryOfTheRoot() {
+		assertThat(ContentLoader.loadAll(fixture.root)).extracting(course -> course.manifest().course().id())
+			.containsExactly("demo");
+	}
+
+	@Test
+	void loadAllRejectsIdsRepeatedAcrossCourses() throws IOException {
+		Path copy = Files.createDirectories(fixture.root.resolve("copia"));
+		Files.copy(fixture.root.resolve(ContentFixture.MANIFEST), copy.resolve("manifest.json"));
+
+		ContentValidationException ex = assertThrows(ContentValidationException.class,
+				() -> ContentLoader.loadAll(fixture.root));
+
+		assertThat(ex.getMessage()).contains("id demo is used by more than one course",
+				"id demo-01.01-e02 is used by more than one course", "id demo-01.01-r-hello is used by more than one course");
+	}
+
+	@Test
+	void loadAllRejectsARootWithoutCoursesOrACourseWithoutManifest() throws IOException {
+		Path empty = Files.createDirectories(tempDir.resolve("vacio"));
+		assertThat(assertThrows(ContentValidationException.class,
+				() -> ContentLoader.loadAll(empty)).getMessage()).contains("has no course");
+
+		Files.createDirectories(fixture.root.resolve("sin-manifiesto"));
+		assertThat(assertThrows(ContentValidationException.class,
+				() -> ContentLoader.loadAll(fixture.root)).getMessage())
+			.contains("manifest sin-manifiesto/manifest.json does not exist");
 	}
 }

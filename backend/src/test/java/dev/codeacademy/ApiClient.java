@@ -62,6 +62,14 @@ final class ApiClient {
 		return send("GET", path, null, null);
 	}
 
+	/** A GET as a browser download would send it, keeping the exact response bytes; null omits Accept. */
+	HttpResponse<byte[]> download(String path, String accept) throws Exception {
+		var builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+				.timeout(Duration.ofSeconds(10));
+		if (accept != null) builder.header("Accept", accept);
+		return client.send(builder.GET().build(), HttpResponse.BodyHandlers.ofByteArray());
+	}
+
 	Optional<HttpCookie> cookie(String name) {
 		return cookies.getCookieStore().getCookies().stream().filter(c -> c.getName().equals(name)).findFirst();
 	}

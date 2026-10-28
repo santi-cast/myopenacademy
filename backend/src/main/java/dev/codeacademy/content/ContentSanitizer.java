@@ -11,7 +11,8 @@ import org.owasp.html.PolicyFactory;
 
 /**
  * Explicit allow-list for rendered lesson HTML. Only heading IDs generated for the fragment and only links produced by
- * the rewriting survive; external links always carry rel="noopener noreferrer". Everything removed is reported, so
+ * the rewriting survive; absolute http/https links always open a new tab (target="_blank") with
+ * rel="noopener noreferrer", internal, fragment and resource links never get a target. Everything removed is reported, so
  * real content that would be altered fails validation instead of being mangled silently.
  */
 final class ContentSanitizer {
@@ -19,6 +20,7 @@ final class ContentSanitizer {
 	static final Pattern LANGUAGE_CLASS = Pattern.compile("language-[a-z0-9+#-]+");
 	static final Pattern HREF = Pattern.compile(
 			"(/lessons/[A-Za-z0-9._-]+(#[^\\s\"<>]+)?|/courses/[A-Za-z0-9._-]+|/api/resources/[A-Za-z0-9._-]+|#[^\\s\"<>]+|https?://[^\\s\"<>]+)");
+	static final String EXTERNAL_TARGET = "_blank";
 	static final String EXTERNAL_REL = "noopener noreferrer";
 
 	private static final String[] TEXT_ELEMENTS = { "p", "blockquote", "hr", "br", "h1", "h2", "h3", "h4", "h5", "h6",
@@ -35,8 +37,7 @@ final class ContentSanitizer {
 			.allowElements((name, attributes) -> {
 				int href = attributes.indexOf("href");
 				if (href >= 0 && attributes.get(href + 1).matches("(?i)https?:.*")) {
-					attributes.add("rel");
-					attributes.add(EXTERNAL_REL);
+					attributes.addAll(List.of("target", EXTERNAL_TARGET, "rel", EXTERNAL_REL));
 				}
 				return name;
 			}, "a")

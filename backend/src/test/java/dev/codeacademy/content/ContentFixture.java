@@ -16,21 +16,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** A writable copy of the synthetic valid course in a temporary directory, to break one rule per test. */
-final class ContentFixture {
+public final class ContentFixture {
 
 	static final Path VALID = Path.of("src/test/resources/content/valid");
 	static final String MANIFEST = "demo/manifest.json";
-	static final String INTRO = "demo/lessons/demo-01.01.md";
+	public static final String INTRO = "demo/lessons/demo-01.01.md";
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
-	final Path root;
+	public final Path root;
 
 	private ContentFixture(Path root) {
 		this.root = root;
 	}
 
-	static ContentFixture copyInto(Path tempDir) {
+	public static ContentFixture copyInto(Path tempDir) {
 		Path root = tempDir.resolve("content");
 		try (Stream<Path> files = Files.walk(VALID)) {
 			for (Path source : files.toList()) {
@@ -45,13 +45,13 @@ final class ContentFixture {
 		return new ContentFixture(root);
 	}
 
-	void editManifest(Consumer<ObjectNode> edit) {
+	public void editManifest(Consumer<ObjectNode> edit) {
 		ObjectNode manifest = (ObjectNode) JSON.readTree(read(MANIFEST));
 		edit.accept(manifest);
 		write(MANIFEST, JSON.writeValueAsString(manifest));
 	}
 
-	static ObjectNode lesson(ObjectNode manifest, String id) {
+	public static ObjectNode lesson(ObjectNode manifest, String id) {
 		return (ObjectNode) find(manifest.get("lessons"), "id", id);
 	}
 
@@ -59,7 +59,7 @@ final class ContentFixture {
 		return (ObjectNode) find(manifest.get("resources"), "resourceId", id);
 	}
 
-	static ObjectNode link(ObjectNode manifest, String sourcePath) {
+	public static ObjectNode link(ObjectNode manifest, String sourcePath) {
 		return (ObjectNode) find(manifest.get("sourceToId"), "sourcePath", sourcePath);
 	}
 
@@ -70,7 +70,7 @@ final class ContentFixture {
 		throw new IllegalArgumentException(value);
 	}
 
-	void replace(String relativePath, String oldText, String newText) {
+	public void replace(String relativePath, String oldText, String newText) {
 		String text = read(relativePath);
 		assertThat(text).contains(oldText);
 		write(relativePath, text.replace(oldText, newText));
@@ -94,7 +94,7 @@ final class ContentFixture {
 		}
 	}
 
-	CourseContent load() {
+	public CourseContent load() {
 		return ContentLoader.load(root, MANIFEST);
 	}
 
