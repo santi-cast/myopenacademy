@@ -96,15 +96,15 @@ class CodeAcademyApplicationTest {
 		assertThat(token.orElseThrow().isHttpOnly()).isFalse();
 		assertThat(token.orElseThrow().getValue()).isNotBlank();
 		assertError(request("POST", "/api/auth/login", "invalid-token"), 403, "CSRF_REJECTED");
-		// A valid token passes CSRF; the public registration route then rejects the missing body.
-		assertError(request("POST", "/api/auth/register", token.orElseThrow().getValue()), 400, "INVALID_REQUEST");
-		for (String path : List.of("/api/auth/login", "/api/auth/logout")) {
-			assertError(request("POST", path, token.orElseThrow().getValue()), 401, "AUTHENTICATION_REQUIRED");
+		// A valid token passes CSRF; the public routes then handle the request themselves.
+		for (String path : List.of("/api/auth/register", "/api/auth/login")) {
+			assertError(request("POST", path, token.orElseThrow().getValue()), 400, "INVALID_REQUEST");
 		}
 		for (String method : List.of("PUT", "PATCH", "DELETE")) {
 			assertError(request(method, "/api/me/courses/java", token.orElseThrow().getValue()),
 					401, "AUTHENTICATION_REQUIRED");
 		}
+		assertThat(request("POST", "/api/auth/logout", token.orElseThrow().getValue()).statusCode()).isEqualTo(204);
 		assertThat(databaseSnapshot()).isEqualTo(before);
 	}
 

@@ -93,7 +93,7 @@ Ejemplo ilustrativo de un curso existente no añadido, con dos entradas y una di
 - Cookie HttpOnly, SameSite=Lax, sin Domain; Secure con HTTPS, con excepción de HTTP exclusivamente local. Caducar tras 2 horas sin solicitudes autenticadas. Logout invalida en servidor, limpia cookie y elimina todo estado privado de la interfaz.
 - Cada solicitud autenticada compara la versión de credenciales conservada en sesión con la actual en base de datos, sin caché obsoleta. Sesiones viejas se rechazan en su siguiente solicitud; no se cancelan retroactivamente solicitudes en vuelo.
 - CSRF obligatorio para TODAS las operaciones inseguras, incluidos registro, login y logout. Token disponible antes del login y renovado después de login y logout. SameSite no sustituye CSRF.
-- Preferir integración SPA oficial de Spring documentada para la versión elegida. `csrf.spa()` sigue **SIN VERIFICAR**: comprobar documentación en H3. `/api/auth/csrf` es solo ruta condicional si la integración nativa soportada no basta, no una decimoquinta ruta fijada.
+- Preferir integración SPA oficial de Spring documentada para la versión elegida. `csrf.spa()` verificado en H3 y en uso. `/api/auth/csrf` es solo ruta condicional si la integración nativa soportada no basta, no una decimoquinta ruta fijada.
 - En local, frontend y `/api` comparten origen mediante proxy de Vite a Spring Boot. No requiere CORS abierto ni sustituye CSRF o autorización. Todos los servicios ligados exclusivamente a loopback; en publicación se definirá el esquema de origen correspondiente.
 - Fallos de autenticación genéricos, sin registrar secretos. Respuestas de autenticación y progreso sin cachés compartidas. Antes de exposición fuera de local se revisarán limitación de intentos y enumeración mediante `USERNAME_TAKEN` en H7, o antes si cambia el entorno.
 
@@ -118,7 +118,7 @@ Los errores incluyen `code` y `message`; la UI decide por `code`, no interpreta 
 |---|---|
 | 400 | `INVALID_REQUEST` (JSON/campos/tipos), `INVALID_USERNAME` y `INVALID_PASSWORD` en registro, `INVALID_STATE`, `COURSE_MISMATCH`. Login inválido usa 401 genérico, salvo errores de esquema/tipo. |
 | 401 | `AUTHENTICATION_FAILED` (login), `AUTHENTICATION_REQUIRED` (sesión ausente, caducada o versión de credenciales inválida). |
-| 403 | `CSRF_REJECTED`, incluidas operaciones públicas inseguras. |
+| 403 | `CSRF_REJECTED`, incluidas operaciones públicas inseguras. `ACCESS_DENIED`: solicitud autenticada a una ruta o acción denegada, distinta de un fallo de CSRF. |
 | 404 | `NOT_FOUND`: curso/lección/ejercicio/recurso inexistente, recurso no autorizado o dato personal ajeno; sin revelar existencia ni rutas. |
 | 409 | `USERNAME_TAKEN`, `LESSON_UNAVAILABLE`, `COURSE_NOT_ADDED`. |
 | 500 | `INTERNAL_ERROR`: fallo inesperado sin detalles internos ni secretos; escrituras transaccionales sin efectos parciales. |
