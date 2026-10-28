@@ -68,6 +68,19 @@ class CatalogSynchronizationTest {
 		assertThat(jdbc.queryForMap("select course_id, title, position, available, source_available "
 				+ "from code_academy.lessons where id = 'demo-02.01'")).isEqualTo(Map.of("course_id", "demo",
 						"title", "Pendiente", "position", 3, "available", false, "source_available", false));
+		assertThat(jdbc.queryForList("select id, course_id, title, position from code_academy.phases "
+				+ "where course_id = 'demo' order by position")).containsExactly(
+						Map.of("id", "demo-phase-01", "course_id", "demo", "title", "Primera fase", "position", 1),
+						Map.of("id", "demo-phase-02", "course_id", "demo", "title", "Segunda fase", "position", 2));
+		assertThat(jdbc.queryForList("select id || ' ' || phase_id from code_academy.lessons where course_id = 'demo' "
+				+ "order by position", String.class)).containsExactly("demo-01.01 demo-phase-01",
+						"demo-01.02 demo-phase-01", "demo-02.01 demo-phase-02");
+		assertThat(count("phases where course_id = 'java'")).isEqualTo(21);
+		assertThat(jdbc.queryForObject("select title from code_academy.phases where id = 'java-phase-02'", String.class))
+				.isEqualTo("Fundamentos de Java");
+		assertThat(jdbc.queryForObject("select phase_id from code_academy.lessons where id = 'java-02.01'", String.class))
+				.isEqualTo("java-phase-02");
+		assertThat(count("lessons where phase_id is null")).isZero();
 		var before = TestDatabase.snapshot(jdbc);
 
 		synchronizer.synchronize(List.of(java, demo.load().manifest()));
@@ -96,9 +109,75 @@ class CatalogSynchronizationTest {
 	}
 
 	@Test
+	void aLessonMovedToAnotherPhaseAndRetitledOrReorderedPhasesAreSynchronized() {
+		demo.editManifest(manifest -> {
+			ContentFixture.lesson(manifest, "demo-01.02").put("phaseId", "demo-phase-02");
+			ContentFixture.phase(manifest, "demo-phase-02").put("title", "Segunda fase renovada");
+		});
+
+		synchronizer.synchronize(List.of(java, demo.load().manifest()));
+
+		assertThat(jdbc.queryForList("select id || ' ' || phase_id from code_academy.lessons where course_id = 'demo' "
+				+ "order by position", String.class)).containsExactly("demo-01.01 demo-phase-01",
+						"demo-01.02 demo-phase-02", "demo-02.01 demo-phase-02");
+		assertThat(jdbc.queryForList("select id || ' ' || position || ' ' || title from code_academy.phases "
+				+ "where course_id = 'demo' order by position", String.class))
+				.containsExactly("demo-phase-01 1 Primera fase", "demo-phase-02 2 Segunda fase renovada");
+
+		// Swapping the phases' positions (and the lessons with them) only fails at commit if the check is not deferred.
+		demo.editManifest(manifest -> {
+			ContentFixture.phase(manifest, "demo-phase-01").put("position", 2);
+			ContentFixture.phase(manifest, "demo-phase-02").put("position", 1);
+			ContentFixture.lesson(manifest, "demo-01.02").put("position", 1);
+			ContentFixture.lesson(manifest, "demo-02.01").put("position", 2);
+			ContentFixture.lesson(manifest, "demo-01.01").put("position", 3);
+		});
+
+		synchronizer.synchronize(List.of(java, demo.load().manifest()));
+
+		assertThat(jdbc.queryForList("select id || ' ' || position from code_academy.phases where course_id = 'demo' "
+				+ "order by position", String.class)).containsExactly("demo-phase-02 1", "demo-phase-01 2");
+	}
+
+	@Test
+	void aStoredPhaseRemovedFromTheManifestIsRejectedWithoutChanges() {
+		demo.editManifest(manifest -> {
+			removeWhere((ArrayNode) manifest.get("phases"), "id", "demo-phase-02");
+			ContentFixture.lesson(manifest, "demo-02.01").put("phaseId", "demo-phase-01");
+			manifest.withObject("course").put("title", "Cambio que no debe guardarse");
+		});
+		Manifest withoutPhase = demo.load().manifest();
+		var before = TestDatabase.snapshot(jdbc);
+
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, withoutPhase)))
+				.isInstanceOf(CatalogConflictException.class)
+				.hasMessageContaining("phase demo-phase-02 is no longer in the manifest");
+
+		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+	}
+
+	@Test
+	void aRenamedPhaseIdIsRejectedWithoutChanges() {
+		demo.editManifest(manifest -> {
+			ContentFixture.phase(manifest, "demo-phase-02").put("id", "demo-phase-segunda");
+			ContentFixture.lesson(manifest, "demo-02.01").put("phaseId", "demo-phase-segunda");
+		});
+		Manifest renamed = demo.load().manifest();
+		var before = TestDatabase.snapshot(jdbc);
+
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, renamed)))
+				.isInstanceOf(CatalogConflictException.class)
+				.hasMessageContaining("phase demo-phase-02 is no longer in the manifest");
+
+		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+	}
+
+	@Test
 	void aLessonRemovedFromTheManifestIsRejectedWithoutChanges() {
 		demo.editManifest(manifest -> {
 			removeWhere((ArrayNode) manifest.get("lessons"), "id", "demo-02.01");
+			// Its phase would be left empty, which the manifest rules reject.
+			removeWhere((ArrayNode) manifest.get("phases"), "id", "demo-phase-02");
 			removeWhere((ArrayNode) manifest.get("sourceToId"), "sourcePath", "fase-02/01-pendiente.md");
 			manifest.withObject("course").put("title", "Cambio que no debe guardarse");
 		});
@@ -126,6 +205,7 @@ class CatalogSynchronizationTest {
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, moved)))
 				.isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("lesson demo-01.01 belongs to course demo, not demo-nuevo")
+				.hasMessageContaining("phase demo-phase-01 belongs to course demo, not demo-nuevo")
 				.hasMessageContaining("course demo is no longer in the content");
 
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
@@ -205,14 +285,31 @@ class CatalogSynchronizationTest {
 		Manifest base = demo.load().manifest();
 		// Two lessons on one position only fail when the transaction commits, after every other write.
 		Manifest clash = withLessons(base, lesson -> lesson.id().equals("demo-02.01")
-				? new Lesson(lesson.id(), "Título nuevo", 1, lesson.sourcePath(), lesson.sourceAvailable(),
-						lesson.available(), lesson.bodyPath(), lesson.exercises())
+				? new Lesson(lesson.id(), "Título nuevo", 1, lesson.phaseId(), lesson.sourcePath(),
+						lesson.sourceAvailable(), lesson.available(), lesson.bodyPath(), lesson.exercises())
 				: lesson);
 		Manifest renamed = new Manifest(clash.schemaVersion(), clash.source(),
-				new Manifest.Course("demo", "demo", "Otro título"), clash.lessons(), clash.resources(), clash.sourceToId());
+				new Manifest.Course("demo", "demo", "Otro título"), clash.phases(), clash.lessons(), clash.resources(),
+				clash.sourceToId());
 		var before = TestDatabase.snapshot(jdbc);
 
 		assertThat(catchThrowable(() -> synchronizer.synchronize(List.of(java, renamed)))).isNotNull();
+
+		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+	}
+
+	@Test
+	void aLessonLeftWithoutPhaseFailsTheSynchronizationWithoutChanges() {
+		// The manifest rules require a phase; this bypasses them to prove the synchronizer never commits a null one.
+		Manifest noPhase = withLessons(demo.load().manifest(), lesson -> lesson.id().equals("demo-02.01")
+				? new Lesson(lesson.id(), lesson.title(), lesson.position(), null, lesson.sourcePath(),
+						lesson.sourceAvailable(), lesson.available(), lesson.bodyPath(), lesson.exercises())
+				: lesson);
+		var before = TestDatabase.snapshot(jdbc);
+
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, noPhase)))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("lessons without phase after synchronization: [demo-02.01]");
 
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}
@@ -230,12 +327,12 @@ class CatalogSynchronizationTest {
 	private static Manifest withLessons(Manifest manifest, UnaryOperator<Lesson> change) {
 		List<Lesson> lessons = new ArrayList<>();
 		manifest.lessons().forEach(lesson -> lessons.add(change.apply(lesson)));
-		return new Manifest(manifest.schemaVersion(), manifest.source(), manifest.course(), lessons,
-				manifest.resources(), manifest.sourceToId());
+		return new Manifest(manifest.schemaVersion(), manifest.source(), manifest.course(), manifest.phases(),
+				lessons, manifest.resources(), manifest.sourceToId());
 	}
 
 	private static Lesson withExercises(Lesson lesson, List<Manifest.Exercise> exercises) {
-		return new Lesson(lesson.id(), lesson.title(), lesson.position(), lesson.sourcePath(), lesson.sourceAvailable(),
-				lesson.available(), lesson.bodyPath(), exercises);
+		return new Lesson(lesson.id(), lesson.title(), lesson.position(), lesson.phaseId(), lesson.sourcePath(),
+				lesson.sourceAvailable(), lesson.available(), lesson.bodyPath(), exercises);
 	}
 }

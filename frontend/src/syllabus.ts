@@ -1,32 +1,32 @@
-import type { LessonEntry } from './api/types'
+import type { LessonEntry, Phase } from './api/types'
 
 export type SyllabusRow = { lesson: LessonEntry; code: string }
-export type Phase = { label: string; rows: SyllabusRow[] }
+export type PhaseGroup = { key: string; label: string; rows: SyllabusRow[] }
 
-// The API has no phase field. The 04 artboard groups lessons by the phase number of their code
-// («02.01» → «Fase 02»); the manifest gives every lesson the ID `<courseId>-<phase>.<lesson>`,
-// so the same code is read from the ID. Phase names («Fundamentos») are not in the API and are
-// not shown. If any ID does not follow the pattern, or a phase is not contiguous in position
-// order, there is no clean derivation: the caller shows one flat list in position order.
-export function groupByPhase(courseId: string, lessons: LessonEntry[]): Phase[] | null {
-  const pattern = new RegExp(`^${courseId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)\\.(\\d+)$`)
-  const phases: Phase[] = []
-  const seen = new Set<string>()
+const twoDigits = (value: number) => String(value).padStart(2, '0')
+
+// Lessons are grouped by their phaseId, in the order of the API phases' position; lesson IDs are
+// opaque and never read. The caption follows the 04 artboard: «Fase 02 · Fundamentos de Java»,
+// numbered from 00 by position. The code column numbers each lesson inside its phase («02.01»).
+// A lesson whose phase is not in the list is kept in a last «Sin fase» group, never dropped.
+export function groupByPhase(phases: Phase[], lessons: LessonEntry[]): PhaseGroup[] {
+  const ordered = [...phases].sort((a, b) => a.position - b.position)
+  const byId = new Map(ordered.map((phase) => [phase.id, phase]))
+  const groups = ordered.map((phase) => ({
+    key: phase.id,
+    label: `Fase ${twoDigits(phase.position - 1)} · ${phase.title}`,
+    rows: [] as SyllabusRow[],
+  }))
+  const orphans: SyllabusRow[] = []
   for (const lesson of [...lessons].sort((a, b) => a.position - b.position)) {
-    const match = pattern.exec(lesson.id)
-    if (!match) return null
-    const [, phase, number] = match
-    const last = phases.at(-1)
-    if (last?.label !== `Fase ${phase}`) {
-      if (seen.has(phase)) return null
-      seen.add(phase)
-      phases.push({ label: `Fase ${phase}`, rows: [] })
+    const phase = byId.get(lesson.phaseId)
+    if (!phase) {
+      orphans.push({ lesson, code: String(lesson.position) })
+      continue
     }
-    phases[phases.length - 1].rows.push({ lesson, code: `${phase}.${number}` })
+    const group = groups[ordered.indexOf(phase)]
+    group.rows.push({ lesson, code: `${twoDigits(phase.position - 1)}.${twoDigits(group.rows.length + 1)}` })
   }
-  return phases
-}
-
-export function flatSyllabus(lessons: LessonEntry[]): SyllabusRow[] {
-  return [...lessons].sort((a, b) => a.position - b.position).map((lesson) => ({ lesson, code: String(lesson.position) }))
+  if (orphans.length > 0) groups.push({ key: '', label: 'Sin fase', rows: orphans })
+  return groups.filter((group) => group.rows.length > 0)
 }

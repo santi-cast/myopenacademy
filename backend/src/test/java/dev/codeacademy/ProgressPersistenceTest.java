@@ -98,9 +98,12 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 		Manifest retitled = swapped.load().manifest();
 		Manifest exerciseRemoved = withLessons(base, lesson -> lesson.id().equals(INTRO)
 				? withExercises(lesson, List.of(lesson.exercises().get(0))) : lesson);
-		Manifest lessonRemoved = new Manifest(base.schemaVersion(), base.source(), base.course(),
+		Manifest lessonRemoved = new Manifest(base.schemaVersion(), base.source(), base.course(), base.phases(),
 				base.lessons().stream().filter(lesson -> !lesson.id().equals(NEXT)).toList(), base.resources(),
 				base.sourceToId());
+		Manifest phaseRemoved = new Manifest(base.schemaVersion(), base.source(), base.course(),
+				base.phases().subList(0, 1), base.lessons().stream().map(lesson -> withPhase(lesson, "demo-phase-01"))
+					.toList(), base.resources(), base.sourceToId());
 		var before = snapshot();
 
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, retitled)))
@@ -112,12 +115,43 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, lessonRemoved)))
 			.isInstanceOf(CatalogConflictException.class)
 			.hasMessageContaining("lesson demo-01.02 is no longer in the manifest");
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, phaseRemoved)))
+			.isInstanceOf(CatalogConflictException.class)
+			.hasMessageContaining("phase demo-phase-02 is no longer in the manifest");
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(base)))
 			.isInstanceOf(CatalogConflictException.class)
 			.hasMessageContaining("course java is no longer in the content");
 
 		assertThat(snapshot()).isEqualTo(before);
 		assertThat(ok(progress(browser, "demo"))).isEqualTo(demo);
+	}
+
+	/** S22: a lesson's phase is presentation, not identity; moving it never touches progress. */
+	@Test
+	void aLessonMovedToAnotherPhaseKeepsAllProgress() throws Exception {
+		var browser = learner();
+		markSomeProgress(browser);
+		JsonNode demo = ok(progress(browser, "demo"));
+		Manifest java = ContentLoader.load(CONTENT_ROOT, "java/manifest.json").manifest();
+		Manifest base = ContentLoader.load(CONTENT_ROOT, "demo/manifest.json").manifest();
+		Manifest moved = withLessons(base, lesson -> lesson.id().equals(NEXT) ? withPhase(lesson, "demo-phase-02")
+				: lesson);
+		var progressBefore = TestDatabase.snapshot(jdbc, "users", "enrollments", "lesson_states", "exercise_states");
+
+		try {
+			synchronizer.synchronize(List.of(java, moved));
+
+			assertThat(jdbc.queryForObject("select phase_id from code_academy.lessons where id = ?", String.class, NEXT))
+				.isEqualTo("demo-phase-02");
+			assertThat(TestDatabase.snapshot(jdbc, "users", "enrollments", "lesson_states", "exercise_states"))
+				.isEqualTo(progressBefore);
+			assertThat(ok(progress(browser, "demo"))).isEqualTo(demo);
+		}
+		finally {
+			synchronizer.synchronize(List.of(java, base));
+		}
+		assertThat(jdbc.queryForObject("select phase_id from code_academy.lessons where id = ?", String.class, NEXT))
+			.isEqualTo("demo-phase-01");
 	}
 
 	@Test
@@ -132,8 +166,8 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 				"#### Ejercicio 2 · Segundo `ejercicio` cambiado");
 		// Two lessons on one position only fail when the transaction commits, after every other write.
 		Manifest clash = withLessons(base, lesson -> lesson.id().equals(PENDING)
-				? new Lesson(lesson.id(), "Título nuevo", 1, lesson.sourcePath(), lesson.sourceAvailable(),
-						lesson.available(), lesson.bodyPath(), lesson.exercises())
+				? new Lesson(lesson.id(), "Título nuevo", 1, lesson.phaseId(), lesson.sourcePath(),
+						lesson.sourceAvailable(), lesson.available(), lesson.bodyPath(), lesson.exercises())
 				: lesson);
 		var before = snapshot();
 
@@ -172,12 +206,17 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 	private static Manifest withLessons(Manifest manifest, UnaryOperator<Lesson> change) {
 		List<Lesson> lessons = new ArrayList<>();
 		manifest.lessons().forEach(lesson -> lessons.add(change.apply(lesson)));
-		return new Manifest(manifest.schemaVersion(), manifest.source(), manifest.course(), lessons,
-				manifest.resources(), manifest.sourceToId());
+		return new Manifest(manifest.schemaVersion(), manifest.source(), manifest.course(), manifest.phases(),
+				lessons, manifest.resources(), manifest.sourceToId());
+	}
+
+	private static Lesson withPhase(Lesson lesson, String phaseId) {
+		return new Lesson(lesson.id(), lesson.title(), lesson.position(), phaseId, lesson.sourcePath(),
+				lesson.sourceAvailable(), lesson.available(), lesson.bodyPath(), lesson.exercises());
 	}
 
 	private static Lesson withExercises(Lesson lesson, List<Manifest.Exercise> exercises) {
-		return new Lesson(lesson.id(), lesson.title(), lesson.position(), lesson.sourcePath(), lesson.sourceAvailable(),
-				lesson.available(), lesson.bodyPath(), exercises);
+		return new Lesson(lesson.id(), lesson.title(), lesson.position(), lesson.phaseId(), lesson.sourcePath(),
+				lesson.sourceAvailable(), lesson.available(), lesson.bodyPath(), exercises);
 	}
 }

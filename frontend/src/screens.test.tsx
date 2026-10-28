@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { Counts, LessonEntry } from './api/types'
-import { ana, apiCalls, counts, error, installFakeBackend, javaCourse, javaLessons, notAddedProgress, type Reply } from './test/fakeBackend'
+import type { Counts, LessonEntry, Phase } from './api/types'
+import { ana, apiCalls, counts, error, installFakeBackend, javaCourse, javaLessons, javaPhases, notAddedProgress, type Reply } from './test/fakeBackend'
 import { renderApp } from './test/renderApp'
 
 function myCourses(progress: Counts, lastOpenedLessonId: string | null = null): Reply {
@@ -156,9 +156,9 @@ describe('Índice del curso', () => {
     expect(screen.getByText(/lecciones disponibles completadas/)).toHaveTextContent('1 de 1 lecciones disponibles completadas · 100 % · 199 previstas')
     const tables = screen.getAllByRole('table')
     expect(tables).toHaveLength(3)
-    expect(tables[0]).toHaveAccessibleName('Fase 00 0 de 2 disponibles')
-    expect(tables[1]).toHaveAccessibleName('Fase 02 1 de 2 disponibles')
-    expect(tables[2]).toHaveAccessibleName('Fase 03 0 de 1 disponibles')
+    expect(tables[0]).toHaveAccessibleName('Fase 00 · Lógica de programación 0 de 2 disponibles')
+    expect(tables[1]).toHaveAccessibleName('Fase 02 · Fundamentos de Java 1 de 2 disponibles')
+    expect(tables[2]).toHaveAccessibleName('Fase 03 · Programación orientada a objetos 0 de 1 disponibles')
     const phase02 = tables[1]
     const rows = within(phase02).getAllByRole('row').slice(1)
     expect(within(rows[0]).getByText('02.01')).toBeVisible()
@@ -191,19 +191,54 @@ describe('Índice del curso', () => {
     expect(await screen.findByRole('link', { name: 'Continuar: Tu primer programa' })).toHaveAttribute('href', '/lessons/java-02.01')
   })
 
-  it('falls back to a flat ordered list when lesson IDs carry no phase', async () => {
+  // S22.4: the phase comes from phaseId and the API phases, never from the shape of a lesson ID.
+  it('groups by phaseId whatever the lesson IDs look like', async () => {
     const backend = installFakeBackend({ loggedInAs: ana })
-    const lessons: LessonEntry[] = [
-      { id: 'java-intro', courseId: 'java', title: 'Introducción', position: 1, available: true },
-      { id: 'java-02.01', courseId: 'java', title: 'Tu primer programa', position: 2, available: false },
+    const phases: Phase[] = [
+      { id: 'java-phase-b', title: 'Segunda', position: 2 },
+      { id: 'java-phase-a', title: 'Primera', position: 1 },
     ]
-    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, lessons } })
+    const lessons: LessonEntry[] = [
+      { id: 'lección-sin-número', courseId: 'java', title: 'Sin número', position: 3, phaseId: 'java-phase-b', available: false },
+      { id: 'x-a', courseId: 'java', title: 'Equis', position: 1, phaseId: 'java-phase-a', available: true },
+      // Looks like a lesson of «Fase 03», but its phase is the first one.
+      { id: 'java-03.07', courseId: 'java', title: 'Engañosa', position: 2, phaseId: 'java-phase-a', available: false },
+    ]
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases, lessons } })
     renderApp('/courses/java')
 
-    const table = await screen.findByRole('table', { name: /Temario/ })
-    const rows = within(table).getAllByRole('row').slice(1)
-    expect(rows.map((row) => within(row).getAllByRole('cell')[0].textContent)).toEqual(['1', '2'])
-    expect(screen.getAllByRole('table')).toHaveLength(1)
+    await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
+    const tables = screen.getAllByRole('table')
+    expect(tables).toHaveLength(2)
+    expect(tables[0]).toHaveAccessibleName('Fase 00 · Primera 1 de 2 disponibles')
+    expect(tables[1]).toHaveAccessibleName('Fase 01 · Segunda 0 de 1 disponibles')
+    const cells = (table: HTMLElement) => within(table).getAllByRole('row').slice(1)
+      .map((row) => within(row).getAllByRole('cell').slice(0, 2).map((cell) => cell.textContent))
+    expect(cells(tables[0])).toEqual([['00.01', 'Equis'], ['00.02', 'Engañosa']])
+    expect(cells(tables[1])).toEqual([['01.01', 'Sin número']])
+    expect(within(tables[0]).getByRole('link', { name: 'Equis' })).toHaveAttribute('href', '/lessons/x-a')
+  })
+
+  it('keeps a lesson whose phase is not in the phase list, after the phases', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    const lessons: LessonEntry[] = [
+      { ...javaLessons[0], phaseId: 'java-phase-desconocida' },
+      ...javaLessons.slice(1),
+    ]
+    // Phases out of order in the response: the index follows their position.
+    const phases = [javaPhases[1], javaPhases[0], javaPhases[2]]
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases, lessons } })
+    renderApp('/courses/java')
+
+    await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
+    const tables = screen.getAllByRole('table')
+    expect(tables.map((table) => table.querySelector('caption')?.textContent)).toEqual([
+      'Fase 00 · Lógica de programación 0 de 1 disponibles',
+      'Fase 02 · Fundamentos de Java 1 de 2 disponibles',
+      'Fase 03 · Programación orientada a objetos 0 de 1 disponibles',
+      'Sin fase 0 de 1 disponibles',
+    ])
+    expect(within(tables[3]).getByText('Qué es programar')).toBeVisible()
   })
 
   it('shows «No encontrado» for an unknown course', async () => {

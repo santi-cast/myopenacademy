@@ -2,11 +2,16 @@
   "schemaVersion": 1,
   "source": { "name": "Curso de prueba", "versionRef": "0123456789abcdef0123456789abcdef01234567" },
   "course": { "id": "demo", "namespace": "demo", "title": "Demo" },
+  "phases": [
+    { "id": "demo-phase-01", "title": "Primera fase", "position": 1 },
+    { "id": "demo-phase-02", "title": "Segunda fase", "position": 2 }
+  ],
   "lessons": [
     {
       "id": "demo-01.01",
       "title": "Introducción",
       "position": 1,
+      "phaseId": "demo-phase-01",
       "sourcePath": "fase-01/01-intro.md",
       "sourceAvailable": true,
       "available": true,
@@ -20,6 +25,7 @@
       "id": "demo-01.02",
       "title": "Siguiente",
       "position": 2,
+      "phaseId": "demo-phase-01",
       "sourcePath": "fase-01/02-siguiente.md",
       "sourceAvailable": true,
       "available": true,
@@ -30,6 +36,7 @@
       "id": "demo-02.01",
       "title": "Pendiente",
       "position": 3,
+      "phaseId": "demo-phase-02",
       "sourcePath": "fase-02/01-pendiente.md",
       "sourceAvailable": false,
       "available": false,

@@ -17,7 +17,8 @@ Los nombres de formas siguientes son abreviaturas documentales, no envoltorios a
 | User | `id`, `username` (nombre visible conservado). |
 | Counts | `completedLessons`, `availableLessons`, `plannedLessons`, `percentage`: cifras calculadas dinámicamente desde el catálogo y los estados, nunca constantes. Porcentaje 0–100 sin redondeo contractual; null si no hay disponibles. |
 | Course | `id`, `title`. |
-| LessonEntry | `id`, `courseId`, `title`, `position`, `available` (disponibilidad importada, no promesa de que todo lo escrito en origen ya se importó). |
+| Phase | `id`, `title`, `position` (campos añadidos en H4): fase del curso con ID permanente y título literal del índice del curso de origen. `position` empieza en 1 y ordena las fases. |
+| LessonEntry | `id`, `courseId`, `title`, `position`, `phaseId`, `available` (disponibilidad importada, no promesa de que todo lo escrito en origen ya se importó). `phaseId` (campo añadido en H4) es el ID de la fase del mismo curso a la que pertenece la lección; el cliente agrupa por él y nunca deduce la fase del ID de la lección. |
 | Exercise | `id`, `lessonId`, `courseId`, `title`, `statementHtml`, `solutionHtml` (campos saneados por separado; solución libremente desplegable). |
 | Resource | `resourceId`, `url`, `mediaType`, `fileName`; URL controlada `/api/resources/{resourceId}`, sin ruta física. `fileName` (campo añadido en H4) es el nombre original del archivo, por ejemplo `Hello.java`: el que se muestra y con el que se descarga, nunca el nombre interno basado en el ID. |
 | Continuation | `lastOpenedLessonId`: ID o null. |
@@ -37,7 +38,7 @@ Sin cuerpo de entrada salvo el indicado; arrays vacíos válidos. El cliente usa
 | POST /api/auth/logout | Sin cuerpo | 204, sin cuerpo; invalida sesión y limpia cookie. |
 | GET /api/me | — | 200, User. |
 | GET /api/courses | — | 200, `{ "courses": Course[] }`. |
-| GET /api/courses/{courseId} | — | 200, `{ "course": Course, "lessons": LessonEntry[] }`, temario completo ordenado. |
+| GET /api/courses/{courseId} | — | 200, `{ "course": Course, "phases": Phase[], "lessons": LessonEntry[] }`, temario completo ordenado: fases por `position` y lecciones por `position`; las lecciones de cada fase son consecutivas y siguen el orden de las fases. |
 | GET /api/lessons/{lessonId} | — | 200, `{ "lesson": LessonEntry, "bodyHtml": string, "exercises": Exercise[], "resources": Resource[], "previousLessonId": ID o null, "nextLessonId": ID o null }`; vecinos disponibles del mismo curso. |
 | GET /api/resources/{resourceId} | — | 200, bytes con tipo seguro del recurso, no JSON; HTML solo descarga/texto escapado y SVG con sandbox según política de contenido. Solo recursos del manifiesto cuya lección está disponible; el resto, 404. El encabezado `Accept` no la bloquea. |
 | GET /api/me/courses | — | 200, `{ "courses": [{ "course": Course, "enrollment": Enrollment }] }`; solo los cursos añadidos, ordenados por ID de curso; lista vacía si no hay ninguno. |

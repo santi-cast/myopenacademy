@@ -11,11 +11,14 @@ export type Counts = {
 
 export type Course = { id: string; title: string }
 
+export type Phase = { id: string; title: string; position: number }
+
 export type LessonEntry = {
   id: string
   courseId: string
   title: string
   position: number
+  phaseId: string
   available: boolean
 }
 
@@ -49,7 +52,7 @@ export type MyCourses = { courses: { course: Course; enrollment: Enrollment }[] 
 
 export type Courses = { courses: Course[] }
 
-export type Syllabus = { course: Course; lessons: LessonEntry[] }
+export type Syllabus = { course: Course; phases: Phase[]; lessons: LessonEntry[] }
 
 export type LessonView = {
   lesson: LessonEntry

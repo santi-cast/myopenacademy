@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import type { Counts, Course, LessonEntry, Progress, User } from '../api/types'
+import type { Counts, Course, LessonEntry, Phase, Progress, User } from '../api/types'
 
 // A fetch double at the API-client boundary. It behaves like the real backend where the
 // client depends on it: a cookie jar for XSRF-TOKEN (set on a safe request when absent,
@@ -29,12 +29,19 @@ export type FakeBackend = {
 
 export const javaCourse: Course = { id: 'java', title: 'Java' }
 
+// An excerpt of the real syllabus: phase positions keep their gaps (Fase 01 is left out).
+export const javaPhases: Phase[] = [
+  { id: 'java-phase-00', title: 'Lógica de programación', position: 1 },
+  { id: 'java-phase-02', title: 'Fundamentos de Java', position: 3 },
+  { id: 'java-phase-03', title: 'Programación orientada a objetos', position: 4 },
+]
+
 export const javaLessons: LessonEntry[] = [
-  { id: 'java-00.01', courseId: 'java', title: 'Qué es programar', position: 1, available: false },
-  { id: 'java-00.02', courseId: 'java', title: 'Algoritmos, pseudocódigo y diagramas de flujo', position: 2, available: false },
-  { id: 'java-02.01', courseId: 'java', title: 'Tu primer programa', position: 3, available: true },
-  { id: 'java-02.02', courseId: 'java', title: 'Variables y tipos de datos', position: 4, available: false },
-  { id: 'java-03.01', courseId: 'java', title: 'Clases y objetos', position: 5, available: false },
+  { id: 'java-00.01', courseId: 'java', title: 'Qué es programar', position: 1, phaseId: 'java-phase-00', available: false },
+  { id: 'java-00.02', courseId: 'java', title: 'Algoritmos, pseudocódigo y diagramas de flujo', position: 2, phaseId: 'java-phase-00', available: false },
+  { id: 'java-02.01', courseId: 'java', title: 'Tu primer programa', position: 3, phaseId: 'java-phase-02', available: true },
+  { id: 'java-02.02', courseId: 'java', title: 'Variables y tipos de datos', position: 4, phaseId: 'java-phase-02', available: false },
+  { id: 'java-03.01', courseId: 'java', title: 'Clases y objetos', position: 5, phaseId: 'java-phase-03', available: false },
 ]
 
 export function counts(completedLessons: number, availableLessons: number, plannedLessons: number): Counts {
@@ -113,7 +120,7 @@ function defaultRoutes(): Record<string, Handler | Reply> {
       status: 200,
       body: { courseId: 'java', added: true, continuation: { lastOpenedLessonId: null }, progress: counts(0, 1, 199) },
     })),
-    'GET /api/courses/java': authenticated(() => ({ status: 200, body: { course: javaCourse, lessons: javaLessons } })),
+    'GET /api/courses/java': authenticated(() => ({ status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons } })),
     'GET /api/me/courses/java/progress': authenticated(() => ({ status: 200, body: notAddedProgress() })),
     'GET /api/lessons/java-02.01': authenticated(() => ({
       status: 200,

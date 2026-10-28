@@ -1,6 +1,7 @@
 package dev.codeacademy.content;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,10 +14,14 @@ import java.util.stream.Stream;
 
 import dev.codeacademy.content.Manifest.Exercise;
 import dev.codeacademy.content.Manifest.Lesson;
+import dev.codeacademy.content.Manifest.Phase;
 import dev.codeacademy.content.Manifest.Resource;
 import dev.codeacademy.content.Manifest.SourceLink;
 
-/** Structural rules of docs/manifiesto.md that do not need the files: schema, provenance, IDs, positions, sourceToId. */
+/**
+ * Structural rules of docs/manifiesto.md that do not need the files: schema, provenance, IDs, phases, positions,
+ * sourceToId.
+ */
 final class ManifestValidator {
 
 	static final int SCHEMA_VERSION = 1;
@@ -55,13 +60,67 @@ final class ManifestValidator {
 		}
 		prefix = manifest.course().namespace() + "-";
 		ids.add(manifest.course().id());
+		if (manifest.phases() == null) {
+			problems.add("manifest needs phases");
+			return;
+		}
 		if (manifest.lessons() == null || manifest.resources() == null || manifest.sourceToId() == null) {
 			problems.add("manifest needs lessons, resources and sourceToId");
 			return;
 		}
+		Map<String, Phase> phases = phases();
 		Map<String, Lesson> lessons = lessons();
+		phaseOrder(phases, lessons);
 		Map<String, Resource> resources = resources(lessons);
 		sourceToId(lessons, resources);
+	}
+
+	private Map<String, Phase> phases() {
+		Map<String, Phase> phases = new HashMap<>();
+		List<Integer> positions = new ArrayList<>();
+		for (Phase phase : manifest.phases()) {
+			if (phase == null || blank(phase.id()) || blank(phase.title()) || phase.position() == null) {
+				problems.add("phase " + (phase == null ? null : phase.id()) + " needs id, title and position");
+				continue;
+			}
+			register(phase.id());
+			phases.put(phase.id(), phase);
+			positions.add(phase.position());
+		}
+		List<Integer> expected = IntStream.rangeClosed(1, positions.size()).boxed().toList();
+		if (!positions.stream().sorted().toList().equals(expected)) {
+			problems.add("phase positions must be 1.." + positions.size() + " without gaps or repeats");
+		}
+		return phases;
+	}
+
+	/**
+	 * Every lesson is in a phase of its course and every phase has lessons. In lesson position order the phase
+	 * positions never go back, so each phase is one block of consecutive lessons and the blocks follow phase order.
+	 */
+	private void phaseOrder(Map<String, Phase> phases, Map<String, Lesson> lessons) {
+		Set<String> used = new HashSet<>();
+		Phase before = null;
+		for (Lesson lesson : lessons.values().stream().sorted(Comparator.comparing(Lesson::position)).toList()) {
+			if (blank(lesson.phaseId())) {
+				problems.add("lesson " + lesson.id() + " needs phaseId");
+				continue;
+			}
+			Phase phase = phases.get(lesson.phaseId());
+			if (phase == null) {
+				problems.add("lesson " + lesson.id() + ": unknown phase " + lesson.phaseId());
+				continue;
+			}
+			used.add(phase.id());
+			if (before != null && before.position() > phase.position()) {
+				problems.add("lesson " + lesson.id() + " (position " + lesson.position() + ") is in phase " + phase.id()
+						+ " (position " + phase.position() + "), after a lesson of phase " + before.id() + " (position "
+						+ before.position() + ")");
+			}
+			before = phase;
+		}
+		manifest.phases().stream().filter(Objects::nonNull).map(Phase::id).filter(phases::containsKey)
+			.filter(id -> !used.contains(id)).distinct().forEach(id -> problems.add("phase " + id + " has no lessons"));
 	}
 
 	private Map<String, Lesson> lessons() {

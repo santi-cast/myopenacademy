@@ -60,6 +60,7 @@ public final class ContentLoader {
 		for (CourseContent course : courses) {
 			Manifest manifest = course.manifest();
 			List<String> courseIds = new ArrayList<>(List.of(manifest.course().id()));
+			manifest.phases().forEach(phase -> courseIds.add(phase.id()));
 			manifest.lessons().forEach(lesson -> {
 				courseIds.add(lesson.id());
 				lesson.exercises().forEach(exercise -> courseIds.add(exercise.id()));

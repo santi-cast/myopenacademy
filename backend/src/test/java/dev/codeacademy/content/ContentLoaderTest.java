@@ -14,6 +14,7 @@ import tools.jackson.databind.node.ObjectNode;
 import static dev.codeacademy.content.ContentFixture.INTRO;
 import static dev.codeacademy.content.ContentFixture.lesson;
 import static dev.codeacademy.content.ContentFixture.link;
+import static dev.codeacademy.content.ContentFixture.phase;
 import static dev.codeacademy.content.ContentFixture.resource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -176,6 +177,104 @@ class ContentLoaderTest {
 	void rejectsRepeatedPositions() {
 		fixture.editManifest(m -> lesson(m, "demo-02.01").put("position", 2));
 		fixture.rejected("positions");
+	}
+
+	// --- phases ---
+
+	@Test
+	void validCourseKeepsItsPhasesAndTheLessonsPhase() {
+		Manifest manifest = fixture.load().manifest();
+
+		assertThat(manifest.phases()).containsExactly(new Manifest.Phase("demo-phase-01", "Primera fase", 1),
+				new Manifest.Phase("demo-phase-02", "Segunda fase", 2));
+		assertThat(manifest.lessons()).extracting(Manifest.Lesson::phaseId)
+			.containsExactly("demo-phase-01", "demo-phase-01", "demo-phase-02");
+	}
+
+	@Test
+	void rejectsAManifestWithoutPhases() {
+		fixture.editManifest(m -> m.remove("phases"));
+		fixture.rejected("manifest needs phases");
+	}
+
+	@Test
+	void rejectsAPhaseWithoutTitleOrPosition() {
+		fixture.editManifest(m -> phase(m, "demo-phase-01").put("title", " "));
+		fixture.rejected("phase demo-phase-01 needs id, title and position");
+
+		fixture = ContentFixture.copyInto(tempDir.resolve("sin-posicion"));
+		fixture.editManifest(m -> phase(m, "demo-phase-02").remove("position"));
+		fixture.rejected("phase demo-phase-02 needs id, title and position");
+	}
+
+	@Test
+	void rejectsDuplicatePhaseIdsAndAPhaseIdThatRepeatsALessonId() {
+		fixture.editManifest(m -> phase(m, "demo-phase-02").put("id", "demo-phase-01"));
+		fixture.rejected("duplicate id demo-phase-01");
+
+		fixture = ContentFixture.copyInto(tempDir.resolve("repite-leccion"));
+		fixture.editManifest(m -> {
+			phase(m, "demo-phase-02").put("id", "demo-01.01");
+			lesson(m, "demo-02.01").put("phaseId", "demo-01.01");
+		});
+		fixture.rejected("duplicate id demo-01.01");
+	}
+
+	@Test
+	void rejectsAPhaseIdOutsideTheCourseNamespace() {
+		fixture.editManifest(m -> {
+			phase(m, "demo-phase-02").put("id", "java-phase-02");
+			lesson(m, "demo-02.01").put("phaseId", "java-phase-02");
+		});
+		fixture.rejected("id java-phase-02 is not in namespace demo");
+	}
+
+	@Test
+	void rejectsPhasePositionsWithAGapOrRepeats() {
+		fixture.editManifest(m -> phase(m, "demo-phase-02").put("position", 3));
+		fixture.rejected("phase positions must be 1..2 without gaps or repeats");
+
+		fixture = ContentFixture.copyInto(tempDir.resolve("repetida"));
+		fixture.editManifest(m -> phase(m, "demo-phase-02").put("position", 1));
+		fixture.rejected("phase positions must be 1..2 without gaps or repeats");
+	}
+
+	@Test
+	void rejectsALessonWithoutPhase() {
+		fixture.editManifest(m -> lesson(m, "demo-01.02").remove("phaseId"));
+		fixture.rejected("lesson demo-01.02 needs phaseId");
+	}
+
+	@Test
+	void rejectsALessonOfAnUnknownPhase() {
+		fixture.editManifest(m -> lesson(m, "demo-02.01").put("phaseId", "demo-phase-09"));
+		fixture.rejected("lesson demo-02.01: unknown phase demo-phase-09");
+	}
+
+	@Test
+	void rejectsAPhaseWithoutLessons() {
+		fixture.editManifest(m -> lesson(m, "demo-02.01").put("phaseId", "demo-phase-01"));
+		fixture.rejected("phase demo-phase-02 has no lessons");
+	}
+
+	@Test
+	void rejectsLessonsThatDoNotFollowThePhaseOrder() {
+		// Phases in the opposite order of their lessons.
+		fixture.editManifest(m -> {
+			phase(m, "demo-phase-01").put("position", 2);
+			phase(m, "demo-phase-02").put("position", 1);
+		});
+		fixture.rejected("lesson demo-02.01 (position 3) is in phase demo-phase-02 (position 1), "
+				+ "after a lesson of phase demo-phase-01 (position 2)");
+
+		// A phase split in two by a lesson of another phase.
+		fixture = ContentFixture.copyInto(tempDir.resolve("partida"));
+		fixture.editManifest(m -> {
+			lesson(m, "demo-01.02").put("phaseId", "demo-phase-02");
+			lesson(m, "demo-02.01").put("phaseId", "demo-phase-01");
+		});
+		fixture.rejected("lesson demo-02.01 (position 3) is in phase demo-phase-01 (position 1), "
+				+ "after a lesson of phase demo-phase-02 (position 2)");
 	}
 
 	// --- paths ---
@@ -421,7 +520,8 @@ class ContentLoaderTest {
 				() -> ContentLoader.loadAll(fixture.root));
 
 		assertThat(ex.getMessage()).contains("id demo is used by more than one course",
-				"id demo-01.01-e02 is used by more than one course", "id demo-01.01-r-hello is used by more than one course");
+				"id demo-01.01-e02 is used by more than one course", "id demo-01.01-r-hello is used by more than one course",
+				"id demo-phase-01 is used by more than one course");
 	}
 
 	@Test

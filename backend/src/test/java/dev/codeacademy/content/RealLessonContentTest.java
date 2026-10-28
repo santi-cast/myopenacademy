@@ -54,6 +54,33 @@ class RealLessonContentTest {
 			.replace("&amp;", "&");
 	}
 
+	/** Titles verbatim from the «## Fase NN — <title>» headings of 00-indice.md at the pinned commit. */
+	@Test
+	void theManifestHasThePhasesOfTheSourceIndexAndEveryLessonIsInOne() {
+		List<String> titles = List.of("Lógica de programación", "Entorno y herramientas", "Fundamentos de Java",
+				"Programación orientada a objetos", "Java intermedio", "Programación funcional", "Concurrencia y redes",
+				"Java avanzado y calidad de código", "Interfaces gráficas de escritorio", "Bases de datos",
+				"Fundamentos web", "Spring y Spring Boot: fundamentos", "APIs REST y persistencia con Spring",
+				"Web con Spring", "Seguridad", "Testing en Spring y calidad", "Funcionalidades avanzadas de Spring",
+				"Microservicios y mensajería", "Despliegue", "Inteligencia artificial con Spring AI",
+				"Desarrollo profesional");
+		List<Manifest.Phase> expected = new ArrayList<>();
+		for (int i = 0; i < titles.size(); i++) {
+			expected.add(new Manifest.Phase("java-phase-%02d".formatted(i), titles.get(i), i + 1));
+		}
+		assertThat(content.manifest().phases()).containsExactlyElementsOf(expected);
+
+		List<Integer> lessonsPerPhase = new ArrayList<>();
+		for (Manifest.Phase phase : expected) {
+			lessonsPerPhase.add((int) content.manifest().lessons().stream()
+				.filter(lesson -> lesson.phaseId().equals(phase.id())).count());
+		}
+		assertThat(lessonsPerPhase).containsExactly(3, 9, 13, 14, 13, 8, 6, 11, 4, 12, 8, 10, 19, 3, 13, 4, 8, 11, 9,
+				15, 6);
+		assertThat(content.manifest().lessons().stream().filter(lesson -> lesson.id().equals(LESSON)).findFirst()
+			.orElseThrow().phaseId()).isEqualTo("java-phase-02");
+	}
+
 	@Test
 	void onlyTheImportedLessonIsRendered() {
 		assertThat(content.lessons()).containsOnlyKeys(LESSON);

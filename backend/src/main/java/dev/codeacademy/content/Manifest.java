@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 /** content/<course>/manifest.json, as described in docs/manifiesto.md. */
-public record Manifest(Integer schemaVersion, Source source, Course course, List<Lesson> lessons, List<Resource> resources,
-		List<SourceLink> sourceToId) {
+public record Manifest(Integer schemaVersion, Source source, Course course, List<Phase> phases, List<Lesson> lessons,
+		List<Resource> resources, List<SourceLink> sourceToId) {
 
 	public record Source(String name, String versionRef) {
 	}
@@ -13,8 +13,12 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 	public record Course(String id, String namespace, String title) {
 	}
 
-	public record Lesson(String id, String title, Integer position, String sourcePath, Boolean sourceAvailable,
-			Boolean available, String bodyPath, List<Exercise> exercises) {
+	/** A permanent group of lessons; its title is taken verbatim from the source course index. */
+	public record Phase(String id, String title, Integer position) {
+	}
+
+	public record Lesson(String id, String title, Integer position, String phaseId, String sourcePath,
+			Boolean sourceAvailable, Boolean available, String bodyPath, List<Exercise> exercises) {
 	}
 
 	public record Exercise(String id, String lessonId, String title) {

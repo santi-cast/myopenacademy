@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router'
 import { apiGet } from '../api/client'
 import type { LessonEntry, Progress, Syllabus } from '../api/types'
-import { flatSyllabus, groupByPhase, type SyllabusRow } from '../syllabus'
+import { groupByPhase, type SyllabusRow } from '../syllabus'
 import { LoadFailure } from './LoadFailure'
 import { ProgressSummary } from './ProgressSummary'
 import { useLoad } from './useApi'
@@ -29,13 +29,13 @@ function LessonState({ lesson, completed }: { lesson: LessonEntry; completed: bo
 
 function LessonTable({ caption, count, rows, completed }: {
   caption: string
-  count?: string
+  count: string
   rows: SyllabusRow[]
   completed: Set<string>
 }) {
   return (
     <table className="phase-table">
-      <caption>{caption}{count && <> <span>{count}</span></>}</caption>
+      <caption>{caption} <span>{count}</span></caption>
       <thead>
         <tr>
           <th scope="col">Código</th>
@@ -70,7 +70,7 @@ export function CourseIndexPage() {
   const { syllabus, progress } = loaded.data
   const completed = new Set(progress.lessonStates.filter((state) => state.state === 'completed').map((state) => state.lessonId))
   const continuation = syllabus.lessons.find((lesson) => lesson.id === progress.continuation.lastOpenedLessonId)
-  const phases = groupByPhase(syllabus.course.id, syllabus.lessons)
+  const phases = groupByPhase(syllabus.phases, syllabus.lessons)
 
   return (
     <div className="index">
@@ -88,17 +88,15 @@ export function CourseIndexPage() {
       </div>
       <p hidden id={PENDING_DESCRIPTION_ID}>Lección pendiente: todavía no disponible, no se puede abrir.</p>
       <div className="phase-grid">
-        {phases
-          ? phases.map((phase) => (
-              <LessonTable
-                key={phase.label}
-                caption={phase.label}
-                count={`${phase.rows.filter(({ lesson }) => lesson.available).length} de ${phase.rows.length} disponibles`}
-                rows={phase.rows}
-                completed={completed}
-              />
-            ))
-          : <LessonTable caption="Temario" rows={flatSyllabus(syllabus.lessons)} completed={completed} />}
+        {phases.map((phase) => (
+          <LessonTable
+            key={phase.key}
+            caption={phase.label}
+            count={`${phase.rows.filter(({ lesson }) => lesson.available).length} de ${phase.rows.length} disponibles`}
+            rows={phase.rows}
+            completed={completed}
+          />
+        ))}
       </div>
     </div>
   )

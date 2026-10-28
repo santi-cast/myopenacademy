@@ -55,6 +55,10 @@ public final class ContentFixture {
 		return (ObjectNode) find(manifest.get("lessons"), "id", id);
 	}
 
+	public static ObjectNode phase(ObjectNode manifest, String id) {
+		return (ObjectNode) find(manifest.get("phases"), "id", id);
+	}
+
 	static ObjectNode resource(ObjectNode manifest, String id) {
 		return (ObjectNode) find(manifest.get("resources"), "resourceId", id);
 	}

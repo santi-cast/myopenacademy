@@ -105,16 +105,29 @@ class CatalogApiTest {
 
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
 		var body = json(response);
-		assertThat(body.propertyNames()).containsExactlyInAnyOrder("course", "lessons");
+		assertThat(body.propertyNames()).containsExactlyInAnyOrder("course", "phases", "lessons");
 		assertThat(body.path("course").path("id").asString()).isEqualTo("java");
+		JsonNode phases = body.path("phases");
+		assertThat(phases.size()).isEqualTo(21);
+		List<String> phaseIds = new ArrayList<>();
+		for (int i = 0; i < phases.size(); i++) {
+			JsonNode phase = phases.get(i);
+			assertThat(phase.propertyNames()).containsExactlyInAnyOrder("id", "title", "position");
+			assertThat(phase.path("position").asInt()).isEqualTo(i + 1);
+			phaseIds.add(phase.path("id").asString());
+		}
+		assertThat(phaseIds).startsWith("java-phase-00", "java-phase-01", "java-phase-02").endsWith("java-phase-20");
+		assertThat(phases.get(2).path("title").asString()).isEqualTo("Fundamentos de Java");
+		assertThat(phases.get(20).path("title").asString()).isEqualTo("Desarrollo profesional");
 		JsonNode lessons = body.path("lessons");
 		assertThat(lessons.size()).isEqualTo(199);
 		List<String> available = new ArrayList<>();
 		for (int i = 0; i < lessons.size(); i++) {
 			JsonNode lesson = lessons.get(i);
 			assertThat(lesson.propertyNames()).containsExactlyInAnyOrder("id", "courseId", "title", "position",
-					"available");
+					"phaseId", "available");
 			assertThat(lesson.path("position").asInt()).isEqualTo(i + 1);
+			assertThat(phaseIds).contains(lesson.path("phaseId").asString());
 			assertThat(lesson.path("courseId").asString()).isEqualTo("java");
 			if (lesson.path("available").asBoolean()) available.add(lesson.path("id").asString());
 		}
@@ -122,6 +135,9 @@ class CatalogApiTest {
 		assertThat(lessons.get(0).path("id").asString()).isEqualTo("java-00.01");
 		assertThat(lessons.get(0).path("title").asString()).isEqualTo("Qué es programar");
 		assertThat(lessons.get(12).path("id").asString()).isEqualTo(LESSON);
+		assertThat(lessons.get(12).path("phaseId").asString()).isEqualTo("java-phase-02");
+		assertThat(lessons.get(0).path("phaseId").asString()).isEqualTo("java-phase-00");
+		assertThat(lessons.get(198).path("phaseId").asString()).isEqualTo("java-phase-20");
 	}
 
 	@Test
@@ -132,7 +148,10 @@ class CatalogApiTest {
 		var body = json(response);
 		assertThat(body.propertyNames()).containsExactlyInAnyOrder("lesson", "bodyHtml", "exercises", "resources",
 				"previousLessonId", "nextLessonId");
+		assertThat(body.path("lesson").propertyNames()).containsExactlyInAnyOrder("id", "courseId", "title", "position",
+				"phaseId", "available");
 		assertThat(body.path("lesson").path("id").asString()).isEqualTo(LESSON);
+		assertThat(body.path("lesson").path("phaseId").asString()).isEqualTo("java-phase-02");
 		assertThat(body.path("lesson").path("available").asBoolean()).isTrue();
 		assertThat(body.path("lesson").path("position").asInt()).isEqualTo(13);
 		assertThat(body.path("previousLessonId").isNull()).isTrue();
@@ -256,17 +275,24 @@ class CatalogApiTest {
 				           join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.n order by k.i), ',') as columns
 				from pg_constraint c join pg_namespace n on n.oid = c.connamespace
 				where n.nspname = 'code_academy' and c.contype in ('u', 'f')
-				  and c.conrelid::regclass::text in ('code_academy.lessons', 'code_academy.exercises')
+				  and c.conrelid::regclass::text in ('code_academy.phases', 'code_academy.lessons', 'code_academy.exercises')
 				""")).extracting(row -> row.get("table_name") + " " + row.get("type") + " " + row.get("columns"))
-				.contains("code_academy.lessons u course_id,position", "code_academy.lessons u id,course_id",
-						"code_academy.lessons f course_id", "code_academy.exercises u id,course_id",
+				.contains("code_academy.phases u course_id,position", "code_academy.phases u id,course_id",
+						"code_academy.phases f course_id", "code_academy.lessons u course_id,position",
+						"code_academy.lessons u id,course_id", "code_academy.lessons f course_id",
+						"code_academy.lessons f phase_id,course_id", "code_academy.exercises u id,course_id",
 						"code_academy.exercises f lesson_id,course_id");
+		assertThat(jdbc.queryForObject("select count(*) from code_academy.phases where course_id = 'java'",
+				Integer.class)).isEqualTo(21);
+		assertThat(jdbc.queryForObject("select count(*) from code_academy.lessons where phase_id is null",
+				Integer.class)).isZero();
 		// Neither bodies nor HTML are stored: the catalog has no text column beyond titles.
 		assertThat(jdbc.queryForList("""
 				select table_name || '.' || column_name from information_schema.columns
-				where table_schema = 'code_academy' and table_name in ('courses', 'lessons', 'exercises')
-				""", String.class)).containsExactlyInAnyOrder("courses.id", "courses.title", "lessons.id",
-				"lessons.course_id", "lessons.title", "lessons.position", "lessons.available",
+				where table_schema = 'code_academy' and table_name in ('courses', 'phases', 'lessons', 'exercises')
+				""", String.class)).containsExactlyInAnyOrder("courses.id", "courses.title", "phases.id",
+				"phases.course_id", "phases.title", "phases.position", "lessons.id", "lessons.course_id",
+				"lessons.title", "lessons.position", "lessons.phase_id", "lessons.available",
 				"lessons.source_available", "exercises.id", "exercises.course_id", "exercises.lesson_id",
 				"exercises.title", "exercises.position");
 		// No cascading deletes anywhere in the catalog.

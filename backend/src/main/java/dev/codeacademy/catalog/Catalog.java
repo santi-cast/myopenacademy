@@ -66,6 +66,11 @@ public final class Catalog {
 		return Optional.ofNullable(resources.get(resourceId));
 	}
 
+	/** The course's phases in syllabus order. */
+	static List<Manifest.Phase> phases(CourseContent course) {
+		return course.manifest().phases().stream().sorted(Comparator.comparing(Manifest.Phase::position)).toList();
+	}
+
 	/** The course's lessons in syllabus order. */
 	static List<Lesson> syllabus(CourseContent course) {
 		return course.manifest().lessons().stream().sorted(Comparator.comparing(Lesson::position)).toList();

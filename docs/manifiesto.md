@@ -25,11 +25,15 @@ Extracto diminuto, no manifiesto completo ni medición del curso. Números de ca
     "versionRef": "PENDIENTE_HASH_COMPLETO_DEL_COMMIT"
   },
   "course": { "id": "java", "namespace": "java", "title": "Java" },
+  "phases": [
+    { "id": "java-phase-basics", "title": "Primeros pasos", "position": 1 }
+  ],
   "lessons": [
     {
       "id": "java-lesson-intro",
       "title": "Introducción",
       "position": 1,
+      "phaseId": "java-phase-basics",
       "sourcePath": "01/introduccion.md",
       "sourceAvailable": true,
       "available": true,
@@ -42,6 +46,7 @@ Extracto diminuto, no manifiesto completo ni medición del curso. Números de ca
       "id": "java-lesson-next",
       "title": "Siguiente módulo",
       "position": 2,
+      "phaseId": "java-phase-basics",
       "sourcePath": "02/siguiente.md",
       "sourceAvailable": true,
       "available": false,
@@ -73,7 +78,7 @@ Extracto diminuto, no manifiesto completo ni medición del curso. Números de ca
 ## Identidad, extracción y rutas
 
 - Incluir cada entrada del índice de la revisión elegida con título, posición, identidad y disponibilidad; no deducir el total del extracto. `available: true` exige `sourceAvailable: true`, cuerpo existente y ejercicios/recursos válidos.
-- IDs de curso, lección, ejercicio y recurso globalmente únicos, permanentes y coherentes con namespace y pertenencia. Los IDs del contenido usan prefijo permanente del curso; no se derivan del título ni se renumeran al reorganizar el origen. El número de origen no es fuente de identidad.
+- IDs de curso, fase, lección, ejercicio y recurso globalmente únicos, permanentes y coherentes con namespace y pertenencia. Los IDs del contenido usan prefijo permanente del curso; no se derivan del título ni se renumeran al reorganizar el origen. El número de origen no es fuente de identidad.
 - El cuerpo controlado conserva el material de los ejercicios y su asociación explícita con los IDs permanentes declarados para su lección. Al procesarlo se extrae la sección exacta «Ejercicios prácticos resueltos»: enunciados a `Exercise.statementHtml`, soluciones en `<details>` a `Exercise.solutionHtml`, saneados por separado. Esa sección se excluye de `bodyHtml` para evitar duplicación. No usar el ordinal transitorio como identidad ni adivinar asociaciones al reorganizar.
 - Cada ejercicio de la lección se asocia con el ejercicio del manifiesto cuyo `title` es exactamente el texto plano de su encabezado tras «Ejercicio N · » (código en línea sin comillas invertidas): igualdad de puntos de código Unicode, sin más recorte que el de CommonMark, sin mayúsculas/minúsculas ni normalización Unicode (una forma NFD frente a NFC es un conflicto). Ese mismo texto es el título que guarda el catálogo y devuelve la API. Reordenar los ejercicios conserva sus IDs; el número N nunca los identifica. Un encabezado sin entrada en el manifiesto, una entrada sin encabezado o un título repetido en la misma lección rechazan la importación completa: retitular, añadir o quitar un ejercicio es un conflicto explícito que resolverá H5. Además, al sincronizar el catálogo, un ejercicio ya guardado no puede cambiar de título, de lección ni desaparecer: el arranque falla sin cambiar la base. Los ejercicios nuevos, con su entrada en el manifiesto, sí se añaden.
 - `bodyPath`/`localPath` son relativos a la raíz de copia controlada; `sourcePath` aporta solo procedencia y resolución relativa desde el documento de origen. Ninguna ruta habilita lecturas del origen al servir contenido.
@@ -81,6 +86,14 @@ Extracto diminuto, no manifiesto completo ni medición del curso. Números de ca
 - El índice del curso de origen se declara en `sourceToId` con `courseId`: `{ "sourcePath": "00-indice.md", "courseId": "java" }`. Sus enlaces llevan a la pantalla de índice del curso, no a un documento importado.
 - `sourceToId` cubre documentos, carpetas, recursos y fragmentos referenciados. Resolver cada enlace relativo respecto a su documento de origen, convertirlo a destino por ID y conservar/mapear su fragmento al ID final compatible con GitHub, incluidos duplicados, acentos y puntuación.
 - Validar enlaces locales, cruzados, recursos y fragmentos tras separar contenido, reescribir y sanear, también en `statementHtml` y `solutionHtml`. Solo IDs de encabezados generados, no arbitrarios. Un enlace sin fragmento a entrada pendiente lleva a «todavía no disponible»; no fingir fragmento validado si falta el cuerpo de destino. Una referencia no resuelta nunca se sustituye por un destino adivinado.
+
+## Fases
+
+- `phases` es obligatorio y enumera las fases del curso en el orden del índice de origen, cada una con `id`, `title` y `position`. Cada lección declara su fase con `phaseId`, que debe ser una fase del mismo manifiesto.
+- El `id` de una fase es permanente, como el de una lección: lleva el prefijo del curso (por ejemplo, `java-phase-02`), es único entre todos los IDs y no se deriva del título ni se renumera al reorganizar el origen.
+- El `title` se copia literalmente del índice del curso (`00-indice.md`) en el commit fijado en `source.versionRef`, sin inventarlo ni traducirlo: es el texto que sigue a «Fase NN — » en cada encabezado `## Fase NN — <título>`, sin ese prefijo. Las secciones del índice que no son fases y no tienen lecciones en el manifiesto (por ejemplo, «Proyecto evolutivo») no se declaran como fases.
+- Las posiciones de las fases van de 1 a N, sin huecos ni repeticiones, y cada fase tiene al menos una lección. Recorridas las lecciones por `position`, la posición de su fase nunca retrocede: las lecciones de cada fase son consecutivas y los bloques siguen el orden de las fases. Cualquier incumplimiento rechaza la carga completa.
+- Al sincronizar el catálogo, el título y la posición de una fase pueden cambiar. Mover una lección a otra fase está permitido y no es un conflicto, porque el progreso no se refiere a fases. Una fase ya guardada que desaparece del manifiesto, cambia de ID (se trata como desaparecida) o pasa a otro curso es un conflicto explícito: el arranque falla sin cambiar la base.
 
 ## Validación y entrega segura
 

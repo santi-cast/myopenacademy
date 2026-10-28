@@ -34,11 +34,17 @@ class CatalogController {
 		}
 	}
 
-	record LessonEntry(String id, String courseId, String title, int position, boolean available) {
+	record PhaseView(String id, String title, int position) {
+		static PhaseView of(Manifest.Phase phase) {
+			return new PhaseView(phase.id(), phase.title(), phase.position());
+		}
+	}
+
+	record LessonEntry(String id, String courseId, String title, int position, String phaseId, boolean available) {
 		static LessonEntry of(LessonRef ref) {
 			Lesson lesson = ref.lesson();
 			return new LessonEntry(lesson.id(), ref.course().manifest().course().id(), lesson.title(), lesson.position(),
-					lesson.available());
+					lesson.phaseId(), lesson.available());
 		}
 	}
 
@@ -57,7 +63,7 @@ class CatalogController {
 	record CoursesView(List<CourseView> courses) {
 	}
 
-	record SyllabusView(CourseView course, List<LessonEntry> lessons) {
+	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons) {
 	}
 
 	record LessonView(LessonEntry lesson, String bodyHtml, List<ExerciseView> exercises, List<ResourceView> resources,
@@ -81,8 +87,9 @@ class CatalogController {
 	@GetMapping(path = "/api/courses/{courseId}", produces = MediaType.APPLICATION_JSON_VALUE)
 	SyllabusView course(@PathVariable String courseId) {
 		CourseContent course = catalog.course(courseId).orElseThrow(CatalogController::notFound);
-		return new SyllabusView(CourseView.of(course.manifest().course()), Catalog.syllabus(course).stream()
-				.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList());
+		return new SyllabusView(CourseView.of(course.manifest().course()),
+				Catalog.phases(course).stream().map(PhaseView::of).toList(), Catalog.syllabus(course).stream()
+					.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList());
 	}
 
 	/** Pending lessons keep their syllabus entry but never open; neighbours skip them. */
