@@ -5,6 +5,7 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -24,7 +25,7 @@ import dev.codeacademy.api.StrictJson;
 
 /** Logout is not here: the security chain's logout filter handles it. */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping(path = "/api/auth", produces = MediaType.APPLICATION_JSON_VALUE)
 class AuthController {
 
 	private final RegistrationService registration;

@@ -98,6 +98,7 @@ class PasswordResetCommandTest {
 				new Case(username, new String[] { "a".repeat(14), "a".repeat(14) }, policy, 2),
 				new Case(username, new String[] { "🚀".repeat(129), "🚀".repeat(129) }, policy, 2),
 				new Case(username, new String[] { "a".repeat(129), "a".repeat(129) }, policy, 2),
+				new Case(username, new String[] { "\uD800" + "a".repeat(15), "\uD800" + "a".repeat(15) }, policy, 2),
 				new Case(username, new String[] { null }, "No se recibió la contraseña. No se cambió nada." + NL, 1),
 				new Case(unique("nobody_"), new String[] { NEW_PASSWORD, NEW_PASSWORD },
 						"No existe el usuario indicado. No se cambió nada." + NL, 0))) {

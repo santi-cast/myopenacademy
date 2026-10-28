@@ -156,6 +156,19 @@ class SessionApiTest {
 	}
 
 	@Test
+	void staleSessionContinuesAsAnonymousOnPublicRoutes() throws Exception {
+		assertThat(browser.send("POST", "/api/auth/login", credentials(username, PASSWORD)).statusCode())
+				.isEqualTo(200);
+		jdbc.update("update code_academy.users set credentials_version = credentials_version + 1 "
+				+ "where username_canonical = ?", username.toLowerCase());
+
+		assertThat(browser.get("/actuator/health").statusCode()).isEqualTo(200);
+		assertThat(browser.send("POST", "/api/auth/login", credentials(username, PASSWORD)).statusCode())
+				.isEqualTo(200);
+		assertThat(browser.get("/api/me").statusCode()).isEqualTo(200);
+	}
+
+	@Test
 	void nonCsrfDenialIsAccessDeniedWhileCsrfFailureStaysCsrfRejected() throws Exception {
 		assertThat(browser.send("POST", "/api/auth/login", credentials(username, PASSWORD)).statusCode())
 				.isEqualTo(200);
@@ -166,7 +179,40 @@ class SessionApiTest {
 		assertError(browser.send("PUT", "/api/future-route", null, null), 403, "CSRF_REJECTED");
 		assertError(browser.send("PUT", "/api/future-route", null, "forged"), 403, "CSRF_REJECTED");
 		assertError(new ApiClient(port).get("/api/future-route"), 401, "AUTHENTICATION_REQUIRED");
+		// Only the container's error forward reaches /error; a direct request stays denied.
+		assertError(browser.get("/error"), 403, "ACCESS_DENIED");
+		assertError(new ApiClient(port).get("/error"), 401, "AUTHENTICATION_REQUIRED");
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+	}
+
+	@Test
+	void unpairedSurrogateIsGeneric401AndDuplicateKeysAre400() throws Exception {
+		for (String name : List.of(username, unique("nobody_"))) {
+			assertError(browser.send("POST", "/api/auth/login",
+					"{\"username\":\"" + name + "\",\"password\":\"\\ud800\"}"), 401, "AUTHENTICATION_FAILED");
+		}
+		assertError(browser.send("POST", "/api/auth/login", "{\"username\":\"nobody\",\"password\":\"x\",\"username\":\""
+				+ username + "\",\"password\":\"" + PASSWORD + "\"}"), 400, "INVALID_REQUEST");
+		assertError(browser.get("/api/me"), 401, "AUTHENTICATION_REQUIRED");
+	}
+
+	@Test
+	void unacceptableAcceptIsRejectedBeforeWritingOrStartingSession() throws Exception {
+		var before = TestDatabase.snapshot(jdbc);
+		assertError(browser.sendAccepting("POST", "/api/auth/register", credentials(unique("x_"), PASSWORD),
+				"application/xml"), 406, "NOT_ACCEPTABLE");
+		assertError(browser.sendAccepting("POST", "/api/auth/login", credentials(username, PASSWORD), "text/html"),
+				406, "NOT_ACCEPTABLE");
+		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+		assertThat(browser.cookie("JSESSIONID")).isEmpty();
+		assertError(browser.get("/api/me"), 401, "AUTHENTICATION_REQUIRED");
+
+		// Any Accept that allows JSON keeps working, as does no Accept at all.
+		assertThat(browser.sendAccepting("POST", "/api/auth/register", credentials(unique("y_"), PASSWORD), "*/*")
+				.statusCode()).isEqualTo(201);
+		assertThat(browser.sendAccepting("POST", "/api/auth/login", credentials(username, PASSWORD), null)
+				.statusCode()).isEqualTo(200);
+		assertThat(browser.get("/api/me").statusCode()).isEqualTo(200);
 	}
 
 	private String csrfAfterSafeRequest() throws Exception {

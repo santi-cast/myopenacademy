@@ -11,7 +11,7 @@ import dev.codeacademy.api.ApiException;
 @Service
 class LoginService {
 
-	/** Hashed in place of malformed input, so its length never reaches Argon2. */
+	/** Hashed in place of malformed input, so an oversized or ill-formed password never reaches Argon2. */
 	private static final String PLACEHOLDER = "placeholder-for-timing-only";
 
 	private final AccountRepository accounts;

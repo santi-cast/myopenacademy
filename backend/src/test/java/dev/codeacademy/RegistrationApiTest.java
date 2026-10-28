@@ -137,6 +137,16 @@ class RegistrationApiTest {
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}
 
+	@Test
+	void duplicateKeysAndUnpairedSurrogatesAreRejectedWithoutWriting() throws Exception {
+		var before = TestDatabase.snapshot(jdbc);
+		assertError(browser.send("POST", "/api/auth/register", "{\"username\":\"ab\",\"username\":\""
+				+ unique("d_") + "\",\"password\":\"" + PASSWORD + "\"}"), 400, "INVALID_REQUEST");
+		assertError(browser.send("POST", "/api/auth/register",
+				"{\"username\":\"" + unique("s_") + "\",\"password\":\"\\ud800aaaaaaaaaaaaaa\"}"), 400, "INVALID_PASSWORD");
+		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+	}
+
 	static String unique(String prefix) {
 		return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 	}

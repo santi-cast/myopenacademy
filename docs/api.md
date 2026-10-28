@@ -79,9 +79,9 @@ Ejemplo ilustrativo de un curso existente no añadido, con dos entradas y una di
 
 ## Validaciones de entrada y credenciales
 
-- JSON estricto: rechazar tipos incorrectos, campos desconocidos, obligatorios ausentes, null no permitido, enums desconocidos y JSON malformado. IDs deben resolver al catálogo; no aceptar rutas como IDs. Cuerpos ausentes donde se exige objeto son inválidos; escrituras sin cuerpo no aceptan campos extra.
+- JSON estricto: rechazar tipos incorrectos, campos desconocidos, claves duplicadas, obligatorios ausentes, null no permitido, enums desconocidos y JSON malformado. IDs deben resolver al catálogo; no aceptar rutas como IDs. Cuerpos ausentes donde se exige objeto son inválidos; escrituras sin cuerpo no aceptan campos extra.
 - Usuario: 3–32 caracteres ASCII `[A-Za-z0-9_]`, sin recortar espacios. Conservar presentación y comparar unicidad/acceso sin distinguir mayúsculas mediante representación canónica en minúsculas; no normalizar la contraseña. Esta regla queda aprobada con el cierre de H2.
-- Registro y recuperación por consola: contraseña de 15–128 puntos de código Unicode, admitiendo espacios y frases, sin exigir composición. No recortar espacios, normalizar ni truncar silenciosamente.
+- Registro y recuperación por consola: contraseña de 15–128 puntos de código Unicode, admitiendo espacios y frases, sin exigir composición. No recortar espacios, normalizar ni truncar silenciosamente. Un sustituto UTF-16 sin pareja no es texto Unicode válido: registro y consola lo rechazan por política y login responde el 401 genérico, sin calcular su hash.
 - Login: no se aplica ningún mínimo de política de contraseña, ni se exige contraseña no vacía como regla de longitud. Solo se rechaza por longitud lo que supere 128 puntos de código Unicode, contados antes del hash. Es una protección operativa del uso de Argon2, no un máximo inherente del algoritmo. Así, un futuro cambio del mínimo no bloquea cuentas existentes. No recortar, normalizar ni truncar la entrada.
 - Toda credencial inválida de login, incluido usuario inexistente, formato de usuario inválido, contraseña incorrecta o superior a 128 puntos de código, devuelve siempre el mismo 401 `AUTHENTICATION_FAILED`, sin revelar la existencia del usuario. Login no devuelve 400 `INVALID_PASSWORD` ni aplica el mínimo de registro; errores de esquema/tipo JSON pueden devolver 400 `INVALID_REQUEST`.
 - Usar Argon2id con Argon2PasswordEncoder y Bouncy Castle, sal por contraseña y suelo inicial de 19 MiB, 2 iteraciones y paralelismo 1. Verificar versiones y medir el coste local en H3 sin bajar ese suelo; no asumir que los valores predeterminados lo cumplen.
@@ -120,6 +120,7 @@ Los errores incluyen `code` y `message`; la UI decide por `code`, no interpreta 
 | 401 | `AUTHENTICATION_FAILED` (login), `AUTHENTICATION_REQUIRED` (sesión ausente, caducada o versión de credenciales inválida). |
 | 403 | `CSRF_REJECTED`, incluidas operaciones públicas inseguras. `ACCESS_DENIED`: solicitud autenticada a una ruta o acción denegada, distinta de un fallo de CSRF. |
 | 404 | `NOT_FOUND`: curso/lección/ejercicio/recurso inexistente, recurso no autorizado o dato personal ajeno; sin revelar existencia ni rutas. |
+| 406 | `NOT_ACCEPTABLE`: el encabezado `Accept` no admite JSON. Se rechaza antes de ejecutar la operación: sin escrituras ni sesión. Sin `Accept`, `*/*` o `application/json` son válidos. |
 | 409 | `USERNAME_TAKEN`, `LESSON_UNAVAILABLE`, `COURSE_NOT_ADDED`. |
 | 500 | `INTERNAL_ERROR`: fallo inesperado sin detalles internos ni secretos; escrituras transaccionales sin efectos parciales. |
 

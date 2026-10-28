@@ -1,9 +1,9 @@
 package dev.codeacademy;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -33,6 +33,7 @@ import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 import dev.codeacademy.account.CurrentCredentials;
+import dev.codeacademy.api.ApiErrorWriter;
 
 @Configuration(proxyBeanMethods = false)
 class SecurityConfiguration {
@@ -57,7 +58,7 @@ class SecurityConfiguration {
 								response.addHeader(HttpHeaders.SET_COOKIE, expiredSessionCookie(request)))
 						.logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
 				.requestCache(AbstractHttpConfigurer::disable)
-				.addFilterAfter(new CredentialsVersionFilter(credentials, authenticationRequired), LogoutFilter.class)
+				.addFilterAfter(new CredentialsVersionFilter(credentials), LogoutFilter.class)
 				.exceptionHandling(exceptions -> exceptions
 						.authenticationEntryPoint(authenticationRequired)
 						.accessDeniedHandler((request, response, exception) -> {
@@ -69,6 +70,8 @@ class SecurityConfiguration {
 							}
 						}))
 				.authorizeHttpRequests(requests -> requests
+						// Only the container's error forward; a direct request to /error is still denied.
+						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 						.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/logout")
 								.permitAll()
@@ -109,10 +112,6 @@ class SecurityConfiguration {
 
 	private static void error(HttpServletResponse response, int status, String code, String message)
 			throws IOException {
-		// Fixed strings only: no exception messages, credentials or request data reach the response.
-		response.setStatus(status);
-		response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-		response.setContentType("application/json");
-		response.getWriter().write("{\"code\":\"" + code + "\",\"message\":\"" + message + "\"}");
+		ApiErrorWriter.write(response, status, code, message);
 	}
 }

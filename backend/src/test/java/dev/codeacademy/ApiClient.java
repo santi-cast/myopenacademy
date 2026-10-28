@@ -37,8 +37,20 @@ final class ApiClient {
 	}
 
 	HttpResponse<String> send(String method, String path, String jsonBody, String csrf) throws Exception {
+		return send(method, path, jsonBody, csrf, "application/json");
+	}
+
+	/** Same as {@link #send(String, String, String)} with a chosen Accept header; null omits it. */
+	HttpResponse<String> sendAccepting(String method, String path, String jsonBody, String accept) throws Exception {
+		if (cookie("XSRF-TOKEN").isEmpty()) send("GET", "/actuator/health", null, null);
+		return send(method, path, jsonBody, cookie("XSRF-TOKEN").map(HttpCookie::getValue).orElseThrow(), accept);
+	}
+
+	private HttpResponse<String> send(String method, String path, String jsonBody, String csrf, String accept)
+			throws Exception {
 		var builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
-				.timeout(Duration.ofSeconds(10)).header("Accept", "application/json");
+				.timeout(Duration.ofSeconds(10));
+		if (accept != null) builder.header("Accept", accept);
 		if (csrf != null) builder.header("X-XSRF-TOKEN", csrf);
 		if (jsonBody != null) builder.header("Content-Type", "application/json");
 		var body = jsonBody == null ? HttpRequest.BodyPublishers.noBody()
