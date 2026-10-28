@@ -18,8 +18,8 @@ final class CredentialsPolicy {
 	}
 
 	/** Registration and console reset: 15–128 code points, spaces and phrases allowed, no composition rules. */
-	static boolean validNewPassword(String password) {
-		int codePoints = password.codePointCount(0, password.length());
+	static boolean validNewPassword(CharSequence password) {
+		int codePoints = Character.codePointCount(password, 0, password.length());
 		return codePoints >= MIN_PASSWORD_CODE_POINTS && codePoints <= MAX_PASSWORD_CODE_POINTS;
 	}
 

@@ -84,6 +84,27 @@ npm run test:e2e
 
 Si Chromium necesita bibliotecas del sistema, **detenete y pedí aprobación explícita**. No uses `--with-deps`, instalaciones globales ni paquetes del sistema como arreglo automático.
 
+## Recuperar una contraseña
+
+No hay recuperación por la web ni cuenta de administración: se cambia desde una consola local. Con la base sana, compilá el jar desde `backend/` (o reutilizá uno ya construido):
+
+```sh
+cd backend
+./mvnw -B package -DskipTests
+```
+
+Después, **en una terminal real** y desde `backend/`, para que el perfil `local` encuentre `../.env`:
+
+```sh
+java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --reset-password=<usuario>
+```
+
+El usuario no distingue mayúsculas. La herramienta pide la contraseña nueva dos veces sin mostrarla; nunca la pases como argumento. Debe tener entre 15 y 128 caracteres y se guarda tal cual, con sus espacios. Si las dos no coinciden, la contraseña no cumple la regla o el usuario no existe, no cambia nada y termina con error.
+
+Si no hay terminal interactiva (entrada redirigida, scripts o `./mvnw spring-boot:run`, que arranca Java en otro proceso sin terminal propia), se niega antes de arrancar: no pregunta ni cambia nada. Por eso no funciona con `./mvnw spring-boot:run`. Este modo no levanta el servidor web, así que puede ejecutarse con el backend en marcha.
+
+El hash nuevo y la versión de credenciales se guardan juntos en una sola operación, conservando la cuenta y su progreso. Las sesiones ya abiertas de ese usuario se cierran en su siguiente solicitud y hay que volver a iniciar sesión.
+
 ## Parar sin perder datos
 
 Usá `Ctrl+C` en las terminales del frontend y backend. Después, desde la raíz:

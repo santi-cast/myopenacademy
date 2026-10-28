@@ -6,6 +6,7 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -36,7 +37,9 @@ import dev.codeacademy.account.CurrentCredentials;
 @Configuration(proxyBeanMethods = false)
 class SecurityConfiguration {
 
+	/** Not built in console reset mode, which has no web server; the other beans stay shared. */
 	@Bean
+	@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 	SecurityFilterChain securityFilterChain(HttpSecurity http, CsrfTokenRepository csrfTokens,
 			SecurityContextRepository contexts, CurrentCredentials credentials) throws Exception {
 		AuthenticationEntryPoint authenticationRequired = (request, response, exception) ->
