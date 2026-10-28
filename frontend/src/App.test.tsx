@@ -7,7 +7,7 @@ import { renderApp } from './test/renderApp'
 // backend status. The last test below pins that removal.
 
 describe('app routes', () => {
-  it('the lesson route shows the lesson title (placeholder for part b)', async () => {
+  it('the lesson route shows the lesson title', async () => {
     installFakeBackend({ loggedInAs: ana })
     renderApp('/lessons/java-02.01')
 

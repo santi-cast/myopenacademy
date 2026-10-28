@@ -1,0 +1,1136 @@
+/* Lesson view after design/h4-visual-style/04-mezcla.html. Values from styles/tokens.css only (S20). */
+
+.vh,
+.clipboard-buffer {
+  position: absolute;
+  width: var(--border-width);
+  height: var(--border-width);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.clipboard-buffer {
+  position: fixed;
+  top: 0;
+  left: var(--space-offscreen);
+}
+
+/* Layout: syllabus column, lesson column, lesson index from 1400px */
+.mix {
+  display: grid;
+  grid-template-columns: clamp(var(--lesson-side-min), var(--lesson-side-fluid), var(--lesson-side-max)) minmax(0, 1fr);
+  align-items: start;
+}
+
+.mix-side {
+  position: sticky;
+  top: 0;
+  max-height: var(--viewport-height);
+  overflow: auto;
+  overflow-x: hidden;
+  background: var(--surface);
+  border-right: var(--border-width) solid var(--border);
+  padding: var(--space-4) var(--space-3) var(--space-7);
+}
+
+.collapse-btn {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  background: var(--surface);
+  color: var(--heading);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.collapse-btn[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.side-course {
+  padding: 0 var(--space-2) var(--space-3);
+  border-bottom: var(--border-width) solid var(--border);
+  margin-bottom: var(--space-2);
+}
+
+.side-course h2 {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.side-course p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.phase-nav summary {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--line-height-tight);
+  color: var(--heading);
+}
+
+.phase-nav summary::-webkit-details-marker {
+  display: none;
+}
+
+.phase-nav summary::before {
+  content: "";
+  flex: none;
+  margin-top: var(--space-1);
+  border-left: var(--caret-size) solid var(--text-muted);
+  border-top: var(--caret-size-small) solid transparent;
+  border-bottom: var(--caret-size-small) solid transparent;
+  transition: transform 0.15s;
+}
+
+.phase-nav details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.phase-nav summary:hover {
+  background: var(--surface-2);
+}
+
+.ph-count {
+  margin-left: auto;
+  flex: none;
+  padding-left: var(--space-2);
+  white-space: nowrap;
+  font-weight: 400;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.phase-nav ol {
+  list-style: none;
+  margin: var(--space-0) 0 var(--space-2);
+  padding: 0 0 0 var(--space-4);
+}
+
+.phase-nav li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-tight);
+  color: var(--text-muted);
+  border-left: var(--border-width) solid var(--border);
+}
+
+.phase-nav li .c {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.phase-nav li .t {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.phase-nav li .p,
+.phase-nav li .badge {
+  flex: none;
+  white-space: nowrap;
+  font-size: var(--text-2xs);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.phase-nav li .p {
+  background: var(--pending-bg);
+  color: var(--pending);
+}
+
+.phase-nav li.current {
+  border-left: var(--border-width-strong) solid var(--accent);
+  background: var(--bg);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.phase-nav li.current a {
+  color: var(--heading);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mix-main {
+  min-width: 0;
+}
+
+/* Only this thin bar is sticky (L48) */
+.lbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: var(--lbar-height);
+  padding: 0 var(--space-6);
+  background: var(--bg);
+  border-bottom: var(--border-width) solid var(--border);
+  font-size: var(--text-sm);
+}
+
+.focus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  background: transparent;
+  border: var(--border-width) solid var(--border-strong);
+  color: var(--text);
+  border-radius: var(--radius-md);
+  padding: var(--space-0) var(--space-2);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.focus-btn:hover {
+  background: var(--surface-2);
+}
+
+.lbar-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.lbar-code {
+  font-family: var(--font-mono);
+  color: var(--heading);
+}
+
+.lbar-lesson {
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.lbar-ex {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  color: var(--heading);
+  font-weight: 600;
+  text-decoration: none;
+  padding: var(--space-0) var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.lbar-ex:hover {
+  text-decoration: underline;
+}
+
+.meter {
+  display: flex;
+  gap: var(--meter-gap);
+  width: var(--meter-width);
+}
+
+.meter i {
+  flex: 1;
+  height: var(--bar-height);
+  border-radius: var(--radius-xs);
+  background: var(--border-strong);
+}
+
+.meter i[data-s="solved"] {
+  background: var(--success);
+}
+
+.meter i[data-s="in_progress"] {
+  background: var(--warning);
+}
+
+.mix-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.reading-wrap {
+  container-type: inline-size;
+  min-width: 0;
+  padding: var(--space-7) var(--space-8) var(--space-9);
+}
+
+.mix-rail {
+  display: none;
+  position: sticky;
+  top: var(--lbar-height);
+  max-height: calc(var(--viewport-height) - var(--lbar-height));
+  overflow: auto;
+  padding: var(--space-7) var(--space-5) var(--space-7) 0;
+  font-size: var(--text-sm);
+}
+
+.mix-rail h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--text-muted);
+}
+
+/* Reading column: 68ch measure */
+.reading {
+  max-width: var(--measure);
+  margin: 0 auto;
+  font-size: var(--reading-size);
+  line-height: var(--reading-line);
+}
+
+.reading h1,
+.reading h2,
+.reading h3,
+.reading h4,
+.reading .exercise,
+.reading .exercises,
+.reading .lesson-end {
+  scroll-margin-top: calc(var(--lbar-height) + var(--space-4));
+}
+
+.reading h2 {
+  font-size: var(--reading-h2);
+  margin: var(--space-8) 0 var(--space-3);
+  padding-bottom: var(--space-1);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.reading h3 {
+  font-size: var(--reading-h3);
+  margin: var(--space-7) 0 var(--space-2);
+}
+
+.reading h4 {
+  font-size: var(--reading-h4);
+  margin: var(--space-6) 0 var(--space-2);
+}
+
+.reading .lesson-head h1 {
+  font-size: var(--reading-h1);
+  margin: var(--space-1) 0;
+}
+
+.position {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+.head-state {
+  margin-top: var(--space-4);
+}
+
+.reading :not(pre) > code {
+  font-size: var(--code-inline-size);
+  background: var(--surface-2);
+  padding: var(--space-0) var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.reading table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+  margin: var(--space-5) 0;
+}
+
+.reading th,
+.reading td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.reading thead th {
+  background: var(--surface);
+  color: var(--heading);
+}
+
+.reading blockquote {
+  margin: var(--space-5) 0;
+  padding: var(--space-0) var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-left: var(--border-width-strong) solid var(--link);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+/* Code: bar with language and «Copiar», then the block; outset past the text when there is room */
+.reading pre {
+  margin: var(--space-5) 0;
+  overflow: auto;
+  background: var(--code-bg);
+  color: var(--code-text);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  line-height: var(--code-line-height);
+}
+
+.reading pre code {
+  font-size: var(--code-size);
+}
+
+.code-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-1) var(--space-3);
+  background: var(--surface-2);
+  border: var(--border-width) solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--line-height);
+  color: var(--text-muted);
+}
+
+.code-head + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.code-lang {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+}
+
+.lesson-body > pre,
+.lesson-body > .code-head,
+.lesson-body > .diagram,
+.lesson-body > .diagram-error {
+  margin-inline: calc(-1 * clamp(0px, (var(--container-width) - var(--measure)) / 2 - var(--space-2), var(--code-outset-max)));
+}
+
+.copy-btn {
+  margin-left: auto;
+  background: var(--surface);
+  color: var(--text);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-2);
+  font: inherit;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.copy-btn:hover {
+  background: var(--bg);
+}
+
+.code-head:hover .copy-btn,
+.copy-btn:focus-visible,
+.copy-btn.is-done {
+  opacity: 1;
+}
+
+.code-head:has(+ pre:hover) .copy-btn {
+  opacity: 1;
+}
+
+.copy-btn.is-done {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+/* highlight.js theme from the --hl-* tokens, light and dark */
+.hljs-keyword,
+.hljs-literal,
+.hljs-selector-tag,
+.hljs-doctag,
+.hljs-variable.language_ {
+  color: var(--hl-keyword);
+  font-weight: 600;
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-selector-attr,
+.hljs-selector-pseudo,
+.hljs-addition {
+  color: var(--hl-string);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-attr,
+.hljs-attribute,
+.hljs-meta,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--hl-number);
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-name,
+.hljs-tag {
+  color: var(--hl-title);
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-params {
+  color: var(--hl-type);
+}
+
+.hljs-deletion {
+  color: var(--danger);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
+
+/* Mermaid: drawing replaces the source on screen; a failure keeps the source under a note */
+.diagram {
+  margin: var(--space-6) 0;
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram + pre {
+  display: none;
+}
+
+.diagram-error {
+  margin: var(--space-6) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--danger);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--danger-bg);
+}
+
+.diagram-error + pre {
+  margin-top: 0;
+  border-color: var(--danger);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  white-space: pre;
+}
+
+.diagram-error-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--danger);
+}
+
+.diagram-error-help {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-md);
+  color: var(--text);
+}
+
+/* Links to pending lessons: muted, not looking clickable, still focusable and described (04) */
+.reading a.link-pending {
+  color: var(--text-muted);
+  text-decoration: underline dotted;
+  cursor: not-allowed;
+}
+
+.reading a.link-pending::after {
+  content: "todavía no disponible";
+  display: inline-block;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--pending-bg);
+  color: var(--pending);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  line-height: var(--line-height-tight);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Heading anchors (S21) */
+.anchor-btn {
+  margin-left: var(--space-2);
+  vertical-align: middle;
+  background: transparent;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  font: inherit;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.reading h2:hover .anchor-btn,
+.reading h3:hover .anchor-btn,
+.anchor-btn:focus-visible,
+.anchor-btn.is-done {
+  opacity: 1;
+}
+
+.anchor-btn:hover {
+  color: var(--link);
+  border-color: var(--border-strong);
+}
+
+.anchor-btn.is-done {
+  color: var(--success);
+}
+
+/* Lesson index */
+.toc {
+  list-style: none;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+}
+
+.toc a {
+  display: block;
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+  border-left: var(--border-width) solid var(--border);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.toc .lvl3 a {
+  padding-left: var(--space-5);
+}
+
+.toc a:hover {
+  color: var(--link);
+  border-left-color: var(--link);
+}
+
+.toc a[aria-current="true"] {
+  color: var(--heading);
+  font-weight: 600;
+  border-left-color: var(--accent);
+  box-shadow: inset var(--border-width) 0 0 var(--accent);
+}
+
+.toc-drop {
+  margin: var(--space-6) 0 0;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  font-size: var(--text-md);
+}
+
+.toc-drop summary {
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.toc-drop-hint {
+  margin-left: var(--space-2);
+  font-weight: 400;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.toc-drop .toc {
+  margin: 0 var(--space-3) var(--space-3);
+}
+
+/* Manual state controls */
+fieldset.state {
+  border: 0;
+  margin: var(--space-4) 0;
+  padding: 0;
+  min-width: 0;
+}
+
+fieldset.state legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--heading);
+}
+
+.state-help {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xs);
+  line-height: var(--line-height-tight);
+  color: var(--text-muted);
+}
+
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface);
+  font-size: var(--text-md);
+  line-height: var(--line-height);
+}
+
+.seg input {
+  position: absolute;
+  opacity: 0;
+  width: var(--border-width);
+  height: var(--border-width);
+}
+
+.seg label {
+  display: block;
+  white-space: nowrap;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  color: var(--text);
+  user-select: none;
+}
+
+.seg-option + .seg-option label {
+  border-left: var(--border-width) solid var(--border-strong);
+}
+
+.seg input:checked + label {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+.seg input:focus-visible + label {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: calc(-1 * var(--focus-width));
+}
+
+.seg input:disabled + label {
+  cursor: progress;
+}
+
+.save-status {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  min-height: var(--space-5);
+}
+
+.save-ok {
+  color: var(--success);
+}
+
+.save-progress {
+  color: var(--text-muted);
+}
+
+.save-error {
+  color: var(--danger);
+}
+
+/* Exercises as cards (03 in 04) */
+.ex-summary {
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+.reading .exercise {
+  margin: var(--space-4) 0;
+  padding: var(--space-4) var(--space-5) var(--space-2);
+  border: var(--border-width) solid var(--border);
+  border-left: var(--exercise-accent-width) solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  font-size: var(--reading-size-md);
+}
+
+.reading .exercise.is-solved {
+  border-left-color: var(--success);
+}
+
+.reading .exercise.is-in_progress {
+  border-left-color: var(--warning);
+}
+
+.ex-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.reading .ex-head h3 {
+  margin: 0;
+  font-size: var(--reading-h4);
+}
+
+.exercise fieldset.state {
+  margin: var(--space-3) 0 var(--space-1);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--border);
+}
+
+.solution details {
+  margin: var(--space-4) 0;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.solution summary {
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  font-weight: 600;
+  line-height: var(--line-height-tight);
+  color: var(--link);
+}
+
+.solution details > :not(summary) {
+  margin-inline: var(--space-4);
+}
+
+.sum-hint {
+  display: block;
+  margin: var(--space-0) 0 0 var(--space-4);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* End of the lesson, files and pager */
+.lesson-files ul {
+  padding-left: var(--space-5);
+  font-size: var(--text-md);
+}
+
+.lesson-end {
+  margin-top: var(--space-8);
+  padding: var(--space-5) var(--space-6);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  font-size: var(--text-base);
+}
+
+.reading .lesson-end h2 {
+  margin: 0 0 var(--space-1);
+  padding: 0;
+  border: 0;
+  font-size: var(--reading-h3);
+}
+
+.lesson-end p {
+  margin: var(--space-1) 0;
+}
+
+.pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin: var(--space-8) 0 var(--space-4);
+}
+
+.pager-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-xl);
+  text-decoration: none;
+}
+
+.pager-item.is-empty {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+.pager-next {
+  text-align: right;
+}
+
+.pager-dir {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+
+.pager-title {
+  font-size: var(--text-base);
+}
+
+/* Toast after an automatic «añadir a Mis cursos» */
+.toast {
+  position: fixed;
+  right: var(--toast-offset);
+  bottom: var(--toast-offset);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--toast-bg);
+  color: var(--toast-text);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--toast-shadow);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+}
+
+.toast-close {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-xl);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-md);
+}
+
+/* Wide screens: lesson index as a right column */
+@media (min-width: 1400px) {
+  .mix-body {
+    grid-template-columns: minmax(0, 1fr) var(--lesson-rail);
+  }
+
+  .mix-rail {
+    display: block;
+  }
+
+  .toc-drop {
+    display: none;
+  }
+}
+
+/* Focus mode: «Ocultar temario» only where the syllabus is a column */
+@media (min-width: 1100px) {
+  .temario-oculto .mix {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .temario-oculto .mix-side {
+    display: none;
+  }
+}
+
+@media (min-width: 1100px) and (max-width: 1199px) {
+  .reading-wrap {
+    padding-left: var(--space-5);
+    padding-right: var(--space-5);
+  }
+}
+
+/* Below 1100px the syllabus becomes a toggle above the lesson, so the text keeps its 68ch */
+@media (max-width: 1099px) {
+  .mix {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mix-side {
+    position: static;
+    max-height: none;
+    border-right: 0;
+    border-bottom: var(--border-width) solid var(--border);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .mix-side .collapse-btn {
+    display: flex;
+  }
+
+  .mix-side .collapsible:not(.is-open) .collapsible-body {
+    display: none;
+  }
+
+  .mix-side .collapsible-body {
+    padding-top: var(--space-3);
+    max-height: var(--syllabus-body-max);
+    overflow: auto;
+  }
+
+  .focus-btn {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .reading-wrap {
+    padding: var(--space-6) var(--space-5) var(--space-8);
+  }
+
+  .reading {
+    font-size: var(--reading-size-md);
+  }
+
+  .reading .lesson-head h1 {
+    font-size: var(--reading-h1-md);
+  }
+
+  .lbar {
+    padding: 0 var(--space-5);
+  }
+}
+
+@media (max-width: 640px) {
+  .reading {
+    font-size: var(--reading-size-sm);
+    line-height: var(--reading-line-sm);
+  }
+
+  .reading .lesson-head h1 {
+    font-size: var(--reading-h1-sm);
+  }
+
+  .lbar {
+    gap: var(--space-3);
+    padding: 0 var(--space-4);
+  }
+
+  .lbar-title {
+    display: none;
+  }
+
+  .meter {
+    width: var(--meter-width-small);
+  }
+
+  .reading .exercise {
+    padding: var(--space-3) var(--space-4) var(--space-2);
+  }
+
+  .pager {
+    grid-template-columns: 1fr;
+  }
+
+  .pager-next {
+    text-align: left;
+  }
+
+  .toast {
+    left: var(--toast-offset-small);
+    right: var(--toast-offset-small);
+    bottom: var(--toast-offset-small);
+  }
+}
+
+@media (hover: none), (max-width: 640px) {
+  .copy-btn,
+  .anchor-btn {
+    opacity: 1;
+  }
+}
+
+/* Print (S21): only the lesson; open solutions print whole, closed ones only their summary */
+@media print {
+  .skip,
+  .topbar,
+  .lbar,
+  .mix-side,
+  .mix-rail,
+  .toc-drop,
+  .copy-btn,
+  .anchor-btn,
+  .toast,
+  .pager,
+  fieldset.state {
+    display: none !important;
+  }
+
+  .mix,
+  .mix-body {
+    display: block;
+  }
+
+  .reading-wrap {
+    padding: 0;
+  }
+
+  .reading {
+    max-width: none;
+    margin: 0;
+    font-size: var(--print-size);
+    line-height: var(--line-height);
+  }
+
+  .lesson-body > pre,
+  .lesson-body > .code-head,
+  .lesson-body > .diagram,
+  .lesson-body > .diagram-error {
+    margin-inline: 0;
+  }
+
+  .reading pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow: visible;
+  }
+
+  .reading a {
+    color: var(--text);
+    text-decoration: underline;
+  }
+
+  .reading pre,
+  .diagram,
+  .reading tr,
+  .reading .exercise {
+    break-inside: avoid;
+  }
+
+  .reading h1,
+  .reading h2,
+  .reading h3,
+  .reading h4 {
+    break-after: avoid;
+  }
+}

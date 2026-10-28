@@ -54,11 +54,34 @@ export type Courses = { courses: Course[] }
 
 export type Syllabus = { course: Course; phases: Phase[]; lessons: LessonEntry[] }
 
+export type Exercise = {
+  id: string
+  lessonId: string
+  courseId: string
+  title: string
+  statementHtml: string
+  solutionHtml: string
+}
+
+export type Resource = { resourceId: string; url: string; mediaType: string; fileName: string }
+
 export type LessonView = {
   lesson: LessonEntry
   bodyHtml: string
-  exercises: unknown[]
-  resources: unknown[]
+  exercises: Exercise[]
+  resources: Resource[]
   previousLessonId: string | null
   nextLessonId: string | null
 }
+
+type StateResultBase = {
+  courseId: string
+  updatedAt: string
+  courseAutoAdded: boolean
+  continuation: Continuation
+  progress: Counts
+}
+
+export type LessonStateResult = StateResultBase & { lessonId: string; state: LessonState['state'] }
+
+export type ExerciseStateResult = StateResultBase & { exerciseId: string; state: ExerciseState['state'] }

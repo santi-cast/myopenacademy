@@ -1,6 +1,6 @@
 # Frontend de Code Academy
 
-Pantallas de H4 sobre el [contrato de la API](../docs/api.md): acceso y registro, Mis cursos, catálogo e índice del curso. La vista de lección es todavía un marcador (solo el título) hasta la T9 parte b. Dependencia de ejecución añadida en H4: `react-router` 8.5.1, versión exacta aprobada.
+Pantallas de H4 sobre el [contrato de la API](../docs/api.md): acceso y registro, Mis cursos, catálogo, índice del curso y vista de lección. Dependencias de ejecución añadidas en H4, en versiones exactas aprobadas: `react-router` 8.5.1, `mermaid` 12.2.0 y `highlight.js` 11.12.0 (estas dos se cargan solo en la vista de lección).
 
 ## Comandos locales
 
@@ -28,9 +28,20 @@ El smoke comprueba que una visita anónima llega al backend real por el proxy (`
 | `/` | Mis cursos: avance «X de Y lecciones disponibles completadas · P % · Z previstas», «Continuar» o índice. |
 | `/courses` | Catálogo; «Añadir … a Mis cursos» se muestra como añadido solo tras el 200 del servidor. |
 | `/courses/:courseId` | Índice del curso agrupado por fase; las lecciones pendientes no son enlaces. |
-| `/lessons/:lessonId` | Marcador de la lección (parte b). |
+| `/lessons/:lessonId` | Lección: temario, texto, ejercicios con su estado, archivos y anterior/siguiente. Una lección pendiente (409 `LESSON_UNAVAILABLE`) muestra «todavía no disponible». |
 
 Las demás rutas muestran «No encontrado». Sin sesión, toda ruta privada lleva al acceso.
+
+## Vista de lección
+
+- El HTML de la lección (`bodyHtml`, `statementHtml`, `solutionHtml`) se inserta tal como lo entrega el backend, ya saneado, sin volver a procesarlo. Alrededor solo se añaden controles marcados con `data-ui` (barra de código con «Copiar», «#» para copiar el enlace a una sección, la pregunta de recuperación dentro del `<summary>` de la solución) y tres atributos en los enlaces a lecciones pendientes (`class="link-pending"`, `aria-disabled`, `aria-describedby`).
+- Enlaces: un único manejador delegado. `/lessons/…` y `/courses/…` navegan con el router y, tras cargar la lección, hacen scroll al fragmento; `#fragmento` hace scroll en la página. El destino se busca siempre con `document.getElementById` (los IDs pueden empezar por un dígito o llevar puntos). Los enlaces a `/api/resources/…` y los externos (`target="_blank"`) quedan para el navegador. Un enlace a una lección pendiente se ve apagado, se describe como «todavía no disponible» y no navega.
+- Resaltado: `highlight.js` (núcleo y solo java, xml/html, sql, properties, bash, yaml, javascript, css, powershell, json y kotlin) en un chunk aparte que se importa al abrir una lección. Opera sobre el texto del elemento `<code>`; `text`, `mermaid` y lenguajes desconocidos quedan sin color y sin autodetección. Colores desde las variables `--hl-*` (claro y oscuro).
+- Mermaid: chunk aparte, solo en la vista de lección, con `securityLevel: 'strict'`, sin etiquetas HTML y el tema del modo actual; se alimenta con el `textContent` del bloque. Si un diagrama falla, su código queda visible como texto con la nota «No se pudo dibujar el diagrama».
+- Estados de lección y ejercicios: «Guardando…» y luego «✓ Guardado · hoy, HH:MM» (de `updatedAt`) solo tras la confirmación del servidor; un error muestra su mensaje y vuelve al estado guardado. Si el guardado añadió el curso, aviso «Java se añadió a Mis cursos». Abrir una solución no guarda nada.
+- Continuación: `PUT /api/me/courses/{courseId}/continuation` solo si el progreso dice `added: true`, una vez cargada la lección.
+- Modo enfoque «Ocultar temario» / «Mostrar temario» recordado en `localStorage` (`ca.temario`); sin almacenamiento, dura mientras la página esté abierta.
+- Impresión: se imprime solo la lección; las soluciones abiertas salen completas y las cerradas solo con su resumen.
 
 ## Cliente de la API
 

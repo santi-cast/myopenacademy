@@ -101,6 +101,42 @@
   --code-column: 4rem;
   --state-column: 10rem;
   --body-min-width: 20rem;
+
+  /* Lesson view (04): columns, sticky bar and reading measure */
+  --viewport-height: 100vh;
+  --container-width: 100cqi;
+  --lesson-side-min: 300px;
+  --lesson-side-fluid: 22vw;
+  --lesson-side-max: 380px;
+  --lesson-rail: 250px;
+  --lbar-height: 36px;
+  --meter-width: 162px;
+  --meter-width-small: 90px;
+  --meter-gap: 2px;
+  --radius-xs: 1px;
+  --syllabus-body-max: 60vh;
+  --code-outset-max: 56px;
+  --exercise-accent-width: 3px;
+  --caret-size: 5px;
+  --caret-size-small: 4px;
+  --toast-offset: 24px;
+  --toast-offset-small: 12px;
+  --toast-shadow: 0 8px 28px var(--shadow);
+  --reading-size: 1.1875rem;
+  --reading-size-md: 1.0625rem;
+  --reading-size-sm: 1rem;
+  --reading-line: 1.72;
+  --reading-line-sm: 1.65;
+  --reading-h1: 2.6rem;
+  --reading-h1-md: 2.1rem;
+  --reading-h1-sm: 1.8rem;
+  --reading-h2: 1.65rem;
+  --reading-h3: 1.3rem;
+  --reading-h4: 1.1rem;
+  --code-size: 0.82rem;
+  --code-inline-size: 0.82em;
+  --code-line-height: 1.6;
+  --print-size: 11pt;
 }
 
 [data-theme="dark"] {
@@ -142,4 +178,43 @@
   --toast-bg: #f0f6fc;
   --toast-text: #0d1117;
   --shadow: rgba(0, 0, 0, 0.55);
+}
+
+/* Print (S21): always the light palette, with black text and links, whatever the screen theme. */
+@media print {
+  :root,
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f2f2f2;
+    --text: #000000;
+    --text-muted: #333333;
+    --heading: #000000;
+    --link: #000000;
+    --border: #999999;
+    --border-strong: #666666;
+    --accent: #0b5cad;
+    --accent-contrast: #ffffff;
+    --success: #1a7f37;
+    --success-bg: #dafbe1;
+    --warning: #7d4e00;
+    --warning-bg: #fff1cc;
+    --pending: #57606a;
+    --pending-bg: #eef1f4;
+    --danger: #b42318;
+    --danger-bg: #fee4e2;
+    --code-bg: #ffffff;
+    --code-text: #000000;
+    --hl-keyword: #cf222e;
+    --hl-string: #0a3069;
+    --hl-comment: #59636e;
+    --hl-number: #0550ae;
+    --hl-title: #8250df;
+    --hl-type: #953800;
+    --diagram-node: #eef4fb;
+    --diagram-stroke: #6b8fb5;
+    --diagram-text: #1f2933;
+    --diagram-edge: #52606d;
+  }
 }
