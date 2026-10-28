@@ -233,11 +233,12 @@ El antiguo «Pendiente de seguridad para H4» quedó resuelto: los 403 que no so
 
 Solo anotado; no son compromisos nuevos.
 
+`npm audit` del frontend se comprobó al cierre de H4 (0 vulnerabilidades); repetirlo antes de publicar.
+
 - El cebado del token CSRF depende de `GET /actuator/health` ([API](docs/api.md#sesión-csrf-y-entorno)).
 - Licencias copyleft en dependencias transitivas de ejecución: elkjs (EPL-2.0) y dompurify (MPL-2.0 OR Apache-2.0).
 - Tomcat registra el mensaje completo de una excepción que escapa a un filtro del framework.
 - La cookie que borra logout no lleva `Secure` y fija el nombre `JSESSIONID`.
-- `npm audit` necesita red; no se pudo comprobar en H4.
 - Limitación de intentos y enumeración de usuarios (sección 4).
 - CSP para la aplicación.
 
