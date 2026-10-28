@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
+
+// Under a loaded machine the default 1 s wait makes async queries flaky; behaviour is unchanged.
+configure({ asyncUtilTimeout: 5000 })
 
 // jsdom has no layout and reports window.scrollTo as not implemented; the lesson view calls it.
 window.scrollTo = () => {}

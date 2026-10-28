@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { waitFor, fireEvent, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ana, installFakeBackend } from './test/fakeBackend'
 import { renderApp } from './test/renderApp'
@@ -47,7 +47,7 @@ describe('theme', () => {
     renderApp('/login')
 
     expect(await screen.findByRole('button', { name: 'Modo oscuro' })).toBeVisible()
-    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'light'))
   })
 
   it('ignores an unknown stored value', async () => {

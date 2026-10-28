@@ -192,6 +192,8 @@ export function LessonView({ data }: { data: LessonData }) {
     addHeadingAnchors(body)
     addSolutionHints(root)
     const blocks = decorateCodeBlocks(root)
+    // The synchronous reading aids are in place (anchors, hints, code bars, pending links).
+    root.dataset.enhanced = 'true'
     void highlightBlocks(blocks.highlight, isCancelled)
     let theme = currentTheme()
     void drawDiagrams(blocks.diagrams, theme, isCancelled)

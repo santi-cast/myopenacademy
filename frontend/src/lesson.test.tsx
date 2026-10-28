@@ -40,6 +40,8 @@ async function openLesson(options: { body?: string; progress?: ReturnType<typeof
   routeLesson(backend, lessonView(options.body === undefined ? {} : { bodyHtml: options.body }), options.progress)
   const view = renderApp(options.path ?? '/lessons/java-02.01')
   await screen.findByRole('heading', { level: 1, name: 'Tu primer programa' })
+  // Wait for the reading aids added after the HTML is in the page, not just for the title.
+  await waitFor(() => expect(document.querySelector('[data-enhanced="true"]')).not.toBeNull())
   return { backend, ...view }
 }
 
