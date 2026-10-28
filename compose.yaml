@@ -1,0 +1,23 @@
+name: code-academy
+
+services:
+  db:
+    image: postgres:18.6
+    environment:
+      POSTGRES_DB: ${DB_NAME:-code_academy}
+      POSTGRES_USER: ${DB_USERNAME:-code_academy}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set a nonempty DB_PASSWORD in your local environment}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      # PostgreSQL 18 stores versioned PGDATA beneath /var/lib/postgresql.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres_data:

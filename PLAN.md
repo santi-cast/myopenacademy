@@ -2,7 +2,7 @@
 
 Academia web para estudiar programación, empezando por Java. El objetivo es usarla personalmente cuando esté funcionando y presentarla como proyecto de portfolio, con apoyo de agentes de IA para desarrollarla.
 
-**Estado:** H1 y H2 cerrados en definición y diseño; H3 (base técnica) es el siguiente hito, todavía no iniciado. No se ha iniciado la implementación de la aplicación. El cierre de diseño no autoriza código, instalaciones ni servicios.
+**Estado:** H1, H2 y H3 cerrados. La base técnica está validada y versionada en `feat/h3-base`. H4 no está iniciado: todavía no hay cuentas, cursos para estudiar ni progreso de alumnos.
 Este archivo es el plan principal versionado; Engram complementa su continuidad, no lo reemplaza.
 
 ## 1. Decisiones confirmadas
@@ -41,6 +41,8 @@ El [manifiesto mínimo aprobado para H4](docs/manifiesto.md) detalla el temario 
 
 ### Requisitos y recorrido confirmados
 
+Diseño aprobado para H4, todavía sin implementar; no describe funciones disponibles en la base técnica de H3.
+
 1. **Cuenta y acceso:** registro abierto en local con usuario y contraseña. Catálogo y contenido requieren sesión; registro y login son accesibles sin autenticar.
 2. **Recuperación:** herramienta de consola local para restablecer contraseña conservando ID interno y progreso. No se creará cuenta administradora automática. Se revisará el mecanismo antes de publicar en internet.
 3. **Mis cursos:** añadir Java explícitamente o automáticamente al marcar estado de una lección o ejercicio de un curso todavía no añadido.
@@ -64,48 +66,47 @@ El [manifiesto mínimo aprobado para H4](docs/manifiesto.md) detalla el temario 
 - Nuevas lecciones disponibles pueden reducir el porcentaje sin borrar trabajo. Si no hay disponibles, mostrar «sin lecciones disponibles» y no dividir por cero. Las fechas corresponden a cambios guardados de estado, no visitas.
 - Sin registro personal, lección no completada y ejercicio pendiente; no precargar estados al añadir un curso. H5 diseñará tratamiento de cambios, retiradas o divisiones sin pérdida ni reasignación silenciosa de progreso.
 
-H1 queda cerrado con estas reglas. La seguridad está acordada en diseño en H2, pero todavía no implementada ni verificada.
+H1 queda cerrado con estas reglas. H2 define la seguridad del futuro recorrido de estudio; H3 valida solo la base técnica de seguridad, no las cuentas ni la separación de progreso entre alumnos.
 
 ## 4. Arquitectura y tecnologías
 
-**Diseño confirmado por el propietario.** La compatibilidad y disponibilidad de versiones se comprobarán en H3 antes de generar el proyecto; cualquier sustitución se justificará y revisará, no será automática. Confirmar diseño no autoriza instalar ni implementar.
+**Diseño confirmado por el propietario; base técnica validada en H3.** Las versiones elegidas y su compatibilidad se comprobaron. Las funciones de negocio siguientes siguen siendo diseño para H4; cualquier sustitución futura requiere justificación y revisión.
 
 | Responsabilidad | Decisión o estado |
 |---|---|
 | Frontend | React + Vite + TypeScript; no Next.js. |
 | Componentes y estilos | Tailwind CSS + shadcn/ui siguen como propuesta opcional independiente del cierre funcional. |
-| Backend | Java 25 + Spring Boot 4.1.2, Maven y Maven Wrapper. Compatibilidad por verificar. Una aplicación modular, no microservicios. |
+| Backend | Java 25 + Spring Boot 4.1.2, Maven 3.10.0 mediante Wrapper; base compatible y validada. Una aplicación modular, no microservicios. |
 | Comunicación | API REST; contrato documental aprobado. |
 | Base de datos | PostgreSQL con imagen postgres:18.6 en Docker Compose, entorno y datos propios. |
 | Persistencia | Spring Data JPA y migraciones versionadas Flyway con soporte PostgreSQL. |
-| Seguridad | Spring Security, sesión de servidor, CSRF y Argon2id con Argon2PasswordEncoder y Bouncy Castle; implementación pendiente. |
-| Contenido | Markdown y recursos versionados en copia controlada. |
+| Seguridad | Base Spring Security con denegación por defecto, CSRF SPA y Argon2id con Bouncy Castle validada en H3; cuentas y reglas de sesión de negocio pendientes de H4. |
+| Contenido | Futura copia controlada de Markdown y recursos; todavía sin importación. |
 | Pruebas | Vitest y React Testing Library; JUnit y Testcontainers con PostgreSQL real; Playwright para recorridos completos. |
 
-Monorepo con `frontend/`, `backend/`, `content/` (copia y manifiesto) y `docs/`. Backend por responsabilidades de cuentas/acceso, catálogo/contenido y estudio/progreso; responsable de reglas y datos. La interfaz consume la API. No se incorpora Prisma ni se da por elegido Auth.js.
+Monorepo con `frontend/`, `backend/`, `content/` (reservado para copia y manifiesto) y `docs/`. El diseño del backend separa cuentas/acceso, catálogo/contenido y estudio/progreso; estas funciones de negocio no están implementadas. La interfaz técnica consulta salud del backend. No se incorpora Prisma ni se da por elegido Auth.js.
 
 ### Herramientas y entorno
 
-**Evidencia aportada por el asesor, no verificada nuevamente aquí:** Java 25.0.4, Maven 3.10.0, Gradle 9.8.2 y Spring Boot CLI 4.1.2 mediante SDKMAN; imágenes postgres:18.6, MySQL, MongoDB, Redis, Tomcat y Testcontainers/Ryuk descargadas; ningún contenedor creado en su revisión; Node.js no instalado. PostgreSQL disponible como imagen, no nativo. «Mi Biblioteca» usaría Java 25, Spring Boot 4.1.2, Maven, Flyway, postgres:18.6 y springdoc. No es garantía de estado actual ni compatibilidad.
+**Base comprobada en H3:** Java 25.0.4.1, Maven 3.10.0 mediante Wrapper, Spring Boot 4.1.2, Node 24.22.1 mediante fnm, npm 11.19.1 y PostgreSQL 18.6 en Compose. React, Vite y TypeScript tienen versiones fijadas y lockfile. Los detalles de comprobación están solo en [las tareas de H3](odd/tasks/h3-base.md); el arranque se explica en la [guía local](docs/desarrollo-local.md). No se ha inventariado el curso de origen.
 
-- Alinear backend con el curso reduce herramientas nuevas. Maven, sin mantener además Gradle; Wrapper reproducible. El CLI instalado no determina dependencias de la aplicación.
-- En H3 verificar disponibilidad, soporte y compatibilidad conjunta de versiones, Flyway, Testcontainers y bibliotecas añadidas. No instalar ni descargar basándose solo en el inventario.
-- Node.js mediante fnm, LTS vigente al instalar en H3 y compatible con Vite. Fijar versión, npm y lockfile; no instalar también nvm. Toda instalación requiere autorización explícita independiente.
-- Springdoc/OpenAPI sigue opcional; evaluar versión compatible en H3/H4. Swagger no sustituye contrato ni pruebas. No añadir MapStruct sin necesidad concreta.
-- JUnit/Testcontainers con PostgreSQL de la versión propuesta y datos desechables por ejecución; nunca volumen de estudio ni de prácticas del curso.
+- Maven es la única herramienta de construcción Java del proyecto; no se mantiene además Gradle. El CLI instalado no determina dependencias de la aplicación.
+- Flyway y Testcontainers forman parte de la base validada; las pruebas usan datos desechables separados del volumen local y de las prácticas del curso.
+- Node y npm están fijados; no se instala también nvm. Cambiar herramientas o añadir instalaciones requiere autorización propia.
+- Springdoc/OpenAPI sigue opcional para evaluar en H4. Swagger no sustituye contrato ni pruebas. No añadir MapStruct sin necesidad concreta.
 
 **Docker compartido, datos separados**
 
 - Reutilizar motor e imagen postgres:18.6 si está disponible, sin compartir datos. Etiqueta fija no sustituye política de actualizaciones ni digest inmutable.
 - Compose propio con proyecto `code-academy`; contenedor, red, credenciales y volumen exclusivos. No leer ni reutilizar configuración o datos de las prácticas.
 - Volumen persistente con clave lógica y nombre físico prefijado por proyecto: no anónimo, externo ni `name` global fijo; evitar `container_name`. Pruebas e instancias adicionales con aislamiento propio.
-- Host `127.0.0.1:5433` hacia `5432` del contenedor, previa comprobación en H3. No ocupar por defecto 5432 de prácticas ni exponer base a red local. Todos los servicios ligados a loopback.
-- Healthcheck con `pg_isready`. Arranque propuesto: base en Compose, backend con Wrapper, frontend Vite con proxy `/api`; no Tomcat independiente ni MySQL, MongoDB o Redis.
+- Host `127.0.0.1:5433` hacia `5432` del contenedor, comprobado en H3. No ocupar por defecto 5432 de prácticas ni exponer base a red local. Todos los servicios ligados a loopback.
+- Healthcheck con `pg_isready`. Arranque validado: base en Compose, backend con Wrapper y perfil `local`, frontend Vite con proxy `/api`; no Tomcat independiente ni MySQL, MongoDB o Redis. Los servicios quedaron detenidos normalmente y el volumen se conserva.
 - Reiniciar o bajar no borra datos. Eliminar volúmenes, por ejemplo `down -v`, es destructivo y no forma parte del flujo normal. Aislamiento no protege de limpiezas globales; definir respaldo y recuperación antes de depender de datos valiosos.
 
 ### Modelo de datos aprobado
 
-Modelo conceptual, no código ni esquema físico definitivo. Catálogo compartido entre autenticados; inscripciones, estados y continuación privados.
+Modelo conceptual para H4, no código ni esquema físico de negocio implementado. Catálogo compartido entre autenticados; inscripciones, estados y continuación privados.
 
 | Entidad | Datos y relaciones |
 |---|---|
@@ -140,7 +141,7 @@ Recorrido aprobado, no diseño visual ni implementación:
 
 No hay pantallas separadas para ejercicios, soluciones o progreso. Tras confirmar adición automática, aviso como «Java se añadió a Mis cursos» con nombre correspondiente. Cambios solo como guardados tras confirmación; si fallan, informar sin simular persistencia. Backend rechaza abrir pendientes por URL; UI muestra «todavía no disponible». Logout retira datos privados y rechaza nuevas solicitudes con esa sesión.
 
-La [política completa de contenido](docs/api.md#contenido-ejercicios-y-recursos) exige HTML saneado, extracción separada de ejercicios sin duplicación en `bodyHtml`, enlaces reescritos y fragmentos finales válidos. Mantiene `<details>`/`<summary>` seguros, Mermaid `strict` y fallback de fuente original escapada; el SVG generado no elude controles. Recursos autenticados por ID de manifiesto, contención canónica con symlinks y sin rutas del cliente/origen; SVG con tipo correcto, `nosniff` y CSP `sandbox` sin permisos; HTML educativo solo descarga o texto escapado, nunca ejecución del mismo origen. Elegir y comprobar bibliotecas en H3/H4.
+La [política completa de contenido](docs/api.md#contenido-ejercicios-y-recursos) exige HTML saneado, extracción separada de ejercicios sin duplicación en `bodyHtml`, enlaces reescritos y fragmentos finales válidos. Mantiene `<details>`/`<summary>` seguros, Mermaid `strict` y fallback de fuente original escapada; el SVG generado no elude controles. Recursos autenticados por ID de manifiesto, contención canónica con symlinks y sin rutas del cliente/origen; SVG con tipo correcto, `nosniff` y CSP `sandbox` sin permisos; HTML educativo solo descarga o texto escapado, nunca ejecución del mismo origen. La elección y comprobación de bibliotecas de contenido queda para H4.
 
 El asesor informó 1731 anclas, 67 lecciones con Mermaid, 60 SVG y 2662 HTML: evidencia aportada no verificada aquí, no mediciones nuevas ni constantes.
 
@@ -151,23 +152,25 @@ El asesor informó 1731 anclas, 67 lecciones con Mermaid, 60 SVG y 2662 HTML: ev
 
 ### Sesión y contraseña confirmadas
 
+Requisitos de negocio aprobados para H4, no un recorrido de cuentas ya implementado. H3 solo aporta los mecanismos técnicos de base indicados a continuación.
+
 - Sesión de servidor en memoria, ID rotado al login, caducidad tras 2 horas sin solicitudes autenticadas; reiniciar cierra sesión, no borra progreso. Sin remember-me ni credenciales en localStorage. Logout invalida sesión, limpia cookie y estado privado.
 - Cookie HttpOnly, SameSite=Lax, sin Domain; Secure en HTTPS, excepción solo HTTP local. Sin cachés compartidas en autenticación/progreso ni secretos en registros.
 - Comparar versión de credenciales en CADA solicitud autenticada contra base de datos, sin caché obsoleta. Rechazar sesiones viejas en siguiente solicitud, no cancelar retroactivamente solicitudes en vuelo.
 - Recuperación local sin endpoint web: contraseña oculta dos veces, no argumentos. Hash nuevo e incremento de version_credenciales en una transacción, conservando ID y progreso; sin estado parcial que deje sesiones previas válidas.
 - CSRF en TODAS las operaciones inseguras, incluidos registro, login y logout. Token antes de login y renovado tras login/logout. SameSite y proxy no sustituyen CSRF ni autorización. No reintentar escrituras inciertas.
-- Preferir integración SPA oficial documentada: `csrf.spa()` sigue **SIN VERIFICAR**, comprobar en H3. `/api/auth/csrf` solo condicional si integración nativa no basta, no decimoquinta ruta fija; sesión técnica nunca progreso.
+- La integración SPA oficial `csrf.spa()` se verificó y se usa en la base de H3. La integración con registro, login y logout sigue pendiente de H4. `/api/auth/csrf` solo condicional si integración nativa no basta, no decimoquinta ruta fija; sesión técnica nunca progreso.
 - Desarrollo de mismo origen con proxy Vite hacia `/api` Spring Boot, incluidos recursos, sin CORS abierto. Publicación definirá esquema de origen equivalente.
 - Registro y consola: 15–128 puntos de código Unicode, admitiendo espacios/frases, sin composición obligatoria ni recorte, normalización o truncamiento. Login no aplica mínimo de política, ni exige no vacío por longitud: solo rechaza por longitud más de 128 puntos de código antes del hash, siempre con 401 genérico `AUTHENTICATION_FAILED`, nunca 400 `INVALID_PASSWORD`. Errores de esquema/tipo pueden ser 400. Evita bloquear usuarios existentes si cambia el mínimo.
-- El máximo 128 protege operativamente el uso de Argon2, no es límite inherente del algoritmo. Argon2id con Argon2PasswordEncoder, Bouncy Castle y sal por contraseña; suelo inicial OWASP de 19 MiB, 2 iteraciones y paralelismo 1. Medir coste local en H3 sin bajar suelo; no asumir cumplimiento de predeterminados.
+- El máximo 128 protege operativamente el uso de Argon2, no es límite inherente del algoritmo. Argon2id con Argon2PasswordEncoder, Bouncy Castle y sal por contraseña; suelo inicial OWASP de 19 MiB, 2 iteraciones y paralelismo 1. H3 comprobó el mecanismo y midió su coste local sin bajar ese suelo; su uso en cuentas reales corresponde a H4.
 - No bcrypt: límite de 72 bytes, no caracteres; tampoco 64 Unicode garantizan caber. Sin truncamiento ni prehash improvisado. Validar límites explícitamente.
 - Revisar en H7 intentos de acceso/recuperación y enumeración de registro (`USERNAME_TAKEN`), antes si cambia el entorno de uso fuera de local.
 
 ### Cierre de H2 y verificaciones de H3
 
-**H2 cerrado por el propietario:** recorrido, modelo, arquitectura, contrato JSON (incluido username) y manifiesto mínimo aprobados con los ajustes finales de login, extracción, continuación y procedencia. No quedan propuestas de estos contratos pendientes de aprobación ni hay evidencia de implementación.
+**H2 cerrado por el propietario:** recorrido, modelo, arquitectura, contrato JSON (incluido username) y manifiesto mínimo aprobados con los ajustes finales de login, extracción, continuación y procedencia. No quedan propuestas de estos contratos pendientes de aprobación; el recorrido de negocio aún no está implementado.
 
-Compatibilidad/disponibilidad de versiones, documentación CSRF y benchmark Argon2id son verificaciones de H3 antes de implementar sus mecanismos, no bloqueos de aprobación de H2. Estilos y springdoc siguen opcionales. Importador completo de H5, despliegue H7 y maquetas visuales no son necesarios para cerrar H2.
+H3 completó las comprobaciones técnicas de versiones, CSRF y Argon2id, junto con el arranque y la integración local. La evidencia vive en [el archivo único de tareas](odd/tasks/h3-base.md). Esto no demuestra todavía cuentas, contenido ni progreso de H4. Estilos y springdoc siguen opcionales; el importador completo corresponde a H5 y el despliegue a H7.
 
 ## 5. Hitos
 
@@ -177,8 +180,8 @@ Secuencia de trabajo con estado explícito; los hitos futuros se detallarán en 
 |---|---|---|---|
 | H1. Definición | Cerrado | Alcance, progreso y exclusiones | Requisitos y decisiones del primer recorrido resueltos |
 | H2. Diseño | Cerrado | Pantallas, modelo, API, arquitectura y manifiesto mínimo | Recorrido, separación de datos y contratos aprobados en diseño |
-| H3. Base técnica | Próximo; no iniciado | Frontend, backend, entorno local y pruebas iniciales | Arranque reproducible documentado y comprobaciones básicas ejecutables |
-| H4. Primer recorrido | No completado; pendiente | Una lección real importada, cuentas y avance persistente | Dos usuarios conservan avances distintos al reiniciar, sin acceso cruzado |
+| H3. Base técnica | Cerrado | Frontend, backend, entorno local y pruebas iniciales | Arranque reproducible documentado y comprobaciones técnicas e independientes completadas |
+| H4. Primer recorrido | No iniciado; requiere aprobación del propietario | Una lección real importada, cuentas y avance persistente | Dos usuarios conservan avances distintos al reiniciar, sin acceso cruzado |
 | H5. Contenido disponible | No completado; pendiente | Importación de material escrito y actualización incremental | Enlaces/recursos funcionan; nuevo módulo sin borrar avances ni complementos |
 | H6. Validación de estudio | No completado; pendiente | Uso real por el propietario | Recorrido probado y problemas registrados/priorizados |
 | H7. Publicación | No completado; pendiente | Alojamiento, seguridad, respaldos y despliegue | Preparación revisada y autorización explícita antes de publicar |
@@ -199,8 +202,8 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 
 - Git inicializado en rama `main`; el primer commit `29399a1` ya registra `PLAN.md` y `.gitignore` mínimo.
 - Sin remotos configurados ni contenido publicado en GitHub. No se crean remotos en este cierre.
-- El segundo commit documental permanece pendiente: mostrar antes el mensaje propuesto y esperar aprobación expresa del propietario. No se ha ejecutado ni se le asigna un hash ficticio.
-- Cambios pequeños, con pruebas/documentación junto al comportamiento correspondiente. No versionar secretos, datos personales ni temporales.
+- El segundo commit documental `a6f5206` ya cerró H2 y separó los contratos en `docs/api.md` y `docs/manifiesto.md`, con el mensaje `docs: close H2 design and split API and manifest contracts`.
+- Trabajo de H3 en `feat/h3-base`, con commits locales pequeños y coherentes como unidades de revisión; sin cadenas de ramas ni PR. El propietario autorizó integrarlo en `main` tras superar las pruebas, con `--no-ff` y el mensaje `Merge H3: technical foundation`. No se autoriza publicar ni crear remotos. Pruebas/documentación acompañan al comportamiento; no versionar secretos, datos personales ni temporales.
 - Antes de publicar, decidir visibilidad, licencias y material del curso distribuible. Portfolio distinguirá autoría educativa y contribuciones de plataforma.
 - Desarrollo con agentes de IA, sin exigir dominar previamente React, TypeScript o Spring ni convertir cada implementación en una clase. Aprendizaje gradual sin bloquear entregas.
 - Otro modelo podrá actuar como asesor; sus recomendaciones se evaluarán, sin otorgarle escritura ni autoridad para cambiar alcance por sí solo.
@@ -208,10 +211,16 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 
 ## 8. Próximo paso
 
-**H3: preparación de la base técnica, todavía no iniciada.** Preparar su alcance y las verificaciones de disponibilidad/compatibilidad, documentación oficial de CSRF y coste Argon2id. Este cierre solo modifica documentación: no autoriza generar código, instalar dependencias, arrancar servicios, acceder al curso fuente, configurar remotos ni publicar.
+**H3 completado y versionado en Git.** El [archivo único de tareas y comprobaciones](odd/tasks/h3-base.md) conserva la evidencia de las cinco tareas. La revisión independiente de seguridad y entorno está completada. La evaluación nativa no estuvo disponible por alcance no evaluable con archivos sin seguimiento, incluso al solicitar rangos comprometidos; no se declara un veredicto ni aprobación nativa.
 
-Antes de cualquier commit, mostrar al propietario el mensaje propuesto del segundo commit documental y esperar autorización. La aprobación de H2 no sustituye ese punto de control ni permisos independientes para implementar o instalar en H3.
+Los servicios quedaron detenidos normalmente, con el volumen propio conservado. El perfil local del backend carga la configuración humana sin exportaciones manuales. El agente no lee ni modifica `.env` o `.env.example`; no se cambian credenciales ni se borran volúmenes inicializados. Se conservan los commits coherentes de `feat/h3-base`, sin cadenas de ramas/PR, remotos ni publicación; su integración local en `main` está autorizada bajo las condiciones de la sección 7.
 
-**Última confirmación:** H1/H2 cerrados; login sin mínimo de política y con máximo operativo de 128 puntos de código; registro/consola mantienen 15–128; ejercicios extraídos sin duplicación, continuación condicionada y procedencia por hash completo de commit fuente. Los contratos enlazados son diseño aprobado, no pruebas de salvaguardas implementadas. El inventario y recuentos del asesor no se verificaron aquí.
+**Próximo paso: conversar y autorizar H4 antes de implementarlo.** Concretar el primer recorrido real: cuentas, primera lección en copia controlada y progreso persistente, con la comprobación futura de dos usuarios sin acceso cruzado. H4 no está iniciado y este cierre no autoriza acceder al curso de origen ni importar contenido automáticamente.
+
+### Pendiente de seguridad para H4
+
+El `accessDeniedHandler` debe distinguir `CsrfException` de los demás errores 403: solo los fallos de CSRF deben responder `CSRF_REJECTED`. Al incorporar usuarios y autorización, definir el código correspondiente a los otros accesos denegados en el contrato de API. Es seguimiento de H4; no cambia el comportamiento de H3.
+
+Los contratos de H2 siguen siendo diseño para ese recorrido: política de contraseñas, versión de credenciales por solicitud, recuperación por consola, ejercicios separados, continuación condicionada y procedencia por hash completo. La base técnica validada no equivale a esas funciones ya disponibles.
 
 Este documento se actualizará cuando se acuerden cambios. Una propuesta opcional no pasa a ser requisito confirmado por aparecer aquí.
