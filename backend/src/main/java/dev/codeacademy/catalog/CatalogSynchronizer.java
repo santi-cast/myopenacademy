@@ -15,9 +15,10 @@ import dev.codeacademy.content.Manifest.Exercise;
 import dev.codeacademy.content.Manifest.Lesson;
 
 /**
- * Brings the catalog tables in line with the manifests in one transaction: inserts what is new and updates titles,
- * positions and availability. Rows are never deleted, and a permanent ID that disappeared or changed course or lesson
- * rejects the whole synchronization (future retirements need H5).
+ * Brings the catalog tables in line with the manifests in one transaction: inserts what is new and updates lesson
+ * titles, positions and availability. Rows are never deleted. A permanent ID that disappeared or changed course or
+ * lesson, or an exercise whose title changed (the title binds the ID to its content), rejects the whole
+ * synchronization; resolving those is H5 work.
  */
 @Component
 public class CatalogSynchronizer {
@@ -76,13 +77,16 @@ public class CatalogSynchronizer {
 	private List<String> conflicts(List<Manifest> manifests) {
 		Map<String, String> lessonCourses = new HashMap<>();
 		Map<String, Owner> exerciseOwners = new HashMap<>();
+		Map<String, String> exerciseTitles = new HashMap<>();
 		List<String> courseIds = new ArrayList<>();
 		for (Manifest manifest : manifests) {
 			courseIds.add(manifest.course().id());
 			for (Lesson lesson : manifest.lessons()) {
 				lessonCourses.put(lesson.id(), manifest.course().id());
-				lesson.exercises().forEach(exercise ->
-						exerciseOwners.put(exercise.id(), new Owner(manifest.course().id(), lesson.id())));
+				lesson.exercises().forEach(exercise -> {
+					exerciseOwners.put(exercise.id(), new Owner(manifest.course().id(), lesson.id()));
+					exerciseTitles.put(exercise.id(), exercise.title());
+				});
 			}
 		}
 		List<String> problems = new ArrayList<>();
@@ -99,7 +103,7 @@ public class CatalogSynchronizer {
 				problems.add("lesson " + id + " belongs to course " + stored + ", not " + current);
 			}
 		});
-		jdbc.query("select id, course_id, lesson_id from code_academy.exercises order by id", row -> {
+		jdbc.query("select id, course_id, lesson_id, title from code_academy.exercises order by id", row -> {
 			String id = row.getString("id");
 			Owner stored = new Owner(row.getString("course_id"), row.getString("lesson_id"));
 			Owner current = exerciseOwners.get(id);
@@ -107,6 +111,10 @@ public class CatalogSynchronizer {
 			else if (!Objects.equals(current, stored)) {
 				problems.add("exercise " + id + " belongs to lesson " + stored.lessonId() + " of course "
 						+ stored.courseId() + ", not " + current.lessonId() + " of course " + current.courseId());
+			}
+			else if (!row.getString("title").equals(exerciseTitles.get(id))) {
+				problems.add("exercise " + id + " is titled «" + row.getString("title") + "», not «"
+						+ exerciseTitles.get(id) + "»");
 			}
 		});
 		return problems;

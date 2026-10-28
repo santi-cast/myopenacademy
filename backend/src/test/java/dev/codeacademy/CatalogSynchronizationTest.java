@@ -160,6 +160,27 @@ class CatalogSynchronizationTest {
 	}
 
 	@Test
+	void aStoredExerciseWhoseTitleChangesIsRejectedWithoutChanges() {
+		// The title binds an exercise ID to its content, so swapping titles in the manifest would move progress.
+		ContentFixture swapped = ContentFixture.copyInto(tempDir.resolve("swapped"));
+		swapped.editManifest(manifest -> {
+			var exercises = ContentFixture.lesson(manifest, "demo-01.01").get("exercises");
+			String first = exercises.get(0).get("title").asString();
+			String second = exercises.get(1).get("title").asString();
+			((ObjectNode) exercises.get(0)).put("title", second);
+			((ObjectNode) exercises.get(1)).put("title", first);
+		});
+		Manifest loaded = swapped.load().manifest();
+		var before = TestDatabase.snapshot(jdbc);
+
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, loaded)))
+				.isInstanceOf(CatalogConflictException.class)
+				.hasMessageContaining("exercise demo-01.01-e01 is titled «Primer ejercicio», not «Segundo ejercicio»")
+				.hasMessageContaining("exercise demo-01.01-e02 is titled «Segundo ejercicio», not «Primer ejercicio»");
+		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+	}
+
+	@Test
 	void anExerciseTitleConflictWithTheLessonFailsTheLoadAndLeavesTheDatabaseUntouched() {
 		ContentFixture retitled = ContentFixture.copyInto(tempDir.resolve("retitled"));
 		retitled.editManifest(manifest -> ((ObjectNode) ContentFixture.lesson(manifest, "demo-01.01").get("exercises").get(0))
