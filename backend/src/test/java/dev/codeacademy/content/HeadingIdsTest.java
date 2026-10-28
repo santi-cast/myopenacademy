@@ -46,6 +46,12 @@ class HeadingIdsTest {
 	}
 
 	@Test
+	void aTabInsideAHeadingIsDroppedLikeAncla() {
+		// Frozen from ancla() at 0c2df357; kept out of the TSV, which cannot hold a literal tab.
+		assertThat(HeadingIds.slug("Tab\tdentro")).isEqualTo("tabdentro");
+	}
+
+	@Test
 	void everyHeadingOfTheRealLessonMatchesTheFrozenAnchorsInOrder() throws IOException {
 		String lesson = Files.readString(REAL_LESSON, StandardCharsets.UTF_8);
 

@@ -197,6 +197,10 @@ final class LessonPipeline {
 					headingIds.add(result.headingIds.get(heading));
 				}
 				else {
+					String text = HeadingIds.plainText(heading);
+					if (text.startsWith("Ejercicio")) {
+						problems.add(lessonId + ": exercise heading «" + text + "» does not match «Ejercicio N · Título»");
+					}
 					current = null; // level headings (🟢 Básico...) belong to no exercise and leave with the section
 				}
 			}

@@ -341,6 +341,16 @@ class ContentLoaderTest {
 	}
 
 	@Test
+	void rejectsAnExerciseHeadingThatDoesNotFollowTheFormat() throws Exception {
+		for (String malformed : java.util.List.of("Ejercicio 3: Mal formado", "Ejercicio 3 - Mal formado",
+				"Ejercicio tres · Mal formado", "Ejercicio 3 ·Mal formado")) {
+			var fixture = ContentFixture.copyInto(java.nio.file.Files.createTempDirectory(tempDir, "malformed"));
+			fixture.replace(INTRO, "---\n\n## 6. Chuleta", "#### " + malformed + "\n\nEnunciado.\n\n---\n\n## 6. Chuleta");
+			fixture.rejected("demo-01.01: exercise heading «" + malformed + "» does not match «Ejercicio N · Título»");
+		}
+	}
+
+	@Test
 	void rejectsAManifestExerciseWhoseHeadingNoLongerExists() {
 		String text = fixture.read(INTRO);
 		fixture.write(INTRO, text.substring(0, text.indexOf("#### Ejercicio 1 · "))
