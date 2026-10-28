@@ -6,9 +6,16 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,6 +79,35 @@ abstract class ProgressTestSupport {
 	static void login(ApiClient browser, String username) throws Exception {
 		assertThat(browser.send("POST", "/api/auth/login", credentials(username, PASSWORD)).statusCode())
 				.isEqualTo(200);
+	}
+
+	/** Fetches the CSRF token up front, so parallel requests of one browser all send the same one. */
+	static ApiClient ready(ApiClient browser) throws Exception {
+		if (browser.cookie("XSRF-TOKEN").isEmpty()) browser.send("GET", "/actuator/health", null, null);
+		assertThat(browser.cookie("XSRF-TOKEN")).isPresent();
+		return browser;
+	}
+
+	/** Releases every call at the same moment; the responses come back in call order. */
+	static List<HttpResponse<String>> parallel(List<Callable<HttpResponse<String>>> calls) throws Exception {
+		CountDownLatch start = new CountDownLatch(1);
+		ExecutorService pool = Executors.newFixedThreadPool(calls.size());
+		try {
+			List<Future<HttpResponse<String>>> futures = new ArrayList<>();
+			for (var call : calls) {
+				futures.add(pool.submit(() -> {
+					start.await();
+					return call.call();
+				}));
+			}
+			start.countDown();
+			List<HttpResponse<String>> responses = new ArrayList<>();
+			for (var future : futures) responses.add(future.get(30, TimeUnit.SECONDS));
+			return responses;
+		}
+		finally {
+			pool.shutdownNow();
+		}
 	}
 
 	static String userId(ApiClient browser) throws Exception {
