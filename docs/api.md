@@ -1,6 +1,6 @@
 # API — contrato de H2 cerrado
 
-Contrato aprobado en diseño, no implementado ni verificado. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md).
+Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md).
 
 ## Acceso, propiedad y efectos
 
@@ -102,11 +102,11 @@ Ejemplo ilustrativo de un curso existente no añadido, con dos entradas y una di
 
 ## Contenido, ejercicios y recursos
 
-Esta es una política de extracción y entrega aprobada, no una afirmación de importador implementado ni una medición del origen.
+Política de extracción y entrega implementada en H4 para la lección importada; no es una medición del origen. El importador completo es de H5.
 
 La importación extrae los ejercicios de la sección exacta «Ejercicios prácticos resueltos» de cada lección: el enunciado pasa a `Exercise.statementHtml` y la solución en `<details>` pasa a `Exercise.solutionHtml`, conservando el desplegable seguro. Ambos campos se sanean por separado. `bodyHtml` no incluye esa sección, para que los ejercicios no aparezcan dos veces. La asociación explícita del manifiesto conserva IDs permanentes de ejercicios; un ordinal transitorio no identifica el ejercicio. Cada ejercicio se asocia por su título exacto ([regla del manifiesto](manifiesto.md#identidad-extracción-y-rutas)), y `Exercise.title` es ese mismo texto plano, idéntico al guardado en el catálogo. Un ID de elemento repetido en cualquier campo HTML de la lección rechaza la importación.
 
-- Convertir Markdown a HTML con lista permitida de elementos, atributos y protocolos antes de representarlo. Conservar `<details>`/`<summary>` seguros; excluir scripts, manejadores de eventos y enlaces ejecutables. Elegir y comprobar biblioteca en H3/H4.
+- Convertir Markdown a HTML con lista permitida de elementos, atributos y protocolos antes de representarlo. Conservar `<details>`/`<summary>` seguros; excluir scripts, manejadores de eventos y enlaces ejecutables. H4 usa commonmark 0.31.0 y OWASP Java HTML Sanitizer 20261011.1.
 - Reescribir enlaces relativos hacia rutas de lecciones por ID permanente y `/api/resources/{resourceId}`. La reescritura, el saneamiento y la validación final de enlaces, recursos y fragmentos se aplican a `bodyHtml`, `statementHtml` y `solutionHtml`, también a enlaces entre esos campos. No exponer rutas del origen.
 - Generar IDs de encabezados compatibles con GitHub, incluidos duplicados, acentos y puntuación; permitir IDs solo para esos destinos, no arbitrarios. Conservar/mapear fragmentos y validar que sus destinos finales existan tras separar, limpiar y reescribir el contenido. Un enlace a lección pendiente lleva a «todavía no disponible»; una referencia no resuelta se señala en la validación, sin reasignarla silenciosamente ni fingir un fragmento validado sin cuerpo.
 - Un fragmento que apunta al encabezado de un ejercicio extraído se reescribe al ID del ejercicio (por ejemplo, `#java-02.01-e08`, o `/lessons/{lessonId}#java-02.01-e08` desde otra lección). El frontend representa cada ejercicio en un contenedor cuyo `id` es el ID del ejercicio.

@@ -1,6 +1,6 @@
 # Manifiesto mínimo — contrato de H2 cerrado para H4
 
-Contrato aprobado en diseño, no creado como manifiesto de contenido ni implementado como importador o esquema de base de datos. Complementa el [plan principal](../PLAN.md) y el [contrato de API](api.md). H5 conserva el formato completo, comparación, actualización y reconciliación.
+Contrato aprobado en H2 e implementado en H4: `content/java/manifest.json` y su carga y validación en el backend al arrancar. Complementa el [plan principal](../PLAN.md) y el [contrato de API](api.md). H5 conserva el formato completo, comparación, actualización y reconciliación.
 
 ## Alcance de la primera carga
 
@@ -103,8 +103,22 @@ La copia solo incluirá lecciones, ejemplos, ejercicios y recursos educativos ne
 
 La entrega aplica la [política de contenido de la API](api.md#contenido-ejercicios-y-recursos): HTML con lista permitida, `<details>`/`<summary>` seguros, sin scripts ni manejadores; Mermaid `strict` y fallback de fuente original escapada sin romper la lección. El SVG generado no elude controles. Recursos autenticados solo por `resourceId` registrado, contención canónica incluidos symlinks, sin rutas arbitrarias ni exposición del origen. SVG con tipo correcto, `nosniff` y CSP `sandbox` sin permisos; HTML educativo como descarga/texto escapado, nunca ejecución del mismo origen.
 
-## Comprobación futura de H4 y límite de H5
+## Comprobación de H4 y límite de H5
 
-H4 comprobará primera lección, extracción sin duplicación, enlaces y fragmentos resultantes, recursos seguros y fallback Mermaid escapado, además de aislamiento y persistencia entre dos usuarios. Son comprobaciones pendientes de implementación, no pruebas ya realizadas.
+H4 comprobó la lección 02.01, la extracción sin duplicación, enlaces y fragmentos, recursos seguros y el fallback Mermaid escapado, además del aislamiento y la persistencia entre dos usuarios. Los recursos SVG y el fallback Mermaid se probaron con contenido de prueba, porque 02.01 no tiene imágenes ni diagramas rotos.
 
-H5 conserva importación completa, comparación, actualización y reconciliación. Mejoras futuras anotadas para H5: descargar una carpeta de código completa como `.zip` y añadir `commonmark-ext-gfm-strikethrough`, porque el tachado `~~` aparece en 5 lecciones. Este contrato mínimo no resuelve retiradas ni divisiones: ninguna actualización borrará o reasignará progreso silenciosamente.
+H5 conserva importación completa, comparación, actualización y reconciliación. Este contrato mínimo no resuelve retiradas ni divisiones: ninguna actualización borrará o reasignará progreso silenciosamente.
+
+Notas para H5:
+
+- Descargar una carpeta de código completa como `.zip`.
+- Añadir `commonmark-ext-gfm-strikethrough`: el tachado `~~` aparece en 5 lecciones.
+- Permitir `<img>` con `src` limitado a `/api/resources/…` y `alt`: el curso tiene 157 PNG/JPG y 60 SVG.
+- Repetir justo antes de la importación masiva la comprobación del formato «Ejercicio N · Título»; otra variante rechaza la importación.
+- Un subtítulo «Ejercicios…» dentro de la sección de ejercicios daría el error de encabezado mal formado (hoy no hay ninguno).
+- La sección «Proyecto evolutivo» del índice es contenido del curso que la academia todavía no modela.
+- Jackson acepta posiciones como `"2"` o `2.0` y las convierte en enteros.
+- La negrita y la cursiva dentro de etiquetas Mermaid no se muestran (unos 50 archivos).
+- Un diagrama Mermaid con directivas, frontmatter, interacciones, imágenes o `url()`/`@import` en estilos se muestra como código fuente (hoy ninguno en el curso).
+- En las etiquetas Mermaid solo se admiten las entidades `&quot;`, `&lt;`, `&gt;` y `&amp;`, las únicas que usa el curso (en 5 archivos); un diagrama con cualquier otra entidad se muestra como código. Mermaid parte en dos las palabras más anchas que una línea («Pedi / do»); podría ajustarse con `flowchart.wrappingWidth`.
+- `lessons.phase_id` podría pasar a `NOT NULL` en una migración posterior, cuando todas las bases estén sincronizadas.

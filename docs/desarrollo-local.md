@@ -1,6 +1,6 @@
 # Desarrollo local
 
-Esta guía arranca la base técnica H3, validada y completada. Todavía no permite estudiar ni crear cuentas: H4 no está iniciado y requiere aprobación del propietario. Los resultados y pendientes viven en el [archivo único de tareas](../odd/tasks/h3-base.md), no en esta guía.
+Esta guía arranca la academia en local tal como quedó en H4: cuentas, la lección 02.01 y progreso por usuario. Los resultados y pendientes viven en las tareas de [H3](../odd/tasks/h3-base.md) y [H4](../odd/tasks/h4-first-journey.md), no en esta guía.
 
 ## Requisitos
 
@@ -23,7 +23,7 @@ cp -n .env.example .env
 
 Compose consume `.env` desde la raíz. El backend con perfil `local`, ejecutado desde `backend/`, importa obligatoriamente `../.env`, sin exportar variables a mano. Si falta el archivo o `DB_PASSWORD` está ausente o vacío, el arranque debe fallar explícitamente. Las pruebas de Testcontainers no activan ese perfil ni necesitan ese archivo.
 
-**Después de inicializar el volumen, no cambies `DB_NAME`, `DB_USERNAME` ni `DB_PASSWORD`.** PostgreSQL conserva la configuración inicial: editar `.env` no cambia las credenciales almacenadas. No soluciones un error de autenticación borrando el volumen. Un cambio requiere mantenimiento y recuperación coordinados, fuera de H3.
+**Después de inicializar el volumen, no cambies `DB_NAME`, `DB_USERNAME` ni `DB_PASSWORD`.** PostgreSQL conserva la configuración inicial: editar `.env` no cambia las credenciales almacenadas. No soluciones un error de autenticación borrando el volumen. Un cambio requiere mantenimiento y recuperación coordinados.
 
 ## Arrancar en tres terminales
 
@@ -60,6 +60,8 @@ npm run dev
 ```
 
 Abrí http://127.0.0.1:5173. Vite fija loopback y puerto estricto: si está ocupado, falla en vez de elegir otro. El proxy conserva el prefijo `/api` y también reenvía `/actuator/health` al backend. No hace falta abrir CORS; el proxy no sustituye autorización ni CSRF. El frontend no carga el `.env` de la raíz ni recibe sus secretos.
+
+La primera vez, creá una cuenta en la pantalla de registro y después iniciá sesión.
 
 ## Ejecutar pruebas
 
@@ -125,4 +127,4 @@ Usá `Ctrl+C` en las terminales del frontend y backend. Después, desde la raíz
 docker compose stop db
 ```
 
-Los servicios quedaron detenidos así al cerrar las comprobaciones de H3, con el volumen conservado. Nunca uses `down -v` ni limpiezas `prune` como parte de este flujo. No hay despliegue de producción en H3; se abordará en H7.
+El volumen se conserva: cuentas y progreso siguen ahí al volver a arrancar. Nunca uses `down -v` ni limpiezas `prune` como parte de este flujo. No hay despliegue de producción; se abordará en H7.
