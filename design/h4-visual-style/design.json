@@ -1,0 +1,35 @@
+{
+  "title": "H4 · Estilo visual de Code Academy",
+  "brief": "Tres direcciones visuales para la academia local de programación (Java primero, interfaz en español): vista de lección «02.01 Tu primer programa» en modo claro y oscuro, con tabla, código Java resaltado, diagrama Mermaid y su estado de error, enlaces a recursos y a lecciones pendientes, estados manuales, aviso «Java se añadió a Mis cursos» y navegación sin vecinos; más el índice del curso con el resumen de progreso. Sin CDN ni fuentes externas; adaptables a media pantalla y móvil.",
+  "feature": "odd/tasks/h4-first-journey.md",
+  "artboards": [
+    {
+      "file": "01-libro.html",
+      "title": "Libro: columna de lectura",
+      "tradeoff": "La lectura larga más cómoda y tranquila (serif, ~68 caracteres por línea, índice de la página a la izquierda); a cambio, el temario y los ejercicios quedan fuera de la vista y hay que ir a «Índice del curso» o al final de la lección para cambiar estados.",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "02-documentacion.html",
+      "title": "Documentación: tres columnas",
+      "tradeoff": "Orientación máxima (temario completo plegable por fases, índice de la página y estado siempre visibles) y aspecto familiar de sitio de documentación; a cambio, más densidad y ruido visual, y la columna central es más estrecha para el texto largo.",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "03-cuaderno.html",
+      "title": "Cuaderno: código y panel de práctica",
+      "tradeoff": "Pone la práctica en primer plano: código con números de línea y los 9 ejercicios con su estado siempre al lado; a cambio, la estética de IDE es menos acogedora para quien empieza y el panel lateral resta espacio a la lectura.",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "04-mezcla.html",
+      "title": "Mezcla elegida",
+      "tradeoff": "Orientación de la 02 con la lectura cómoda de la 01 y los ejercicios en tarjetas de la 03; a cambio, sin panel fijo el estado de la lección se repite arriba y al final, y el índice de la lección solo es columna desde 1400 px.",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}

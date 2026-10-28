@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "chosen": "04-mezcla.html",
+  "handoffs": {
+    "04-mezcla.html": {
+      "status": "sent",
+      "queued": false,
+      "sentAt": "2026-10-28T17:25:14.413Z",
+      "startedAt": null,
+      "implementedAt": null,
+      "feature": "odd/tasks/h4-first-journey.md"
+    }
+  }
+}
