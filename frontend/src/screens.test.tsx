@@ -197,6 +197,8 @@ describe('Índice del curso', () => {
     const phases: Phase[] = [
       { id: 'java-phase-b', title: 'Segunda', position: 2 },
       { id: 'java-phase-a', title: 'Primera', position: 1 },
+      // Decoy: the phase the misleading ID would point to; it has no lessons, so it never shows.
+      { id: 'java-phase-03', title: 'Señuelo', position: 3 },
     ]
     const lessons: LessonEntry[] = [
       { id: 'lección-sin-número', courseId: 'java', title: 'Sin número', position: 3, phaseId: 'java-phase-b', available: false },
