@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "source": { "name": "Curso de prueba", "versionRef": "0123456789abcdef0123456789abcdef01234567" },
+  "course": { "id": "demo", "namespace": "demo", "title": "Demo" },
+  "lessons": [
+    {
+      "id": "demo-01.01",
+      "title": "Introducción",
+      "position": 1,
+      "sourcePath": "fase-01/01-intro.md",
+      "sourceAvailable": true,
+      "available": true,
+      "bodyPath": "demo/lessons/demo-01.01.md",
+      "exercises": [
+        { "id": "demo-01.01-e01", "lessonId": "demo-01.01", "title": "Primer ejercicio" },
+        { "id": "demo-01.01-e02", "lessonId": "demo-01.01", "title": "Segundo `ejercicio`" }
+      ]
+    },
+    {
+      "id": "demo-01.02",
+      "title": "Siguiente",
+      "position": 2,
+      "sourcePath": "fase-01/02-siguiente.md",
+      "sourceAvailable": true,
+      "available": true,
+      "bodyPath": "demo/lessons/demo-01.02.md",
+      "exercises": []
+    },
+    {
+      "id": "demo-02.01",
+      "title": "Pendiente",
+      "position": 3,
+      "sourcePath": "fase-02/01-pendiente.md",
+      "sourceAvailable": false,
+      "available": false,
+      "bodyPath": null,
+      "exercises": []
+    }
+  ],
+  "resources": [
+    {
+      "resourceId": "demo-01.01-r-hello",
+      "lessonId": "demo-01.01",
+      "sourcePath": "fase-01/codigo/hola/Hello.java",
+      "localPath": "demo/resources/demo-01.01-r-hello.java",
+      "mediaType": "text/plain; charset=utf-8"
+    },
+    {
+      "resourceId": "demo-01.01-r-other",
+      "lessonId": "demo-01.01",
+      "sourcePath": "fase-01/codigo/hola/Other.java",
+      "localPath": "demo/resources/demo-01.01-r-other.java",
+      "mediaType": "text/plain; charset=utf-8"
+    },
+    {
+      "resourceId": "demo-01.01-r-solo",
+      "lessonId": "demo-01.01",
+      "sourcePath": "fase-01/codigo/solo/Solo.java",
+      "localPath": "demo/resources/demo-01.01-r-solo.java",
+      "mediaType": "text/plain; charset=utf-8"
+    }
+  ],
+  "sourceToId": [
+    {
+      "sourcePath": "fase-01/01-intro.md",
+      "lessonId": "demo-01.01",
+      "fragments": {
+        "qué-aprenderás": "qué-aprenderás",
+        "repetida": "repetida",
+        "repetida-1": "repetida-1",
+        "ejercicio-2--segundo-ejercicio": "ejercicio-2--segundo-ejercicio"
+      }
+    },
+    { "sourcePath": "fase-01/02-siguiente.md", "lessonId": "demo-01.02", "fragments": { "sección-b": "sección-b" } },
+    { "sourcePath": "fase-02/01-pendiente.md", "lessonId": "demo-02.01", "fragments": {} },
+    { "sourcePath": "fase-01/codigo/hola/", "resourceIds": ["demo-01.01-r-hello", "demo-01.01-r-other"] },
+    { "sourcePath": "fase-01/codigo/solo/", "resourceIds": ["demo-01.01-r-solo"] },
+    { "sourcePath": "fase-01/codigo/hola/Hello.java", "resourceId": "demo-01.01-r-hello" },
+    { "sourcePath": "fase-01/codigo/hola/Other.java", "resourceId": "demo-01.01-r-other" },
+    { "sourcePath": "fase-01/codigo/solo/Solo.java", "resourceId": "demo-01.01-r-solo" },
+    { "sourcePath": "00-indice.md", "courseId": "demo" }
+  ]
+}

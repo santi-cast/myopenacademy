@@ -1,0 +1,326 @@
+package dev.codeacademy.content;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
+
+import static dev.codeacademy.content.ContentFixture.INTRO;
+import static dev.codeacademy.content.ContentFixture.lesson;
+import static dev.codeacademy.content.ContentFixture.link;
+import static dev.codeacademy.content.ContentFixture.resource;
+import static org.assertj.core.api.Assertions.assertThat;
+
+/** The synthetic course: what a valid manifest produces, and every fail-fast rejection. */
+class ContentLoaderTest {
+
+	@TempDir
+	Path tempDir;
+
+	ContentFixture fixture;
+
+	@BeforeEach
+	void copy() {
+		fixture = ContentFixture.copyInto(tempDir);
+	}
+
+	@Test
+	void validCourseRendersLinksExercisesAndResources() {
+		CourseContent content = fixture.load();
+
+		assertThat(content.lessons()).containsOnlyKeys("demo-01.01", "demo-01.02");
+		LessonContent intro = content.lessons().get("demo-01.01");
+		assertThat(intro.bodyHtml())
+			.contains("<h2 id=\"repetida\">Repetida</h2>", "<h2 id=\"repetida-1\">Repetida</h2>")
+			.contains("<a href=\"/lessons/demo-02.01\">02.01 Pendiente</a>")
+			.contains("<a href=\"#repetida-1\">", "<a href=\"/lessons/demo-01.02#sección-b\">",
+					"<a href=\"#demo-01.01-e02\">", "<a href=\"/courses/demo\">índice</a>")
+			.contains("<code>codigo/hola/</code> (<a href=\"/api/resources/demo-01.01-r-hello\">Hello.java</a>, "
+					+ "<a href=\"/api/resources/demo-01.01-r-other\">Other.java</a>)")
+			.contains("<a href=\"/api/resources/demo-01.01-r-solo\">Solo.java</a>")
+			.contains("<a href=\"https://dev.java/learn/\" rel=\"noopener noreferrer\">la web</a>")
+			.contains("<code class=\"language-mermaid\">graph TD")
+			.contains("Final del cuerpo")
+			.doesNotContain("Ejercicios prácticos", "Básico", "Enunciado", "Solución", "<details");
+		assertThat(intro.exercises()).extracting(ExerciseContent::id).containsExactly("demo-01.01-e01", "demo-01.01-e02");
+		assertThat(intro.exercises()).extracting(ExerciseContent::title).containsExactly("Primer ejercicio", "Segundo ejercicio");
+		ExerciseContent first = intro.exercises().get(0);
+		assertThat(first.courseId()).isEqualTo("demo");
+		assertThat(first.statementHtml())
+			.contains("Enunciado uno con código (<a href=\"/api/resources/demo-01.01-r-solo\">Solo.java</a>)")
+			.doesNotContain("<details", "Solución");
+		assertThat(first.solutionHtml()).startsWith("<details>").contains("<summary>Ver solución</summary>",
+				"<a href=\"#repetida\">Repetida</a>").doesNotContain("Enunciado");
+		assertThat(intro.resourceIds()).containsExactly("demo-01.01-r-hello", "demo-01.01-r-other", "demo-01.01-r-solo");
+		assertThat(content.lessons().get("demo-01.02").bodyHtml())
+			.contains("<a href=\"/lessons/demo-01.01#qué-aprenderás\">", "<h2 id=\"sección-b\">Sección B</h2>");
+		ResourceFile hello = content.resources().get("demo-01.01-r-hello");
+		assertThat(hello.originalFileName()).isEqualTo("Hello.java");
+		assertThat(hello.localPath()).isEqualTo(fixture.root.resolve("demo/resources/demo-01.01-r-hello.java").toAbsolutePath());
+		assertThat(hello.mediaType()).isEqualTo("text/plain; charset=utf-8");
+	}
+
+	// --- manifest structure ---
+
+	@Test
+	void rejectsUnknownSchemaVersion() {
+		fixture.editManifest(m -> m.put("schemaVersion", 2));
+		fixture.rejected("schemaVersion");
+	}
+
+	@Test
+	void rejectsUnknownManifestField() {
+		fixture.editManifest(m -> m.put("extra", true));
+		fixture.rejected("manifest");
+	}
+
+	@Test
+	void rejectsThePlaceholderVersionRef() {
+		fixture.editManifest(m -> ((ObjectNode) m.get("source")).put("versionRef", "PENDIENTE_HASH_COMPLETO_DEL_COMMIT"));
+		fixture.rejected("versionRef");
+	}
+
+	@Test
+	void rejectsAnAbbreviatedVersionRef() {
+		fixture.editManifest(m -> ((ObjectNode) m.get("source")).put("versionRef", "0c2df357"));
+		fixture.rejected("versionRef");
+	}
+
+	@Test
+	void rejectsDuplicateLessonIds() {
+		fixture.editManifest(m -> lesson(m, "demo-02.01").put("id", "demo-01.02"));
+		fixture.rejected("duplicate id demo-01.02");
+	}
+
+	@Test
+	void rejectsAnExerciseIdThatRepeatsAResourceId() {
+		fixture.editManifest(m -> ((ObjectNode) lesson(m, "demo-01.01").get("exercises").get(1)).put("id", "demo-01.01-r-solo"));
+		fixture.rejected("duplicate id demo-01.01-r-solo");
+	}
+
+	@Test
+	void rejectsALessonIdOutsideTheCourseNamespace() {
+		fixture.editManifest(m -> {
+			lesson(m, "demo-02.01").put("id", "java-02.01");
+			link(m, "fase-02/01-pendiente.md").put("lessonId", "java-02.01");
+		});
+		fixture.rejected("java-02.01 is not in namespace demo");
+	}
+
+	@Test
+	void rejectsAResourceIdOutsideTheCourseNamespace() {
+		fixture.editManifest(m -> {
+			resource(m, "demo-01.01-r-solo").put("resourceId", "other-r-solo");
+			link(m, "fase-01/codigo/solo/Solo.java").put("resourceId", "other-r-solo");
+			((ArrayNode) link(m, "fase-01/codigo/solo/").get("resourceIds")).set(0, "other-r-solo");
+		});
+		fixture.rejected("other-r-solo is not in namespace demo");
+	}
+
+	@Test
+	void rejectsAnExerciseThatClaimsAnotherLesson() {
+		fixture.editManifest(m -> ((ObjectNode) lesson(m, "demo-01.01").get("exercises").get(0)).put("lessonId", "demo-01.02"));
+		fixture.rejected("demo-01.01-e01 belongs to demo-01.02");
+	}
+
+	@Test
+	void rejectsAResourceOfAnUnknownLesson() {
+		fixture.editManifest(m -> resource(m, "demo-01.01-r-solo").put("lessonId", "demo-09.09"));
+		fixture.rejected("unknown lesson demo-09.09");
+	}
+
+	@Test
+	void rejectsALinkToAnotherCourse() {
+		fixture.editManifest(m -> link(m, "00-indice.md").put("courseId", "java"));
+		fixture.rejected("unknown course java");
+	}
+
+	@Test
+	void rejectsAvailableWithoutSourceAvailable() {
+		fixture.editManifest(m -> lesson(m, "demo-01.02").put("sourceAvailable", false));
+		fixture.rejected("demo-01.02 is available but not sourceAvailable");
+	}
+
+	@Test
+	void rejectsAvailableWithoutBodyPath() {
+		fixture.editManifest(m -> lesson(m, "demo-01.02").putNull("bodyPath"));
+		fixture.rejected("demo-01.02 is available without bodyPath");
+	}
+
+	@Test
+	void rejectsAMissingBody() {
+		fixture.editManifest(m -> lesson(m, "demo-01.02").put("bodyPath", "demo/lessons/missing.md"));
+		fixture.rejected("demo/lessons/missing.md");
+	}
+
+	@Test
+	void rejectsAPendingLessonWithBodyOrExercises() {
+		fixture.editManifest(m -> lesson(m, "demo-02.01").put("bodyPath", "demo/lessons/demo-01.02.md"));
+		fixture.rejected("demo-02.01 is pending but has bodyPath or exercises");
+	}
+
+	@Test
+	void rejectsPositionsWithAGap() {
+		fixture.editManifest(m -> lesson(m, "demo-02.01").put("position", 4));
+		fixture.rejected("positions");
+	}
+
+	@Test
+	void rejectsRepeatedPositions() {
+		fixture.editManifest(m -> lesson(m, "demo-02.01").put("position", 2));
+		fixture.rejected("positions");
+	}
+
+	// --- paths ---
+
+	@Test
+	void rejectsABodyPathThatEscapesWithDotDot() throws IOException {
+		Files.writeString(tempDir.resolve("outside.md"), "# Fuera\n");
+		fixture.editManifest(m -> lesson(m, "demo-01.02").put("bodyPath", "demo/../../outside.md"));
+		fixture.rejected("demo/../../outside.md");
+	}
+
+	@Test
+	void rejectsAnAbsoluteLocalPath() {
+		String absolute = fixture.root.resolve("demo/resources/demo-01.01-r-solo.java").toAbsolutePath().toString();
+		fixture.editManifest(m -> resource(m, "demo-01.01-r-solo").put("localPath", absolute));
+		fixture.rejected(absolute);
+	}
+
+	@Test
+	void rejectsADirectorySymlinkOnTheBodyPath() throws IOException {
+		Path outside = Files.createDirectories(tempDir.resolve("outside"));
+		Files.writeString(outside.resolve("lesson.md"), "# Fuera\n");
+		Files.createSymbolicLink(fixture.root.resolve("demo/linked"), outside);
+		fixture.editManifest(m -> lesson(m, "demo-01.02").put("bodyPath", "demo/linked/lesson.md"));
+		fixture.rejected("demo/linked/lesson.md");
+	}
+
+	@Test
+	void rejectsASymlinkInsideTheContentRootToo() throws IOException {
+		Files.createSymbolicLink(fixture.root.resolve("demo/resources/alias.java"),
+				fixture.root.resolve("demo/resources/demo-01.01-r-solo.java"));
+		fixture.editManifest(m -> resource(m, "demo-01.01-r-solo").put("localPath", "demo/resources/alias.java"));
+		fixture.rejected("demo/resources/alias.java");
+	}
+
+	@Test
+	void rejectsAMissingResourceFile() {
+		fixture.editManifest(m -> resource(m, "demo-01.01-r-solo").put("localPath", "demo/resources/missing.java"));
+		fixture.rejected("demo/resources/missing.java");
+	}
+
+	// --- sourceToId ---
+
+	@Test
+	void rejectsSourceToIdPointingToAnUnknownLesson() {
+		fixture.editManifest(m -> link(m, "fase-02/01-pendiente.md").put("lessonId", "demo-09.09"));
+		fixture.rejected("unknown lesson demo-09.09");
+	}
+
+	@Test
+	void rejectsSourceToIdPointingToAnUnknownResource() {
+		fixture.editManifest(m -> link(m, "fase-01/codigo/solo/Solo.java").put("resourceId", "demo-01.01-r-nope"));
+		fixture.rejected("unknown resource demo-01.01-r-nope");
+	}
+
+	@Test
+	void rejectsASourceToIdEntryWithTwoTargets() {
+		fixture.editManifest(m -> link(m, "00-indice.md").put("lessonId", "demo-01.01"));
+		fixture.rejected("00-indice.md must have exactly one target");
+	}
+
+	@Test
+	void rejectsAFolderThatMissesOneOfItsFiles() {
+		fixture.editManifest(m -> ((ArrayNode) link(m, "fase-01/codigo/hola/").get("resourceIds")).remove(1));
+		fixture.rejected("folder fase-01/codigo/hola/ does not list exactly its resources");
+	}
+
+	@Test
+	void rejectsAFolderThatListsAFileFromElsewhere() {
+		fixture.editManifest(m -> ((ArrayNode) link(m, "fase-01/codigo/hola/").get("resourceIds")).add("demo-01.01-r-solo"));
+		fixture.rejected("folder fase-01/codigo/hola/ does not list exactly its resources");
+	}
+
+	// --- lesson content ---
+
+	@Test
+	void rejectsAnUnmappedRelativeLink() {
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [otro](03-otra.md).");
+		fixture.rejected("demo-01.01: unresolved link 03-otra.md");
+	}
+
+	@Test
+	void rejectsALinkThatClimbsAboveTheSourceRoot() {
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [fuera](../../00-indice.md).");
+		fixture.rejected("demo-01.01: unresolved link ../../00-indice.md");
+	}
+
+	@Test
+	void rejectsAnUnknownOwnFragment() {
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [nada](#no-existe).");
+		fixture.rejected("demo-01.01: unresolved link #no-existe");
+	}
+
+	@Test
+	void rejectsAFragmentToTheRemovedExercisesSection() {
+		fixture.editManifest(m -> ((ObjectNode) link(m, "fase-01/01-intro.md").get("fragments"))
+			.put("5-ejercicios-prácticos-resueltos", "5-ejercicios-prácticos-resueltos"));
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [ejercicios](#5-ejercicios-prácticos-resueltos).");
+		fixture.rejected("demo-01.01: unresolved link #5-ejercicios-prácticos-resueltos");
+	}
+
+	@Test
+	void rejectsACrossLessonFragmentMissingFromItsFragments() {
+		fixture.replace(INTRO, "02-siguiente.md#sección-b", "02-siguiente.md#sección-a");
+		fixture.rejected("demo-01.01: unresolved link 02-siguiente.md#sección-a");
+	}
+
+	@Test
+	void rejectsAMappedFragmentWhoseHeadingDoesNotExist() {
+		fixture.editManifest(m -> ((ObjectNode) link(m, "fase-01/02-siguiente.md").get("fragments")).put("sección-b", "sección-z"));
+		fixture.rejected("demo-01.01: unresolved link 02-siguiente.md#sección-b");
+	}
+
+	@Test
+	void rejectsAnUnresolvedLinkInsideAStatement() {
+		fixture.replace(INTRO, "Enunciado dos.", "Enunciado dos con [roto](codigo/nada/).");
+		fixture.rejected("demo-01.01 demo-01.01-e02 statement: unresolved link codigo/nada/");
+	}
+
+	@Test
+	void rejectsAnUnresolvedFragmentInsideASolution() {
+		fixture.replace(INTRO, "Solución dos.", "Solución dos, ver [arriba](#arriba).");
+		fixture.rejected("demo-01.01 demo-01.01-e02 solution: unresolved link #arriba");
+	}
+
+	@Test
+	void rejectsAnExerciseCountThatDiffersFromTheManifest() {
+		fixture.editManifest(m -> ((ArrayNode) lesson(m, "demo-01.01").get("exercises")).remove(1));
+		fixture.rejected("demo-01.01: 2 exercises in the lesson, 1 in the manifest");
+	}
+
+	@Test
+	void rejectsAnExerciseWithoutSolution() {
+		fixture.replace(INTRO, "Enunciado dos.\n\n<details>", "Enunciado dos.\n\n<div>");
+		fixture.rejected("demo-01.01: exercise Segundo ejercicio has no <details> solution");
+	}
+
+	@Test
+	void rejectsADisallowedLinkScheme() {
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [clic](javascript:alert(1)).");
+		fixture.rejected("demo-01.01: disallowed link javascript:alert(1)");
+	}
+
+	@Test
+	void rejectsAProtocolRelativeLink() {
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [clic](//evil.example/x).");
+		fixture.rejected("demo-01.01: disallowed link //evil.example/x");
+	}
+}

@@ -1,0 +1,98 @@
+package dev.codeacademy.content;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.StreamReadFeature;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+
+import dev.codeacademy.content.Manifest.Lesson;
+import dev.codeacademy.content.Manifest.Resource;
+
+/**
+ * Loads a course from its controlled copy: manifest structure, file containment, then rendering of every available
+ * lesson. Any problem aborts the whole load with no partial result (docs/manifiesto.md, «Validación y entrega segura»).
+ */
+public final class ContentLoader {
+
+	private static final JsonMapper JSON = JsonMapper.builder()
+		.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+		.enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+		.build();
+
+	private ContentLoader() {
+	}
+
+	/** manifestPath is relative to contentRoot, as are the bodyPath and localPath entries of the manifest. */
+	public static CourseContent load(Path contentRoot, String manifestPath) {
+		Path root;
+		try {
+			root = contentRoot.toRealPath();
+		}
+		catch (IOException ex) {
+			throw new ContentValidationException("content root " + contentRoot + " cannot be read");
+		}
+		List<String> problems = new ArrayList<>();
+		Path manifestFile = ContentPaths.file(root, manifestPath, "manifest", problems);
+		failIfAny(problems);
+		Manifest manifest = read(manifestFile);
+		failIfAny(ManifestValidator.validate(manifest));
+
+		Map<String, Path> bodies = new LinkedHashMap<>();
+		for (Lesson lesson : manifest.lessons()) {
+			if (!lesson.available()) continue;
+			Path body = ContentPaths.file(root, lesson.bodyPath(), "bodyPath of " + lesson.id() + ":", problems);
+			if (body != null) bodies.put(lesson.id(), body);
+		}
+		Map<String, ResourceFile> resources = new LinkedHashMap<>();
+		Map<String, String> originalNames = new HashMap<>();
+		for (Resource resource : manifest.resources()) {
+			String name = resource.sourcePath().substring(resource.sourcePath().lastIndexOf('/') + 1);
+			originalNames.put(resource.resourceId(), name);
+			Path file = ContentPaths.file(root, resource.localPath(), "localPath of " + resource.resourceId() + ":", problems);
+			if (file != null) {
+				resources.put(resource.resourceId(), new ResourceFile(resource.resourceId(), file, resource.mediaType(), name));
+			}
+		}
+		failIfAny(problems);
+
+		LessonPipeline pipeline = new LessonPipeline(manifest, originalNames);
+		for (Lesson lesson : manifest.lessons()) {
+			if (!lesson.available()) continue;
+			try {
+				pipeline.parse(lesson, Files.readString(bodies.get(lesson.id()), StandardCharsets.UTF_8));
+			}
+			catch (IOException ex) {
+				pipeline.problems().add(lesson.id() + ": body " + lesson.bodyPath() + " is not readable UTF-8 text");
+			}
+		}
+		failIfAny(pipeline.problems());
+		Map<String, LessonContent> lessons = pipeline.render();
+		failIfAny(pipeline.problems());
+		return new CourseContent(manifest, lessons, Collections.unmodifiableMap(resources));
+	}
+
+	private static Manifest read(Path manifestFile) {
+		try {
+			return JSON.readValue(Files.readString(manifestFile, StandardCharsets.UTF_8), Manifest.class);
+		}
+		catch (IOException | JacksonException ex) {
+			throw new ContentValidationException("manifest is not valid JSON for schema " + ManifestValidator.SCHEMA_VERSION
+					+ ": " + ex.getMessage().lines().findFirst().orElse(""));
+		}
+	}
+
+	private static void failIfAny(List<String> problems) {
+		if (!problems.isEmpty()) throw new ContentValidationException(problems);
+	}
+}

@@ -1,0 +1,54 @@
+package dev.codeacademy.content;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/** Heading IDs must match GitHub, as frozen from ancla() of the source course (see the fixture header). */
+class HeadingIdsTest {
+
+	private static final Path FIXTURE = Path.of("src/test/resources/content/anchors-expected.tsv");
+	private static final Path REAL_LESSON = Path.of("../content/java/lessons/java-02.01.md");
+
+	/** section → ordered (heading text, expected id) rows. */
+	static Map<String, List<String[]>> fixture() throws IOException {
+		Map<String, List<String[]>> sections = new LinkedHashMap<>();
+		for (String line : Files.readAllLines(FIXTURE, StandardCharsets.UTF_8)) {
+			if (line.startsWith("#") || line.isBlank()) continue;
+			String[] columns = line.split("\t", -1);
+			assertThat(columns).hasSize(3);
+			sections.computeIfAbsent(columns[0], key -> new ArrayList<>()).add(new String[] { columns[1], columns[2] });
+		}
+		return sections;
+	}
+
+	static List<String> expectedIds(String section) throws IOException {
+		return fixture().get(section).stream().map(row -> row[1]).toList();
+	}
+
+	@Test
+	void syntheticHeadingsMatchTheFrozenAnchors() throws IOException {
+		List<String[]> rows = fixture().get("synthetic");
+		StringBuilder markdown = new StringBuilder();
+		rows.forEach(row -> markdown.append("## ").append(row[0]).append("\n\n"));
+
+		assertThat(HeadingIds.forMarkdown(markdown.toString()))
+			.containsExactlyElementsOf(rows.stream().map(row -> row[1]).toList());
+	}
+
+	@Test
+	void everyHeadingOfTheRealLessonMatchesTheFrozenAnchorsInOrder() throws IOException {
+		String lesson = Files.readString(REAL_LESSON, StandardCharsets.UTF_8);
+
+		assertThat(HeadingIds.forMarkdown(lesson)).containsExactlyElementsOf(expectedIds("real"));
+	}
+}
