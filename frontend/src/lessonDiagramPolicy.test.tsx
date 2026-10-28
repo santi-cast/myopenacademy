@@ -208,22 +208,38 @@ describe('the course\'s own label shapes', () => {
 })
 
 describe('HTML entities in labels', () => {
-  it('keeps the source as written and draws entities as the characters they stand for', async () => {
-    // Real Mermaid without HTML labels writes an entity it cannot decode as literal text: «&quot;».
-    mermaid.render.mockImplementation(async (id: string) => ({
-      svg: `<svg ${SVG_NS} id="${id}"><text><tspan>IO.println(&amp;quot;Pedido&amp;quot;)</tspan>`
-        + `<tspan> a &amp;amp; b &amp;lt;c&amp;gt; &amp;#39;d&amp;#39; &amp;#x41; &amp;nope;</tspan></text></svg>`,
-    }))
-    await openLesson(diagramBlock('flowchart TD\n B[/"IO.println(&quot;Pedido&quot;)"/]'))
+  it('draws entities as characters even when Mermaid splits a label across text nodes', async () => {
+    // Real Mermaid wraps labels into several <tspan>, at any character, and prints entities literally.
+    mermaid.render.mockImplementation(async (id: string, source: string) => {
+      const label = /\[\/"(.*)"\/\]/.exec(source)?.[1] ?? ''
+      const escaped = label.replaceAll('&', '&amp;')
+      const cut = escaped.indexOf('quo') + 2
+      return { svg: `<svg ${SVG_NS} id="${id}"><text><tspan>${escaped.slice(0, cut)}</tspan><tspan>${escaped.slice(cut)}</tspan></text></svg>` }
+    })
+    await openLesson(diagramBlock('flowchart TD\n B[/"IO.println(&quot;En preparación&quot;) a &amp; b &lt;c&gt; &#39;d&#39; &#x41; &nope;"/]'))
 
     const svg = await waitFor(() => {
       const drawn = lessonBody().querySelector('figure.diagram svg')
       if (!drawn) throw new Error('not drawn')
       return drawn
     })
-    expect(mermaid.render.mock.calls[0][1]).toContain('&quot;Pedido&quot;')
-    expect(svg.textContent).toBe('IO.println("Pedido") a & b <c> \'d\' A &nope;')
+    expect(svg.textContent).toBe('IO.println("En preparación") a & b <c> \'d\' A &nope;')
+    expect(mermaid.render.mock.calls[0][1]).not.toMatch(/&(quot|amp|lt|gt|#39|#x41);/)
+    // Decoding only ever writes text: no element appears from «&lt;c&gt;».
     expect(svg.querySelectorAll('*').length).toBe(3)
+  })
+})
+
+describe('entities cannot smuggle refused syntax past the source gate', () => {
+  it.each([
+    'flowchart LR\n A-->B\n &#99;lick A &#104;ref "https://evil.example"',
+    'flowchart LR\n A-->B\n c&#x6C;ick A call&#98;ack',
+    '&#37;&#37;{init: {"htmlLabels":true}}%%\nflowchart LR\n A-->B',
+    'flowchart TD\n A@{ &#105;mg: "https://evil.example/i.png" }',
+  ])('%s', async (source) => {
+    await openLesson(diagramBlock(source))
+    expect(await screen.findByText('No se pudo dibujar el diagrama')).toBeVisible()
+    expect(mermaid.render).not.toHaveBeenCalled()
   })
 })
 

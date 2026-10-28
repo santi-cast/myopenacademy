@@ -52,27 +52,40 @@ export function withoutInlineMarkup(source: string): string {
     .replace(/<\s*\/?\s*(b|i|strong|em)\s*>/gi, '')
 }
 
+// Characters that would break a Mermaid label if written as themselves travel as one private-use code point each,
+// which no line wrapping can split, and are restored in the drawn SVG's text.
+const PLACEHOLDERS: Record<string, string> = { '"': '\ue000', '&': '\ue001', '<': '\ue002', '>': '\ue003', "'": '\ue004', '#': '\ue005', ';': '\ue006' }
+const RESTORED = new Map(Object.entries(PLACEHOLDERS).map(([character, placeholder]) => [placeholder, character]))
 const NAMED_ENTITIES: Record<string, string> = { quot: '"', amp: '&', lt: '<', gt: '>', apos: "'", nbsp: '\u00a0' }
 
+function entityCharacter(name: string): string | null {
+  if (!name.startsWith('#')) return NAMED_ENTITIES[name] ?? null
+  const code = name[1] === 'x' || name[1] === 'X' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10)
+  return Number.isInteger(code) && code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff)
+    ? String.fromCodePoint(code) : null
+}
+
 /**
- * Lesson authors write HTML entities in labels (GitHub draws Mermaid labels as HTML). Without HTML labels Mermaid
- * prints them literally, so the checked SVG's label text is decoded here: only text nodes outside <style>, assigned
- * as text, never parsed as markup. Unknown entities stay as written.
+ * Lesson authors write HTML entities in labels (GitHub draws Mermaid labels as HTML); without HTML labels Mermaid
+ * would print them literally. Known entities become their character, or a placeholder when that character is part
+ * of Mermaid's syntax; unknown entities stay as written. A source already using the private-use range is left as is.
  */
-export function decodeLabelEntities(svg: Element) {
+export function withEntityPlaceholders(source: string): string {
+  if (/[\ue000-\ue006]/.test(source)) return source
+  return source.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (entity, name: string) => {
+    const character = entityCharacter(name)
+    if (character === null) return entity
+    return PLACEHOLDERS[character] ?? character
+  })
+}
+
+/** Restores placeholders in text nodes outside <style>, assigned as text and never parsed as markup. */
+export function restorePlaceholders(svg: Element) {
   const walker = svg.ownerDocument.createTreeWalker(svg, NodeFilter.SHOW_TEXT)
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (node.parentElement?.closest('style')) continue
     const text = node.nodeValue ?? ''
-    if (!text.includes('&')) continue
-    node.nodeValue = text.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (entity, name: string) => {
-      if (name.startsWith('#')) {
-        const code = name[1] === 'x' || name[1] === 'X' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10)
-        return Number.isInteger(code) && code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff)
-          ? String.fromCodePoint(code) : entity
-      }
-      return NAMED_ENTITIES[name] ?? entity
-    })
+    if (/[\ue000-\ue006]/.test(text)) node.nodeValue = text.replace(/[\ue000-\ue006]/g, (p) => RESTORED.get(p) ?? p)
   }
 }
 
@@ -142,14 +155,17 @@ export async function renderDiagrams(sources: string[], theme: Theme): Promise<(
   })
   const results: (SVGSVGElement | null)[] = []
   for (const source of sources) {
-    if (!isRenderable(source)) {
+    const prepared = withEntityPlaceholders(withoutInlineMarkup(source))
+    // The gate also sees what Mermaid will read, so an entity cannot spell a refused keyword.
+    const decoded = prepared.replace(/[\ue000-\ue006]/g, (p) => RESTORED.get(p) ?? p)
+    if (!isRenderable(source) || !isRenderable(decoded)) {
       results.push(null)
       continue
     }
     counter += 1
     try {
-      const svg = checkedSvg((await library.render(`lesson-diagram-${counter}`, withoutInlineMarkup(source))).svg)
-      if (svg) decodeLabelEntities(svg)
+      const svg = checkedSvg((await library.render(`lesson-diagram-${counter}`, prepared)).svg)
+      if (svg) restorePlaceholders(svg)
       results.push(svg)
     } catch {
       results.push(null)
