@@ -208,10 +208,22 @@ describe('the course\'s own label shapes', () => {
 })
 
 describe('HTML entities in labels', () => {
-  it('become Mermaid entity codes so they are drawn as characters, not literally', () => {
-    expect(withoutInlineMarkup('B[/"IO.println(&quot;Pedido recibido&quot;)"/]')).toBe('B[/"IO.println(#quot;Pedido recibido#quot;)"/]')
-    expect(withoutInlineMarkup('A["a &amp; b &lt;c&gt; &#39;d&#39;"]')).toBe('A["a #amp; b #lt;c#gt; #39;d#39;"]')
-    expect(withoutInlineMarkup('A["sin entidades #quot; ya"]')).toBe('A["sin entidades #quot; ya"]')
+  it('keeps the source as written and draws entities as the characters they stand for', async () => {
+    // Real Mermaid without HTML labels writes an entity it cannot decode as literal text: «&quot;».
+    mermaid.render.mockImplementation(async (id: string) => ({
+      svg: `<svg ${SVG_NS} id="${id}"><text><tspan>IO.println(&amp;quot;Pedido&amp;quot;)</tspan>`
+        + `<tspan> a &amp;amp; b &amp;lt;c&amp;gt; &amp;#39;d&amp;#39; &amp;#x41; &amp;nope;</tspan></text></svg>`,
+    }))
+    await openLesson(diagramBlock('flowchart TD\n B[/"IO.println(&quot;Pedido&quot;)"/]'))
+
+    const svg = await waitFor(() => {
+      const drawn = lessonBody().querySelector('figure.diagram svg')
+      if (!drawn) throw new Error('not drawn')
+      return drawn
+    })
+    expect(mermaid.render.mock.calls[0][1]).toContain('&quot;Pedido&quot;')
+    expect(svg.textContent).toBe('IO.println("Pedido") a & b <c> \'d\' A &nope;')
+    expect(svg.querySelectorAll('*').length).toBe(3)
   })
 })
 

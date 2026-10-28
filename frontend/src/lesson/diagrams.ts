@@ -50,9 +50,30 @@ export function isRenderable(source: string): boolean {
 export function withoutInlineMarkup(source: string): string {
   return source
     .replace(/<\s*\/?\s*(b|i|strong|em)\s*>/gi, '')
-    // Authors write HTML entities (GitHub draws labels as HTML); Mermaid's own form is #name; or #123;.
-    .replace(/&(#\d+|[a-zA-Z]+);/g, '#$1;')
-    .replace(/##(\d+);/g, '#$1;')
+}
+
+const NAMED_ENTITIES: Record<string, string> = { quot: '"', amp: '&', lt: '<', gt: '>', apos: "'", nbsp: '\u00a0' }
+
+/**
+ * Lesson authors write HTML entities in labels (GitHub draws Mermaid labels as HTML). Without HTML labels Mermaid
+ * prints them literally, so the checked SVG's label text is decoded here: only text nodes outside <style>, assigned
+ * as text, never parsed as markup. Unknown entities stay as written.
+ */
+export function decodeLabelEntities(svg: Element) {
+  const walker = svg.ownerDocument.createTreeWalker(svg, NodeFilter.SHOW_TEXT)
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.parentElement?.closest('style')) continue
+    const text = node.nodeValue ?? ''
+    if (!text.includes('&')) continue
+    node.nodeValue = text.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (entity, name: string) => {
+      if (name.startsWith('#')) {
+        const code = name[1] === 'x' || name[1] === 'X' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10)
+        return Number.isInteger(code) && code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff)
+          ? String.fromCodePoint(code) : entity
+      }
+      return NAMED_ENTITIES[name] ?? entity
+    })
+  }
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -127,7 +148,9 @@ export async function renderDiagrams(sources: string[], theme: Theme): Promise<(
     }
     counter += 1
     try {
-      results.push(checkedSvg((await library.render(`lesson-diagram-${counter}`, withoutInlineMarkup(source))).svg))
+      const svg = checkedSvg((await library.render(`lesson-diagram-${counter}`, withoutInlineMarkup(source))).svg)
+      if (svg) decodeLabelEntities(svg)
+      results.push(svg)
     } catch {
       results.push(null)
     }
