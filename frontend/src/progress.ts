@@ -1,0 +1,17 @@
+import type { Counts } from './api/types'
+
+// Display rounding only: the contract percentage has no contractual rounding.
+const percent = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 })
+
+/** «X de Y lecciones disponibles completadas · P % · Z previstas» (PLAN §3, «Reglas de progreso»). */
+export function progressText(counts: Counts): string {
+  if (counts.availableLessons === 0) return `sin lecciones disponibles · ${counts.plannedLessons} previstas`
+  const share = counts.percentage === null ? '' : ` · ${percent.format(counts.percentage)}\u00a0%`
+  return `${counts.completedLessons} de ${counts.availableLessons} lecciones disponibles completadas${share} · ${counts.plannedLessons} previstas`
+}
+
+/** Bar width as a CSS percentage; 0 when nothing is available. */
+export function progressWidth(counts: Counts): string {
+  const value = counts.availableLessons === 0 || counts.percentage === null ? 0 : Math.min(100, Math.max(0, counts.percentage))
+  return `${value}%`
+}
