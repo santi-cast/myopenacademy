@@ -331,7 +331,9 @@
   margin: var(--space-6) 0 var(--space-2);
 }
 
-.reading .lesson-head h1 {
+/* The lesson title: the view's own, or the delivered HTML's when it starts with one */
+.reading .lesson-head h1,
+.reading .lesson-body > h1:first-child {
   font-size: var(--reading-h1);
   margin: var(--space-1) 0;
 }
@@ -383,7 +385,10 @@
   background: var(--surface);
 }
 
-/* Code: bar with language and «Copiar», then the block; outset past the text when there is room */
+/* Code: bar with language and «Copiar», then the block; outset past the text when there is room.
+   The room is measured in the reading container (100cqi) minus the text column (100%, the same
+   containing block for the bar and its block), never from the ch measure, which each element
+   would resolve in its own font. */
 .reading pre {
   margin: var(--space-5) 0;
   overflow: auto;
@@ -431,7 +436,7 @@
 .lesson-body > .code-head,
 .lesson-body > .diagram,
 .lesson-body > .diagram-error {
-  margin-inline: calc(-1 * clamp(0px, (var(--container-width) - var(--measure)) / 2 - var(--space-2), var(--code-outset-max)));
+  margin-inline: calc(-1 * clamp(0px, (var(--container-width) - 100%) / 2 - var(--space-2), var(--code-outset-max)));
 }
 
 .copy-btn {
@@ -1012,7 +1017,8 @@ fieldset.state legend {
     font-size: var(--reading-size-md);
   }
 
-  .reading .lesson-head h1 {
+  .reading .lesson-head h1,
+  .reading .lesson-body > h1:first-child {
     font-size: var(--reading-h1-md);
   }
 
@@ -1027,7 +1033,8 @@ fieldset.state legend {
     line-height: var(--reading-line-sm);
   }
 
-  .reading .lesson-head h1 {
+  .reading .lesson-head h1,
+  .reading .lesson-body > h1:first-child {
     font-size: var(--reading-h1-sm);
   }
 

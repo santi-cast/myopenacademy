@@ -47,6 +47,15 @@ const LessonHtml = memo(function LessonHtml({ html, className }: { html: string;
   return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
 })
 
+/**
+ * The delivered lesson's own title: its first element, when that is an <h1>. Read from an inert
+ * copy made by DOMParser; the HTML put in the page is still the delivered string, untouched.
+ */
+function deliveredTitle(html: string): { id: string } | null {
+  const first = new DOMParser().parseFromString(html, 'text/html').body.firstElementChild
+  return first?.localName === 'h1' ? { id: first.id } : null
+}
+
 function prefersReducedMotion(): boolean {
   try {
     return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -135,6 +144,7 @@ export function LessonView({ data }: { data: LessonData }) {
   const [toc, setToc] = useState<TocEntry[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
 
+  const bodyTitle = useMemo(() => deliveredTitle(view.bodyHtml), [view.bodyHtml])
   const groups = useMemo(() => groupByPhase(syllabus.phases, syllabus.lessons), [syllabus])
   const pendingLessons = useMemo(() => new Set(syllabus.lessons.filter((entry) => !entry.available).map((entry) => entry.id)), [syllabus])
   const isPending = useCallback((lessonId: string) => pendingLessons.has(lessonId), [pendingLessons])
@@ -390,10 +400,16 @@ export function LessonView({ data }: { data: LessonData }) {
           </div>
           <div className="mix-body">
             <div className="reading-wrap">
-              <article className="reading" aria-labelledby="lesson-title" ref={contentRef}>
+              {/* One <h1> per page: the delivered one when the lesson HTML starts with it. */}
+              <article
+                className="reading"
+                aria-labelledby={bodyTitle === null ? 'lesson-title' : bodyTitle.id || undefined}
+                aria-label={bodyTitle !== null && bodyTitle.id === '' ? lesson.title : undefined}
+                ref={contentRef}
+              >
                 <header className="lesson-head">
                   <p className="kicker">{syllabus.course.title}{group ? ` · ${group.label}` : ''}</p>
-                  <h1 id="lesson-title">{lesson.title}</h1>
+                  {bodyTitle === null && <h1 id="lesson-title">{lesson.title}</h1>}
                   <p className="position">
                     Lección <strong>{code}</strong> · posición {lesson.position} de {syllabus.lessons.length} en el temario
                   </p>

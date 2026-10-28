@@ -132,7 +132,8 @@ function clearDiagram(pre: HTMLElement) {
 
 /**
  * Draws each Mermaid block from its code element's textContent. The drawing goes before the
- * source, which CSS then hides; a failure leaves the source visible, as text, under a note.
+ * source, which CSS then hides; a refused or failed diagram leaves the source visible, as text,
+ * under a note.
  */
 export async function drawDiagrams(pres: HTMLElement[], theme: Theme, isCancelled: () => boolean) {
   if (pres.length === 0) return
@@ -154,8 +155,8 @@ export async function drawDiagrams(pres: HTMLElement[], theme: Theme, isCancelle
     }
     const figure = uiElement('figure', 'diagram')
     figure.dataset.uiDiagram = ''
-    // Mermaid's own SVG, produced and sanitized under securityLevel 'strict'.
-    figure.innerHTML = svg
+    // Mermaid's SVG under securityLevel 'strict', as the element that passed checkedSvg.
+    figure.append(svg)
     pre.before(figure)
   })
 }
