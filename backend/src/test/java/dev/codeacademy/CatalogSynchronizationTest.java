@@ -240,6 +240,25 @@ class CatalogSynchronizationTest {
 	}
 
 	@Test
+	void aPhaseMovedToACoexistingCourseIsRejectedWithoutChanges() {
+		Manifest base = demo.load().manifest();
+		Manifest other = new Manifest(1, base.source(), new Manifest.Course("otro", "demo", "Otro"),
+				List.of(new Manifest.Phase("demo-phase-02", "Segunda fase", 1)),
+				List.of(new Lesson("demo-90.01", "Nueva", 1, "demo-phase-02", "x/90.md", false, false, null, List.of())),
+				List.of(), List.of());
+		Manifest demoWithout = new Manifest(base.schemaVersion(), base.source(), base.course(),
+				base.phases().subList(0, 1), base.lessons().stream().map(l -> new Lesson(l.id(), l.title(), l.position(),
+						"demo-phase-01", l.sourcePath(), l.sourceAvailable(), l.available(), l.bodyPath(),
+						l.exercises())).toList(), base.resources(), base.sourceToId());
+		var before = TestDatabase.snapshot(jdbc);
+
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, demoWithout, other)))
+				.isInstanceOf(CatalogConflictException.class)
+				.hasMessageContaining("phase demo-phase-02 belongs to course demo, not otro");
+		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+	}
+
+	@Test
 	void aStoredExerciseWhoseTitleChangesIsRejectedWithoutChanges() {
 		// The title binds an exercise ID to its content, so swapping titles in the manifest would move progress.
 		ContentFixture swapped = ContentFixture.copyInto(tempDir.resolve("swapped"));
