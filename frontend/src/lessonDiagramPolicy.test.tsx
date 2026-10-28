@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { isRenderable, withoutInlineMarkup } from './lesson/diagrams'
+import { isRenderable, withEntityPlaceholders, withoutInlineMarkup } from './lesson/diagrams'
 import { ana, installFakeBackend } from './test/fakeBackend'
 import { lessonView, routeLesson } from './test/lessonFixtures'
 import { renderApp } from './test/renderApp'
@@ -216,15 +216,15 @@ describe('HTML entities in labels', () => {
       const cut = escaped.indexOf('quo') + 2
       return { svg: `<svg ${SVG_NS} id="${id}"><text><tspan>${escaped.slice(0, cut)}</tspan><tspan>${escaped.slice(cut)}</tspan></text></svg>` }
     })
-    await openLesson(diagramBlock('flowchart TD\n B[/"IO.println(&quot;En preparación&quot;) a &amp; b &lt;c&gt; &#39;d&#39; &#x41; &nope;"/]'))
+    await openLesson(diagramBlock('flowchart TD\n B[/"IO.println(&quot;En preparación&quot;) a &amp; b &lt;c&gt;"/]'))
 
     const svg = await waitFor(() => {
       const drawn = lessonBody().querySelector('figure.diagram svg')
       if (!drawn) throw new Error('not drawn')
       return drawn
     })
-    expect(svg.textContent).toBe('IO.println("En preparación") a & b <c> \'d\' A &nope;')
-    expect(mermaid.render.mock.calls[0][1]).not.toMatch(/&(quot|amp|lt|gt|#39|#x41);/)
+    expect(svg.textContent).toBe('IO.println("En preparación") a & b <c>')
+    expect(mermaid.render.mock.calls[0][1]).not.toMatch(/&(quot|amp|lt|gt);/)
     // Decoding only ever writes text: no element appears from «&lt;c&gt;».
     expect(svg.querySelectorAll('*').length).toBe(3)
   })
@@ -240,6 +240,43 @@ describe('entities cannot smuggle refused syntax past the source gate', () => {
     await openLesson(diagramBlock(source))
     expect(await screen.findByText('No se pudo dibujar el diagrama')).toBeVisible()
     expect(mermaid.render).not.toHaveBeenCalled()
+  })
+})
+
+describe('only the four entities the course uses are supported', () => {
+  it.each([
+    ['a numeric entity', 'flowchart LR\n  A["&#99;lick"]-->B'],
+    ['a hex entity', 'flowchart LR\n  A["&#x63;"]-->B'],
+    ['another named entity', 'flowchart LR\n  A["a&nbsp;b"]-->B'],
+    ['a private-use placeholder already in the source', 'flowchart LR\n  A["\ue000x\ue000"]-->B'],
+  ])('%s is shown as source, never rendered', async (_case, source) => {
+    await openLesson(diagramBlock(source))
+    expect(await screen.findByText('No se pudo dibujar el diagrama')).toBeVisible()
+    expect(mermaid.render).not.toHaveBeenCalled()
+    expect(lessonBody().textContent).toContain(source.split('\n')[1].trim().slice(0, 6))
+  })
+})
+
+describe('sources that could load something during rendering', () => {
+  // Mermaid fetches these while drawing, before the SVG gate can act, so they must never reach render().
+  it.each([
+    'flowchart TD\n  A@{ "\\u0069mg": "https://e.example/a.png" }',
+    'flowchart TD\n  A@{ "&#92;u0069mg": "https://e.example/a.png" }',
+    'flowchart TD\n  A@{ \\x69mg: "https://e.example/a.png" }',
+    'classDiagram\n  class Foo\n  style Foo fill:url(https://e.example/a.png)',
+    'classDiagram\n  class Foo\n  style Foo fill&#58;url&#40;https://e.example/a.png&#41;',
+    'stateDiagram-v2\n  s1\n  classDef x fill:url(https://e.example/a.png)\n  class s1 x',
+    'block-beta\n  a\n  classDef x fill:url(https://e.example/a.png)\n  class a x',
+    'flowchart LR\n  A-->B\n  classDef x fill:url( "https://e.example/a.png")',
+    'flowchart LR\n  A-->B\n  style A fill:\\75rl(https://e.example/a.png)',
+    'flowchart LR\n  A-->B\n  linkStyle 0 stroke:#f00,@import url(https://e.example/x.css)',
+  ])('%s', (source) => {
+    const decoded = withEntityPlaceholders(source).replace(/[\ue000-\ue006]/g, (p) => '"&<>\'#;'[p.charCodeAt(0) - 0xe000])
+    expect(isRenderable(source) && isRenderable(decoded)).toBe(false)
+  })
+
+  it('still draws ordinary class definitions and in-diagram references', () => {
+    expect(isRenderable('flowchart LR\n  A-->B\n  classDef ok fill:#ECECFF,stroke:#9370DB\n  class A ok\n  style B fill:url(#grad)')).toBe(true)
   })
 })
 

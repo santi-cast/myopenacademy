@@ -27,9 +27,18 @@ const INTERACTION_STATEMENT = /^(click|links?|callback|href)(?![\w-])/i
 // `@{ … }` node metadata naming an image or an icon, which Mermaid fetches while it draws.
 const SHAPE_METADATA = /@\s*\{([^}]*)/g
 const IMAGE_KEY = /(?<![\w-])(img|icon)(?![\w-])/i
+const STYLE_STATEMENT = /^(style|classDef|linkStyle|cssClass)(?![\w-])/i
 
 /** False for a source that must not reach Mermaid: it is shown as escaped text instead. */
 export function isRenderable(source: string): boolean {
+  if (/[\ue000-\ue006]/.test(source)) return false // the private-use placeholders below
+  // Only &quot; &lt; &gt; &amp; are supported (the only ones the course uses); any other entity, named or
+  // numeric, never reaches Mermaid, so no entity can spell a refused keyword.
+  for (const [, name] of source.matchAll(/&(#x?[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g)) {
+    if (!(name in ALLOWED_ENTITIES)) return false
+  }
+  if (/url\s*\(\s*(?!['"]?\s*#)/i.test(source)) return false // anything loaded through CSS
+  if (/@import|image-set\s*\(/i.test(source)) return false
   if (/%%\s*\{/.test(source)) return false // init/config directives
   if (/^\s*---/.test(source)) return false // YAML frontmatter with `config:`
   if (/(?<![\w-])href(?![\w-])/i.test(source)) return false
@@ -37,7 +46,12 @@ export function isRenderable(source: string): boolean {
     if (INTERACTION_STATEMENT.test(statement.trimStart())) return false
   }
   for (const [, metadata] of source.matchAll(SHAPE_METADATA)) {
-    if (IMAGE_KEY.test(metadata)) return false
+    // A backslash is a YAML escape that could spell `img` or `icon`.
+    if (IMAGE_KEY.test(metadata) || metadata.includes('\\')) return false
+  }
+  for (const statement of source.split(/\r\n|\r|\n|;/)) {
+    // A backslash in styling is a CSS escape that could spell url( or @import.
+    if (STYLE_STATEMENT.test(statement.trimStart()) && statement.includes('\\')) return false
   }
   return true
 }
@@ -52,31 +66,17 @@ export function withoutInlineMarkup(source: string): string {
     .replace(/<\s*\/?\s*(b|i|strong|em)\s*>/gi, '')
 }
 
-// Characters that would break a Mermaid label if written as themselves travel as one private-use code point each,
-// which no line wrapping can split, and are restored in the drawn SVG's text.
-const PLACEHOLDERS: Record<string, string> = { '"': '\ue000', '&': '\ue001', '<': '\ue002', '>': '\ue003', "'": '\ue004', '#': '\ue005', ';': '\ue006' }
-const RESTORED = new Map(Object.entries(PLACEHOLDERS).map(([character, placeholder]) => [placeholder, character]))
-const NAMED_ENTITIES: Record<string, string> = { quot: '"', amp: '&', lt: '<', gt: '>', apos: "'", nbsp: '\u00a0' }
-
-function entityCharacter(name: string): string | null {
-  if (!name.startsWith('#')) return NAMED_ENTITIES[name] ?? null
-  const code = name[1] === 'x' || name[1] === 'X' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10)
-  return Number.isInteger(code) && code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff)
-    ? String.fromCodePoint(code) : null
-}
+// The supported entities and the private-use code point each one travels as: a single character, which no line
+// wrapping can split, restored in the drawn SVG's text.
+const ALLOWED_ENTITIES: Record<string, string> = { quot: '\ue000', amp: '\ue001', lt: '\ue002', gt: '\ue003' }
+const RESTORED = new Map([['\ue000', '"'], ['\ue001', '&'], ['\ue002', '<'], ['\ue003', '>']])
 
 /**
- * Lesson authors write HTML entities in labels (GitHub draws Mermaid labels as HTML); without HTML labels Mermaid
- * would print them literally. Known entities become their character, or a placeholder when that character is part
- * of Mermaid's syntax; unknown entities stay as written. A source already using the private-use range is left as is.
+ * Lesson authors write &quot; &lt; &gt; &amp; in labels (GitHub draws Mermaid labels as HTML); without HTML labels
+ * Mermaid would print them literally. Each becomes its placeholder; isRenderable has already refused any other entity.
  */
 export function withEntityPlaceholders(source: string): string {
-  if (/[\ue000-\ue006]/.test(source)) return source
-  return source.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (entity, name: string) => {
-    const character = entityCharacter(name)
-    if (character === null) return entity
-    return PLACEHOLDERS[character] ?? character
-  })
+  return source.replace(/&(quot|amp|lt|gt);/g, (_entity, name: string) => ALLOWED_ENTITIES[name])
 }
 
 /** Restores placeholders in text nodes outside <style>, assigned as text and never parsed as markup. */
@@ -85,7 +85,7 @@ export function restorePlaceholders(svg: Element) {
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (node.parentElement?.closest('style')) continue
     const text = node.nodeValue ?? ''
-    if (/[\ue000-\ue006]/.test(text)) node.nodeValue = text.replace(/[\ue000-\ue006]/g, (p) => RESTORED.get(p) ?? p)
+    if (/[\ue000-\ue003]/.test(text)) node.nodeValue = text.replace(/[\ue000-\ue003]/g, (p) => RESTORED.get(p) ?? p)
   }
 }
 
@@ -155,15 +155,13 @@ export async function renderDiagrams(sources: string[], theme: Theme): Promise<(
   })
   const results: (SVGSVGElement | null)[] = []
   for (const source of sources) {
-    const prepared = withEntityPlaceholders(withoutInlineMarkup(source))
-    // The gate also sees what Mermaid will read, so an entity cannot spell a refused keyword.
-    const decoded = prepared.replace(/[\ue000-\ue006]/g, (p) => RESTORED.get(p) ?? p)
-    if (!isRenderable(source) || !isRenderable(decoded)) {
+    if (!isRenderable(source)) {
       results.push(null)
       continue
     }
     counter += 1
     try {
+      const prepared = withEntityPlaceholders(withoutInlineMarkup(source))
       const svg = checkedSvg((await library.render(`lesson-diagram-${counter}`, prepared)).svg)
       if (svg) restorePlaceholders(svg)
       results.push(svg)

@@ -88,6 +88,13 @@ function watchForbidden(page: Page, label: string, sink: string[]) {
   page.on('response', (response) => {
     if (response.status() === 403) sink.push(`${label}: ${response.request().method()} ${response.url()}`)
   })
+  // The academy is local: nothing it renders, lesson diagrams included, may reach another host.
+  page.on('request', (request) => {
+    const url = new URL(request.url())
+    if (/^(https?|wss?):$/.test(url.protocol) && !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) {
+      sink.push(`${label}: external request ${request.method()} ${url.origin}`)
+    }
+  })
 }
 
 async function register(page: Page, learner: Learner) {
