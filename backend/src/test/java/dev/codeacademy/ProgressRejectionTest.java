@@ -73,7 +73,8 @@ class ProgressRejectionTest extends ProgressTestSupport {
 		var before = snapshot();
 
 		for (String lessonId : List.of("JAVA-02.01", "j\u0430va-02.01", "a".repeat(300), "java-02.01 ", " java-02.01",
-				"..", "../java-02.01", "java/02.01", "java-02.01/state", "", "java-99.99")) {
+				"..", "../java-02.01", "java/02.01", "java-02.01/state", "", "java-99.99",
+				"\u0000", "java-02.01\u0000", "\u0000java-02.01")) {
 			assertError(continuation(browser, "java", lessonId), 404, "NOT_FOUND");
 		}
 

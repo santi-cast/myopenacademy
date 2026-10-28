@@ -186,6 +186,8 @@ class ProgressService {
 	}
 
 	private Optional<LessonRow> findLesson(String lessonId) {
+		// PostgreSQL rejects U+0000 in text, and no catalog ID can contain it: such an ID simply does not exist.
+		if (lessonId.indexOf('\u0000') >= 0) return Optional.empty();
 		return jdbc.query("select id, course_id, available from code_academy.lessons where id = ?",
 				(row, i) -> new LessonRow(row.getString("id"), row.getString("course_id"), row.getBoolean("available")),
 				lessonId).stream().findFirst();
