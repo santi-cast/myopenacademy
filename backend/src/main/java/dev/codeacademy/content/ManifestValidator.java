@@ -87,12 +87,18 @@ final class ManifestValidator {
 			else if (lesson.bodyPath() != null || !lesson.exercises().isEmpty()) {
 				problems.add(lesson.id() + " is pending but has bodyPath or exercises");
 			}
+			Set<String> exerciseTitles = new HashSet<>();
 			for (Exercise exercise : lesson.exercises()) {
 				if (exercise == null || blank(exercise.id()) || blank(exercise.title())) {
 					problems.add("an exercise of " + lesson.id() + " needs id and title");
 					continue;
 				}
 				register(exercise.id());
+				// The title is what associates the exercise with its heading in the lesson.
+				if (!exerciseTitles.add(exercise.title())) {
+					problems.add("exercise " + exercise.id() + " of " + lesson.id() + " repeats the title «"
+							+ exercise.title() + "»");
+				}
 				if (!lesson.id().equals(exercise.lessonId())) {
 					problems.add("exercise " + exercise.id() + " belongs to " + exercise.lessonId() + ", not to " + lesson.id());
 				}

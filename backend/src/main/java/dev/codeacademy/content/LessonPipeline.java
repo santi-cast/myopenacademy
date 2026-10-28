@@ -26,6 +26,7 @@ import org.commonmark.node.Node;
 import org.commonmark.node.Text;
 import org.commonmark.node.ThematicBreak;
 
+import dev.codeacademy.content.Manifest.Exercise;
 import dev.codeacademy.content.Manifest.Lesson;
 import dev.codeacademy.content.Manifest.Resource;
 import dev.codeacademy.content.Manifest.SourceLink;
@@ -34,6 +35,9 @@ import dev.codeacademy.content.Manifest.SourceLink;
  * Renders the available lessons of a validated manifest: GitHub heading IDs, extraction of the exercises section,
  * link rewriting through sourceToId and sanitizing. Parsing all lessons first lets links check fragments of other
  * lessons. Every problem names the lesson (and exercise part) where it was found.
+ * <p>
+ * An exercise of the lesson is associated with the manifest exercise whose title is exactly the plain text of its
+ * heading after «Ejercicio N · » (code point equality, no normalization); its position and N never identify it.
  */
 final class LessonPipeline {
 
@@ -43,6 +47,7 @@ final class LessonPipeline {
 	private static final Pattern EXTERNAL = Pattern.compile("(?i)https?://[^\\s/?#]+.*");
 	private static final Pattern DETAILS_OPEN = Pattern.compile("(?is)<details>.*");
 	private static final Pattern DETAILS_CLOSE = Pattern.compile("(?is).*</details>");
+	private static final Pattern ID_ATTRIBUTE = Pattern.compile("\\sid=\"([^\"]*)\"");
 
 	private final Manifest manifest;
 	private final Map<String, Lesson> lessons = new HashMap<>();
@@ -73,12 +78,20 @@ final class LessonPipeline {
 	private record Part(String label, Document document) {
 	}
 
+	/** An exercise as found in the lesson: its heading title and ID, and its statement and solution (null if broken). */
+	private record FoundExercise(String title, String headingId, Document[] parts) {
+	}
+
+	/** A manifest exercise with the statement and solution of its heading. */
+	private record MatchedExercise(Exercise exercise, Document[] parts) {
+	}
+
 	private static final class ParsedLesson {
 		final Lesson lesson;
 		final Map<Heading, String> headingIds = new IdentityHashMap<>();
 		Document body;
-		final List<String> titles = new ArrayList<>();
-		final List<Document[]> exercises = new ArrayList<>();
+		final List<FoundExercise> found = new ArrayList<>();
+		final List<MatchedExercise> exercises = new ArrayList<>();
 		final Set<String> renderedIds = new HashSet<>();
 		final Map<String, String> exerciseHeadings = new HashMap<>();
 
@@ -104,26 +117,50 @@ final class LessonPipeline {
 				result.headingIds.put(heading, ids.next(HeadingIds.plainText(heading)));
 			}
 		});
-		List<String> exerciseHeadingIds = extractExercises(result, document);
+		extractExercises(result, document);
 		result.body = document;
-		int expected = lesson.exercises().size();
-		if (result.exercises.size() != expected) {
-			problems.add(lesson.id() + ": " + result.exercises.size() + " exercises in the lesson, " + expected
-					+ " in the manifest");
-		}
-		else {
-			for (int i = 0; i < expected; i++) {
-				result.exerciseHeadings.put(exerciseHeadingIds.get(i), lesson.exercises().get(i).id());
-			}
-		}
+		associate(result);
 		List<Document> rendered = new ArrayList<>(List.of(document));
-		result.exercises.forEach(parts -> rendered.addAll(List.of(parts)));
+		result.exercises.forEach(matched -> rendered.addAll(List.of(matched.parts())));
 		rendered.forEach(part -> result.renderedIds.addAll(headingIdsIn(part, result.headingIds)));
 		parsed.put(lesson.id(), result);
 	}
 
-	/** Removes the exercises section from the document; returns the heading ID of each exercise found. */
-	private List<String> extractExercises(ParsedLesson result, Document document) {
+	/**
+	 * Pairs each exercise found in the lesson with the manifest exercise of the same title, in manifest order. A heading
+	 * without manifest entry, a manifest entry without heading or a repeated heading title is an import conflict.
+	 */
+	private void associate(ParsedLesson result) {
+		String lessonId = result.lesson.id();
+		Map<String, FoundExercise> byTitle = new HashMap<>();
+		Set<String> repeated = new LinkedHashSet<>();
+		for (FoundExercise found : result.found) {
+			if (byTitle.putIfAbsent(found.title(), found) != null) repeated.add(found.title());
+		}
+		repeated.forEach(title -> problems.add(lessonId + ": more than one exercise heading titled «" + title + "»"));
+		Set<String> manifestTitles = new HashSet<>();
+		result.lesson.exercises().forEach(exercise -> manifestTitles.add(exercise.title()));
+		for (FoundExercise found : result.found) {
+			if (!manifestTitles.contains(found.title())) {
+				problems.add(lessonId + ": exercise heading «" + found.title()
+						+ "» has no exercise with that title in the manifest");
+			}
+		}
+		for (Exercise exercise : result.lesson.exercises()) {
+			FoundExercise found = byTitle.get(exercise.title());
+			if (found == null) {
+				problems.add(lessonId + ": exercise " + exercise.id() + " «" + exercise.title()
+						+ "» has no heading with that title in the lesson");
+			}
+			else if (!repeated.contains(found.title())) {
+				result.exerciseHeadings.put(found.headingId(), exercise.id());
+				if (found.parts() != null) result.exercises.add(new MatchedExercise(exercise, found.parts()));
+			}
+		}
+	}
+
+	/** Removes the exercises section from the document and records every exercise found in it. */
+	private void extractExercises(ParsedLesson result, Document document) {
 		String lessonId = result.lesson.id();
 		List<Heading> sections = new ArrayList<>();
 		for (Node node = document.getFirstChild(); node != null; node = node.getNext()) {
@@ -131,11 +168,10 @@ final class LessonPipeline {
 				sections.add(heading);
 			}
 		}
-		List<String> exerciseHeadingIds = new ArrayList<>();
-		if (sections.isEmpty()) return exerciseHeadingIds;
+		if (sections.isEmpty()) return;
 		if (sections.size() > 1) {
 			problems.add(lessonId + ": more than one «" + EXERCISES_SECTION + "» section");
-			return exerciseHeadingIds;
+			return;
 		}
 		Heading section = sections.get(0);
 		List<Node> nodes = new ArrayList<>();
@@ -147,17 +183,18 @@ final class LessonPipeline {
 		nodes.forEach(Node::unlink);
 
 		List<Node> current = null;
-		String currentTitle = null;
 		List<List<Node>> exerciseNodes = new ArrayList<>();
+		List<String> titles = new ArrayList<>();
+		List<String> headingIds = new ArrayList<>();
 		for (Node node : nodes) {
 			if (node instanceof Heading heading) {
-				Matcher matcher = EXERCISE_HEADING.matcher(HeadingIds.plainText(heading).strip());
+				// CommonMark already trimmed the heading text; the title is compared as is, with no further trimming.
+				Matcher matcher = EXERCISE_HEADING.matcher(HeadingIds.plainText(heading));
 				if (matcher.matches()) {
 					current = new ArrayList<>();
-					currentTitle = matcher.group(1).strip();
 					exerciseNodes.add(current);
-					result.titles.add(currentTitle);
-					exerciseHeadingIds.add(result.headingIds.get(heading));
+					titles.add(matcher.group(1));
+					headingIds.add(result.headingIds.get(heading));
 				}
 				else {
 					current = null; // level headings (🟢 Básico...) belong to no exercise and leave with the section
@@ -169,10 +206,9 @@ final class LessonPipeline {
 			}
 		}
 		for (int i = 0; i < exerciseNodes.size(); i++) {
-			Document[] parts = split(lessonId, result.titles.get(i), exerciseNodes.get(i));
-			if (parts != null) result.exercises.add(parts);
+			result.found.add(new FoundExercise(titles.get(i), headingIds.get(i),
+					split(lessonId, titles.get(i), exerciseNodes.get(i))));
 		}
-		return exerciseHeadingIds;
 	}
 
 	/** Statement up to the &lt;details&gt; block, and the solution block itself. */
@@ -229,14 +265,16 @@ final class LessonPipeline {
 		for (ParsedLesson lesson : parsed.values()) {
 			String lessonId = lesson.lesson.id();
 			Set<String> used = new LinkedHashSet<>();
-			String body = render(lesson, new Part(lessonId, lesson.body), used);
+			Set<String> ids = new HashSet<>();
+			String body = render(lesson, new Part(lessonId, lesson.body), used, ids);
 			List<ExerciseContent> exercises = new ArrayList<>();
-			for (int i = 0; i < lesson.exercises.size(); i++) {
-				String exerciseId = lesson.lesson.exercises().get(i).id();
-				Document[] parts = lesson.exercises.get(i);
-				String statement = render(lesson, new Part(lessonId + " " + exerciseId + " statement", parts[0]), used);
-				String solution = render(lesson, new Part(lessonId + " " + exerciseId + " solution", parts[1]), used);
-				exercises.add(new ExerciseContent(exerciseId, lessonId, manifest.course().id(), lesson.titles.get(i),
+			for (MatchedExercise matched : lesson.exercises) {
+				String exerciseId = matched.exercise().id();
+				Document[] parts = matched.parts();
+				String statement = render(lesson, new Part(lessonId + " " + exerciseId + " statement", parts[0]), used, ids);
+				String solution = render(lesson, new Part(lessonId + " " + exerciseId + " solution", parts[1]), used, ids);
+				// The manifest title is exactly the heading title, so the catalog and the API return the same string.
+				exercises.add(new ExerciseContent(exerciseId, lessonId, manifest.course().id(), matched.exercise().title(),
 						statement, solution));
 			}
 			rendered.put(lessonId, new LessonContent(lessonId, body, List.copyOf(exercises), List.copyOf(used)));
@@ -244,7 +282,8 @@ final class LessonPipeline {
 		return Collections.unmodifiableMap(rendered);
 	}
 
-	private String render(ParsedLesson lesson, Part part, Set<String> usedResources) {
+	/** ids collects the element IDs already rendered in the lesson: one repeated in any field is a validation error. */
+	private String render(ParsedLesson lesson, Part part, Set<String> usedResources, Set<String> ids) {
 		List<Link> links = new ArrayList<>();
 		part.document().accept(new AbstractVisitor() {
 			@Override
@@ -259,6 +298,10 @@ final class LessonPipeline {
 		List<String> removed = new ArrayList<>();
 		String clean = ContentSanitizer.sanitize(html, headingIdsIn(part.document(), lesson.headingIds), hrefs, removed);
 		removed.forEach(item -> problems.add(part.label() + ": sanitizer removed " + item));
+		Matcher id = ID_ATTRIBUTE.matcher(clean);
+		while (id.find()) {
+			if (!ids.add(id.group(1))) problems.add(part.label() + ": repeated id " + id.group(1));
+		}
 		return clean;
 	}
 

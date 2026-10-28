@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import static dev.codeacademy.ApiClient.assertError;
 import static dev.codeacademy.ApiClient.credentials;
@@ -57,6 +58,30 @@ class CatalogApiTest {
 			assertThat(download.statusCode()).isEqualTo(401);
 			assertThat(new String(download.body(), StandardCharsets.UTF_8)).doesNotContain("IO.println");
 		}
+	}
+
+	@Test
+	void exerciseTitlesAreTheSameInTheApiAndTheCatalog() throws Exception {
+		var api = new ArrayList<String>();
+		json(browser.get("/api/lessons/" + LESSON)).path("exercises").forEach(e -> api.add(e.path("title").asString()));
+		assertThat(api).isEqualTo(jdbc.queryForList(
+				"select title from code_academy.exercises where lesson_id = ? order by position", String.class, LESSON));
+	}
+
+	@Test
+	void exerciseTitlesInTheApiAreExactlyTheManifestTitles() throws Exception {
+		var manifest = new ArrayList<String>();
+		for (JsonNode lesson : JsonMapper.builder().build().readTree(CONTENT.resolve("java/manifest.json").toFile())
+			.path("lessons")) {
+			if (lesson.path("id").asString().equals(LESSON)) {
+				lesson.path("exercises").forEach(e -> manifest.add(e.path("title").asString()));
+			}
+		}
+		var api = new ArrayList<String>();
+		json(browser.get("/api/lessons/" + LESSON)).path("exercises").forEach(e -> api.add(e.path("title").asString()));
+
+		assertThat(manifest).hasSize(9).contains("¿Qué main se ejecuta?");
+		assertThat(api).isEqualTo(manifest);
 	}
 
 	@Test

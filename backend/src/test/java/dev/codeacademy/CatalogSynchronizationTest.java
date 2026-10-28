@@ -14,11 +14,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import dev.codeacademy.catalog.CatalogConflictException;
 import dev.codeacademy.catalog.CatalogSynchronizer;
 import dev.codeacademy.content.ContentFixture;
 import dev.codeacademy.content.ContentLoader;
+import dev.codeacademy.content.ContentValidationException;
 import dev.codeacademy.content.Manifest;
 import dev.codeacademy.content.Manifest.Lesson;
 
@@ -61,7 +63,7 @@ class CatalogSynchronizationTest {
 				+ "where course_id = 'demo' order by id")).containsExactly(
 						Map.of("id", "demo-01.01-e01", "lesson_id", "demo-01.01", "title", "Primer ejercicio",
 								"position", 1),
-						Map.of("id", "demo-01.01-e02", "lesson_id", "demo-01.01", "title", "Segundo `ejercicio`",
+						Map.of("id", "demo-01.01-e02", "lesson_id", "demo-01.01", "title", "Segundo ejercicio",
 								"position", 2));
 		assertThat(jdbc.queryForMap("select course_id, title, position, available, source_available "
 				+ "from code_academy.lessons where id = 'demo-02.01'")).isEqualTo(Map.of("course_id", "demo",
@@ -153,6 +155,26 @@ class CatalogSynchronizationTest {
 				.isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("exercise demo-01.01-e02 belongs to lesson demo-01.01 of course demo, "
 						+ "not demo-01.02 of course demo");
+
+		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+	}
+
+	@Test
+	void anExerciseTitleConflictWithTheLessonFailsTheLoadAndLeavesTheDatabaseUntouched() {
+		ContentFixture retitled = ContentFixture.copyInto(tempDir.resolve("retitled"));
+		retitled.editManifest(manifest -> ((ObjectNode) ContentFixture.lesson(manifest, "demo-01.01").get("exercises").get(0))
+			.put("title", "Otro título"));
+		ContentFixture missing = ContentFixture.copyInto(tempDir.resolve("missing"));
+		missing.replace(ContentFixture.INTRO, "#### Ejercicio 1 · Primer ejercicio", "#### Ejercicio 1 · Primer ejercicio quitado");
+		var before = TestDatabase.snapshot(jdbc);
+
+		// The load has no database access: it fails before the synchronization is ever called.
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, retitled.load().manifest())))
+				.isInstanceOf(ContentValidationException.class)
+				.hasMessageContaining("exercise demo-01.01-e01 «Otro título» has no heading with that title");
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, missing.load().manifest())))
+				.isInstanceOf(ContentValidationException.class)
+				.hasMessageContaining("exercise demo-01.01-e01 «Primer ejercicio» has no heading with that title");
 
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}

@@ -13,7 +13,7 @@
       "bodyPath": "demo/lessons/demo-01.01.md",
       "exercises": [
         { "id": "demo-01.01-e01", "lessonId": "demo-01.01", "title": "Primer ejercicio" },
-        { "id": "demo-01.01-e02", "lessonId": "demo-01.01", "title": "Segundo `ejercicio`" }
+        { "id": "demo-01.01-e02", "lessonId": "demo-01.01", "title": "Segundo ejercicio" }
       ]
     },
     {

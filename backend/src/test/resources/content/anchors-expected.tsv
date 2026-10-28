@@ -98,3 +98,11 @@ synthetic	123	123
 synthetic	x² y ½	x²-y-½
 synthetic	Café combinado	cafe-combinado
 synthetic	İstanbul	istanbul
+synthetic	 Hola NBSP delante	hola-nbsp-delante
+synthetic	Hola NBSP detrás 	hola-nbsp-detrás
+synthetic	 Em space delante	em-space-delante
+synthetic	Ǆemo titlecase ǅ	ǆemo-titlecase-ǆ
+synthetic	ẞ ß straße	ß-ß-straße
+synthetic	Setext heading	setext-heading
+synthetic	En cita	en-cita
+synthetic	En lista	en-lista

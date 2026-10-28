@@ -302,9 +302,78 @@ class ContentLoaderTest {
 	}
 
 	@Test
-	void rejectsAnExerciseCountThatDiffersFromTheManifest() {
+	void rejectsAnExerciseRemovedFromTheManifest() {
 		fixture.editManifest(m -> ((ArrayNode) lesson(m, "demo-01.01").get("exercises")).remove(1));
-		fixture.rejected("demo-01.01: 2 exercises in the lesson, 1 in the manifest");
+		fixture.rejected("demo-01.01: exercise heading «Segundo ejercicio» has no exercise with that title in the manifest");
+	}
+
+	@Test
+	void reorderedExercisesKeepTheirIds() {
+		String text = fixture.read(INTRO);
+		int first = text.indexOf("#### Ejercicio 1 · ");
+		int second = text.indexOf("#### Ejercicio 2 · ");
+		int end = text.indexOf("---\n\n## 6. Chuleta");
+		fixture.write(INTRO, text.substring(0, first) + text.substring(second, end) + text.substring(first, second)
+				+ text.substring(end));
+
+		LessonContent intro = fixture.load().lessons().get("demo-01.01");
+
+		assertThat(intro.exercises()).extracting(ExerciseContent::id).containsExactly("demo-01.01-e01", "demo-01.01-e02");
+		assertThat(intro.exercises()).extracting(ExerciseContent::title).containsExactly("Primer ejercicio", "Segundo ejercicio");
+		assertThat(intro.exercises().get(0).statementHtml()).contains("Enunciado uno");
+		assertThat(intro.exercises().get(0).solutionHtml()).contains("Solución uno");
+		assertThat(intro.exercises().get(1).statementHtml()).contains("Enunciado dos");
+		assertThat(intro.exercises().get(1).solutionHtml()).contains("Solución dos");
+		assertThat(intro.bodyHtml()).contains("<a href=\"#demo-01.01-e02\">");
+	}
+
+	@Test
+	void rejectsAManifestExerciseTitleThatDiffersFromItsHeading() {
+		fixture.editManifest(m -> ((ObjectNode) lesson(m, "demo-01.01").get("exercises").get(0)).put("title", "Otro"));
+		fixture.rejected("demo-01.01: exercise demo-01.01-e01 «Otro» has no heading with that title in the lesson");
+	}
+
+	@Test
+	void rejectsANewExerciseThatTheManifestDoesNotList() {
+		fixture.replace(INTRO, "---\n\n## 6. Chuleta", "#### Ejercicio 3 · Ejercicio nuevo\n\nEnunciado tres.\n\n<details>\n"
+				+ "<summary>Ver solución</summary>\n\nSolución tres.\n\n</details>\n\n---\n\n## 6. Chuleta");
+		fixture.rejected("demo-01.01: exercise heading «Ejercicio nuevo» has no exercise with that title in the manifest");
+	}
+
+	@Test
+	void rejectsAManifestExerciseWhoseHeadingNoLongerExists() {
+		String text = fixture.read(INTRO);
+		fixture.write(INTRO, text.substring(0, text.indexOf("#### Ejercicio 1 · "))
+				+ text.substring(text.indexOf("#### Ejercicio 2 · ")));
+		fixture.rejected("demo-01.01: exercise demo-01.01-e01 «Primer ejercicio» has no heading with that title in the lesson");
+	}
+
+	@Test
+	void rejectsAHeadingWithoutManifestEntryAndDuplicateTitles() {
+		fixture.replace(INTRO, "Ejercicio 1 · Primer ejercicio", "Ejercicio 1 · Primer ejercicio renombrado");
+		fixture.rejected("demo-01.01: exercise heading «Primer ejercicio renombrado» has no exercise with that title in the manifest");
+
+		ContentFixture headings = ContentFixture.copyInto(tempDir.resolve("headings"));
+		headings.replace(INTRO, "Ejercicio 2 · Segundo `ejercicio`", "Ejercicio 2 · Primer ejercicio");
+		headings.rejected("demo-01.01: more than one exercise heading titled «Primer ejercicio»");
+
+		ContentFixture entries = ContentFixture.copyInto(tempDir.resolve("entries"));
+		entries.editManifest(m -> ((ObjectNode) lesson(m, "demo-01.01").get("exercises").get(1)).put("title", "Primer ejercicio"));
+		entries.rejected("exercise demo-01.01-e02 of demo-01.01 repeats the title «Primer ejercicio»");
+	}
+
+	@Test
+	void rejectsAHeadingThatDiffersFromItsManifestTitleOnlyInUnicodeNormalization() {
+		fixture.replace(INTRO, "Ejercicio 1 · Primer ejercicio", "Ejercicio 1 · Primer ejercicio cafe\u0301");
+		fixture.editManifest(m -> ((ObjectNode) lesson(m, "demo-01.01").get("exercises").get(0))
+			.put("title", "Primer ejercicio caf\u00e9"));
+		fixture.rejected("demo-01.01: exercise demo-01.01-e01 «Primer ejercicio caf\u00e9» has no heading with that title in the lesson");
+	}
+
+	@Test
+	void rejectsDuplicatedHeadingIdsFromRawHtml() {
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo.\n\n<h2 id=\"qué-aprenderás\">x</h2>");
+		fixture.rejected("demo-01.01: repeated id qué-aprenderás");
 	}
 
 	@Test
