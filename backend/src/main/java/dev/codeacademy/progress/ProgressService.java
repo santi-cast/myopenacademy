@@ -127,6 +127,7 @@ class ProgressService {
 	/** An exercise follows its lesson: unavailable with it, and its lesson is the initial continuation. */
 	@Transactional
 	ExerciseStateResult markExercise(UUID user, String exerciseId, String state) {
+		if (!queryable(exerciseId)) throw notFound();
 		ExerciseRow exercise = jdbc.query("""
 				select x.id, x.course_id, x.lesson_id, l.available
 				from code_academy.exercises x join code_academy.lessons l on l.id = x.lesson_id
@@ -186,8 +187,7 @@ class ProgressService {
 	}
 
 	private Optional<LessonRow> findLesson(String lessonId) {
-		// PostgreSQL rejects U+0000 in text, and no catalog ID can contain it: such an ID simply does not exist.
-		if (lessonId.indexOf('\u0000') >= 0) return Optional.empty();
+		if (!queryable(lessonId)) return Optional.empty();
 		return jdbc.query("select id, course_id, available from code_academy.lessons where id = ?",
 				(row, i) -> new LessonRow(row.getString("id"), row.getString("course_id"), row.getBoolean("available")),
 				lessonId).stream().findFirst();
@@ -219,9 +219,18 @@ class ProgressService {
 	}
 
 	private void requireCourse(String courseId) {
+		if (!queryable(courseId)) throw notFound();
 		Integer found = jdbc.queryForObject("select count(*) from code_academy.courses where id = ?", Integer.class,
 				courseId);
 		if (found == null || found == 0) throw notFound();
+	}
+
+	/**
+	 * PostgreSQL rejects U+0000 in text and no catalog ID contains it, so such an ID simply does not exist. Paths with
+	 * NUL are already refused by the server; this keeps every ID that reaches a query safe, whatever its origin.
+	 */
+	private static boolean queryable(String id) {
+		return id.indexOf('\u0000') < 0;
 	}
 
 	/** UTC ISO 8601, for example 2026-01-01T12:00:00Z, with fractional seconds when the stored time has them. */

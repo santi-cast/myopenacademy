@@ -67,6 +67,22 @@ class ProgressRejectionTest extends ProgressTestSupport {
 	}
 
 	@Test
+	void nulInAPathIdNeverReachesTheDatabase() throws Exception {
+		var browser = learner();
+		var before = snapshot();
+
+		for (var route : ID_ROUTES.entrySet()) {
+			// Rejected by the server before routing (Tomcat answers 400), so no query ever sees U+0000.
+			for (String segment : List.of("%00", "java-02.01%00", "%00java")) {
+				var response = send(browser, route.getKey(), segment, route.getValue());
+				assertThat(response.statusCode()).as(route.getKey() + " " + segment).isEqualTo(400);
+			}
+		}
+
+		assertThat(snapshot()).isEqualTo(before);
+	}
+
+	@Test
 	void continuationBodyIdsThatDoNotResolveAre404() throws Exception {
 		var browser = learner();
 		ok(add(browser, "java"));
