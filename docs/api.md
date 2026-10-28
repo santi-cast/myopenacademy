@@ -120,7 +120,7 @@ Los errores incluyen `code` y `message`; la UI decide por `code`, no interpreta 
 | 401 | `AUTHENTICATION_FAILED` (login), `AUTHENTICATION_REQUIRED` (sesión ausente, caducada o versión de credenciales inválida). |
 | 403 | `CSRF_REJECTED`, incluidas operaciones públicas inseguras. `ACCESS_DENIED`: solicitud autenticada a una ruta o acción denegada, distinta de un fallo de CSRF. |
 | 404 | `NOT_FOUND`: curso/lección/ejercicio/recurso inexistente, recurso no autorizado o dato personal ajeno; sin revelar existencia ni rutas. |
-| 406 | `NOT_ACCEPTABLE`: el encabezado `Accept` no admite JSON. Se rechaza antes de ejecutar la operación: sin escrituras ni sesión. Sin `Accept`, `*/*` o `application/json` son válidos. |
+| 406 | `NOT_ACCEPTABLE`: el encabezado `Accept` no admite JSON. Se rechaza antes de ejecutar la operación: sin escrituras ni sesión. Sin `Accept`, `*/*` o `application/json` son válidos. Se evalúan los tipos de medio, no los valores de calidad: `application/json;q=0` se trata como aceptable. |
 | 409 | `USERNAME_TAKEN`, `LESSON_UNAVAILABLE`, `COURSE_NOT_ADDED`. |
 | 500 | `INTERNAL_ERROR`: fallo inesperado sin detalles internos ni secretos; escrituras transaccionales sin efectos parciales. |
 
