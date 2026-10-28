@@ -31,6 +31,7 @@ class SecurityConfiguration {
 								error(response, 403, "CSRF_REJECTED", "CSRF token is missing or invalid.")))
 				.authorizeHttpRequests(requests -> requests
 						.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
 						.anyRequest().denyAll())
 				.build();
 	}
