@@ -77,7 +77,8 @@ final class ManifestValidator {
 			Map<String, String> documents = new HashMap<>();
 			lessons.values().forEach(lesson -> document(documents, lesson.sourcePath(), lesson.id()));
 			stages.values().forEach(stage -> document(documents, stage.sourcePath(), stage.id()));
-			resources.values().forEach(resource -> document(documents, resource.sourcePath(), resource.resourceId()));
+			resources.values().stream().filter(resource -> !"zip".equals(resource.kind()))
+				.forEach(resource -> document(documents, resource.sourcePath(), resource.resourceId()));
 			for (SourceLink link : manifest.sourceToId()) {
 				if (link == null || link.sourcePath() == null) continue;
 				String path = link.sourcePath();
@@ -225,15 +226,33 @@ final class ManifestValidator {
 		Set<String> sourcePaths = new HashSet<>();
 		for (Resource resource : manifest.resources()) {
 			if (resource == null || blank(resource.resourceId()) || blank(resource.sourcePath()) || blank(resource.mediaType())
-					|| resource.sourcePath().endsWith("/")) {
+					|| (resource.sourcePath().endsWith("/") && !"zip".equals(resource.kind()))) {
 				problems.add("resource " + (resource == null ? null : resource.resourceId())
 						+ " needs resourceId, a file sourcePath, localPath and mediaType");
 				continue;
 			}
 			register(resource.resourceId());
 			resources.put(resource.resourceId(), resource);
-			if (Objects.equals(manifest.schemaVersion(), 2) && !"file".equals(resource.kind())) {
-				problems.add("resource " + resource.resourceId() + ": unsupported kind " + resource.kind());
+			if (Objects.equals(manifest.schemaVersion(), 2)) {
+				if ("zip".equals(resource.kind())) {
+					String folder = resource.sourcePath();
+					String plain = folder.endsWith("/") ? folder.substring(0, folder.length() - 1) : "";
+					String name = plain.substring(plain.lastIndexOf('/') + 1) + ".zip";
+					if (!ContentPaths.isPlainRelative(plain) || !"application/zip".equals(resource.mediaType())
+							|| !name.equals(resource.fileName()) || resource.memberResourceIds() == null) {
+						problems.add("invalid ZIP metadata for " + resource.resourceId());
+					}
+					boolean mapped = manifest.sourceToId().stream().filter(Objects::nonNull)
+						.anyMatch(link -> resource.resourceId().equals(link.zipResourceId()) && folder.equals(link.sourcePath())
+							&& Objects.equals(resource.memberResourceIds(), link.resourceIds()));
+					if (!mapped) problems.add("ZIP must decorate its exact ordered folder: " + resource.resourceId());
+				}
+				else if (!"file".equals(resource.kind())) {
+					problems.add("resource " + resource.resourceId() + ": unsupported kind " + resource.kind());
+				}
+				else if (resource.fileName() != null || resource.memberResourceIds() != null) {
+					problems.add("file resource cannot have ZIP metadata: " + resource.resourceId());
+				}
 			}
 			if ((resource.lessonId() == null) == (resource.stageId() == null)) {
 				problems.add("resource " + resource.resourceId() + " must have exactly one owner");
@@ -262,6 +281,9 @@ final class ManifestValidator {
 			if (!sourcePaths.add(path)) problems.add("duplicate sourceToId " + path);
 			long targets = Stream.of(link.lessonId(), link.stageId(), link.resourceId(), link.resourceIds(), link.courseId())
 				.filter(Objects::nonNull).count();
+			if (link.zipResourceId() != null && link.resourceIds() == null) {
+				problems.add("zipResourceId only decorates a folder: " + path);
+			}
 			if (targets != 1 || (link.fragments() != null && link.lessonId() == null && link.stageId() == null)) {
 				problems.add("sourceToId " + path + " must have exactly one target");
 				continue;
@@ -302,11 +324,27 @@ final class ManifestValidator {
 			if (!resources.containsKey(id)) problems.add("sourceToId " + folder + ": unknown resource " + id);
 		}
 		Set<String> inside = new HashSet<>();
-		resources.values().stream().filter(resource -> resource.sourcePath().startsWith(folder))
+		resources.values().stream().filter(resource -> !"zip".equals(resource.kind()) && resource.sourcePath().startsWith(folder))
 			.forEach(resource -> inside.add(resource.resourceId()));
 		if (!folder.endsWith("/") || link.resourceIds().size() != new HashSet<>(link.resourceIds()).size()
 				|| !inside.equals(new HashSet<>(link.resourceIds()))) {
 			problems.add("folder " + folder + " does not list exactly its resources");
+		}
+		if (link.zipResourceId() != null) {
+			Resource zip = resources.get(link.zipResourceId());
+			if (zip == null || !"zip".equals(zip.kind()) || !folder.equals(zip.sourcePath())
+					|| !link.resourceIds().equals(zip.memberResourceIds())) {
+				problems.add("folder ZIP does not match ordered members: " + folder);
+				return;
+			}
+			for (String id : link.resourceIds()) {
+				Resource member = resources.get(id);
+				if (member == null) continue;
+				if (!"file".equals(member.kind()) || !Objects.equals(member.lessonId(), zip.lessonId())
+						|| !Objects.equals(member.stageId(), zip.stageId())) {
+					problems.add("ZIP member must be a file of the same owner: " + id);
+				}
+			}
 		}
 	}
 

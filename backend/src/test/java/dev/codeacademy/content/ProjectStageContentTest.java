@@ -211,7 +211,8 @@ class ProjectStageContentTest {
 			case "unwrittenBody" -> "demo-stage-first is available but not sourceAvailable";
 			case "twoOwners", "noOwner" -> "must have exactly one owner";
 			case "unknownOwner" -> "unknown stage demo-stage-unknown";
-			case "missingKind", "zip", "unknownKind" -> "unsupported kind";
+			case "missingKind", "unknownKind" -> "unsupported kind";
+			case "zip" -> "invalid ZIP metadata";
 			case "badCopyHash", "literalMismatch" -> "literal copy has different source and copy hashes";
 			case "badSourceHash" -> "provenance needs SHA-256 hashes";
 			case "missingCopy" -> "provenance.files must cover exactly the managed copies";
@@ -222,7 +223,7 @@ class ProjectStageContentTest {
 			case "unknownField" -> "Unrecognized property \"exercises\"";
 			case "missingStageMapping" -> "missing sourceToId for demo-stage-first";
 			case "duplicateSource" -> "duplicate sourcePath fase-01/01-intro.md";
-			case "generated" -> "generated files are not supported yet";
+			case "generated" -> "generated provenance must match ZIP inputs and SHA-256";
 			case "missingLocalPath" -> "localPath of demo-stage-image: is missing";
 			default -> throw new AssertionError(rule);
 		};

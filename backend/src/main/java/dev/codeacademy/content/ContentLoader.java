@@ -118,7 +118,8 @@ public final class ContentLoader {
 		Map<String, ResourceFile> resources = new LinkedHashMap<>();
 		Map<String, String> originalNames = new HashMap<>();
 		for (Resource resource : manifest.resources()) {
-			String name = resource.sourcePath().substring(resource.sourcePath().lastIndexOf('/') + 1);
+			String name = "zip".equals(resource.kind()) ? resource.fileName()
+				: resource.sourcePath().substring(resource.sourcePath().lastIndexOf('/') + 1);
 			originalNames.put(resource.resourceId(), name);
 			Path file = ContentPaths.file(root, resource.localPath(), "localPath of " + resource.resourceId() + ":", problems);
 			if (file != null) {
@@ -171,12 +172,14 @@ public final class ContentLoader {
 					throw new ContentValidationException("schemaVersion 1 does not allow projectStages or provenance");
 				}
 				for (var resource : tree.path("resources")) {
-					if (resource.has("kind") || resource.has("stageId")) {
+					if (resource.has("kind") || resource.has("stageId") || resource.has("fileName") || resource.has("memberResourceIds")) {
 						throw new ContentValidationException("schemaVersion 1 does not allow resource kind or stageId");
 					}
 				}
 				for (var link : tree.path("sourceToId")) {
-					if (link.has("stageId")) throw new ContentValidationException("schemaVersion 1 does not allow stageId");
+					if (link.has("stageId") || link.has("zipResourceId")) {
+						throw new ContentValidationException("schemaVersion 1 does not allow stageId or zipResourceId");
+					}
 				}
 			}
 			if (tree == null || tree.isNull()) throw new ContentValidationException("manifest must be an object");

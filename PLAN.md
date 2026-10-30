@@ -35,7 +35,7 @@ El curso Java ya tiene su temario completo definido en el índice, pero no todas
 - Actualizaciones manuales con comparación previa y conflictos explícitos, sin sobrescribir adaptaciones automáticamente. Separar contenido importado y complementos de la academia.
 - IDs de lecciones y ejercicios permanentes, globales e independientes de rutas, títulos, números y posiciones del origen. Se asignan al importar y se conservan al reorganizar; el ordinal no identifica un ejercicio.
 
-El [manifiesto](docs/manifiesto.md) conserva el contrato v1 de H4 y propone v2 para H5, con etapas independientes y comparación antes de aplicar. H5 fija el origen en `7e713008e2e04e9993f827ced8a3fe679a35185c`, sin cambios sin commit: inventario observado de 199 lecciones en 21 fases, 164 disponibles en origen y 14 etapas del Proyecto evolutivo (12 escritas, 2 pendientes), pendiente de contraste durante la importación. No son cifras ya importadas. Adaptaciones, retítulos, retiradas e identidad ambigua rechazan la actualización sin tocar datos; no hay migración automática de progreso.
+El [manifiesto](docs/manifiesto.md) conserva el contrato v1 de H4 y propone v2 para H5, con etapas independientes y comparación antes de aplicar. H5 fija el origen en `f95ae6fba5de2cacf5a4a00387a81b6c7166a632`, sin cambios sin commit: inventario observado de 199 lecciones en 21 fases, 169 disponibles en origen y 14 etapas del Proyecto evolutivo (12 escritas, 2 pendientes), pendiente de contraste durante la importación. No son cifras ya importadas. Adaptaciones, retítulos, retiradas e identidad ambigua rechazan la actualización sin tocar datos; no hay migración automática de progreso.
 
 ## 3. Primera versión local
 
@@ -185,7 +185,7 @@ Secuencia de trabajo con estado explícito; los hitos futuros se detallarán en 
 | H2. Diseño | Cerrado | Pantallas, modelo, API, arquitectura y manifiesto mínimo | Recorrido, separación de datos y contratos aprobados en diseño |
 | H3. Base técnica | Cerrado | Frontend, backend, entorno local y pruebas iniciales | Arranque reproducible documentado y comprobaciones técnicas e independientes completadas |
 | H4. Primer recorrido | Cerrado e integrado en main (`a3d3976`) | Una lección real importada (02.01), cuentas y avance persistente | Cumplido: dos usuarios conservan avances distintos tras reiniciar el backend, sin acceso cruzado (recorrido E2E aislado, `npm run test:e2e:journey`) |
-| H5. Contenido disponible | Autorizado; en curso, no completado | 164 lecciones disponibles del origen fijado, Proyecto evolutivo separado, imágenes/tachado/ZIP y actualización comparada | Inventario contrastado, recursos seguros y actualización incremental con conservación del progreso de dos usuarios en pruebas aisladas |
+| H5. Contenido disponible | Autorizado; en curso, no completado | 169 lecciones disponibles del origen fijado, Proyecto evolutivo separado, imágenes/tachado/ZIP y actualización comparada | Inventario contrastado, recursos seguros y actualización incremental con conservación del progreso de dos usuarios en pruebas aisladas |
 | H6. Validación de estudio | No completado; pendiente | Uso real por el propietario | Recorrido probado y problemas registrados/priorizados |
 | H7. Publicación | No completado; pendiente | Alojamiento, seguridad, respaldos y despliegue | Preparación revisada y autorización explícita antes de publicar |
 

@@ -27,13 +27,19 @@ final class CopyProvenance {
 			problems.add("schemaVersion 2 needs provenance.files and provenance.generated");
 			return;
 		}
-		if (!provenance.generated().isEmpty()) problems.add("generated files are not supported yet");
+		Map<String, Manifest.Resource> generated = new HashMap<>();
 		Map<String, String> expected = new HashMap<>();
 		manifest.lessons().stream().filter(Manifest.Lesson::available)
 			.forEach(lesson -> expect(expected, lesson.bodyPath(), lesson.sourcePath(), problems));
 		manifest.projectStages().stream().filter(Manifest.Stage::available)
 			.forEach(stage -> expect(expected, stage.bodyPath(), stage.sourcePath(), problems));
-		manifest.resources().forEach(resource -> expect(expected, resource.localPath(), resource.sourcePath(), problems));
+		manifest.resources().forEach(resource -> {
+			if ("zip".equals(resource.kind())) {
+				if (generated.putIfAbsent(resource.localPath(), resource) != null) problems.add("duplicate managed localPath " + resource.localPath());
+			}
+			else expect(expected, resource.localPath(), resource.sourcePath(), problems);
+		});
+		generated.keySet().stream().filter(expected::containsKey).forEach(path -> problems.add("duplicate managed localPath " + path));
 		Set<String> seen = new HashSet<>();
 		for (Manifest.CopiedFile file : provenance.files()) {
 			if (file == null) {
@@ -57,14 +63,43 @@ final class CopyProvenance {
 			}
 			Path copy = ContentPaths.file(root, file.localPath(), "provenance copy", problems);
 			if (copy == null) continue;
-			try {
-				String actual = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(copy)));
-				if (!actual.equals(file.copySha256())) problems.add("copySha256 mismatch: " + file.localPath());
-			}
-			catch (IOException ex) { problems.add("provenance copy is not readable: " + file.localPath()); }
-			catch (NoSuchAlgorithmException ex) { throw new IllegalStateException(ex); }
+			verifyHash(copy, file.copySha256(), file.localPath(), problems);
 		}
 		if (!seen.equals(expected.keySet())) problems.add("provenance.files must cover exactly the managed copies");
+		Set<String> generatedSeen = new HashSet<>();
+		for (Manifest.GeneratedFile file : provenance.generated()) {
+			if (file == null) {
+				problems.add("generated provenance must not be null");
+				continue;
+			}
+			if (!generatedSeen.add(file.localPath()) || seen.contains(file.localPath())) {
+				problems.add("duplicate provenance localPath " + file.localPath());
+			}
+			Manifest.Resource archive = generated.get(file.localPath());
+			if (archive == null || !archive.memberResourceIds().equals(file.inputResourceIds()) || !hash(file.copySha256())) {
+				problems.add("generated provenance must match ZIP inputs and SHA-256: " + file.localPath());
+				continue;
+			}
+			// Inspect bytes before hashing: never trust a matching attacker-supplied digest as archive validation.
+			int before = problems.size();
+			FolderZip.validate(manifest, root, archive, problems);
+			if (problems.size() != before) continue;
+			Path copy = ContentPaths.file(root, file.localPath(), "generated copy", problems);
+			if (copy != null) verifyHash(copy, file.copySha256(), file.localPath(), problems);
+		}
+		if (!generatedSeen.equals(generated.keySet())) problems.add("provenance.generated must cover exactly the ZIP resources");
+	}
+
+	private static void verifyHash(Path path, String hash, String local, List<String> problems) {
+		try (var input = Files.newInputStream(path, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			try (var checked = new java.security.DigestInputStream(input, digest)) {
+				checked.transferTo(java.io.OutputStream.nullOutputStream());
+			}
+			if (!HexFormat.of().formatHex(digest.digest()).equals(hash)) problems.add("copySha256 mismatch: " + local);
+		}
+		catch (IOException ex) { problems.add("provenance copy is not readable: " + local); }
+		catch (NoSuchAlgorithmException ex) { throw new IllegalStateException(ex); }
 	}
 
 	private static boolean hash(String value) {

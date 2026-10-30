@@ -103,7 +103,7 @@ class CatalogController {
 		List<Lesson> available = Catalog.syllabus(ref.course()).stream().filter(Lesson::available).toList();
 		int index = available.indexOf(ref.lesson());
 		List<ResourceView> resources = ref.course().manifest().resources().stream()
-				.filter(resource -> resource.lessonId().equals(lessonId))
+				.filter(resource -> lessonId.equals(resource.lessonId()))
 				.map(resource -> new ResourceView(resource.resourceId(), "/api/resources/" + resource.resourceId(),
 						resource.mediaType(), ref.course().resources().get(resource.resourceId()).originalFileName()))
 				.toList();
@@ -114,15 +114,13 @@ class CatalogController {
 	}
 
 	/**
-	 * The bytes of a registered resource of an available lesson, under its original name (PNG/JPEG inline). Not JSON and
+	 * The bytes of a registered resource of an available lesson or stage, under its original name (PNG/JPEG inline). Not JSON and
 	 * not negotiated: a browser's Accept header never blocks it. Unknown, unauthorized or unreadable IDs are 404.
 	 */
 	@GetMapping("/api/resources/{resourceId}")
 	void resource(@PathVariable String resourceId, HttpServletResponse response) throws IOException {
 		ResourceRef ref = catalog.resource(resourceId).orElseThrow(CatalogController::notFound);
-		boolean lessonAvailable = catalog.lesson(ref.resource().lessonId()).map(lesson -> lesson.lesson().available())
-				.orElse(false);
-		if (!lessonAvailable) throw notFound();
+		if (!Catalog.ownerAvailable(ref)) throw notFound();
 		byte[] bytes = catalog.read(ref).orElseThrow(() -> {
 			log.warn("Registered resource {} failed its serve-time file check", resourceId);
 			return notFound();

@@ -423,7 +423,7 @@ final class LessonPipeline {
 			usedResources.add(target.resourceId());
 			return "/api/resources/" + target.resourceId();
 		}
-		replaceFolder(link, target.resourceIds(), hrefs, usedResources);
+		replaceFolder(link, target, hrefs, usedResources);
 		return "";
 	}
 
@@ -450,9 +450,17 @@ final class LessonPipeline {
 		return available == current ? "#" + id : route + lessonId + "#" + id;
 	}
 
-	/** The folder text stays as plain text, followed by one link per file named like the original file. */
-	private void replaceFolder(Link link, List<String> resourceIds, Set<String> hrefs, Set<String> usedResources) {
-		unwrapChildren(link);
+	/** V1 folder text remains plain; a v2 ZIP decoration links it before the same ordered individual files. */
+	private void replaceFolder(Link link, SourceLink folder, Set<String> hrefs, Set<String> usedResources) {
+		List<String> resourceIds = folder.resourceIds();
+		if (folder.zipResourceId() == null) unwrapChildren(link);
+		else {
+			Link archive = new Link("/api/resources/" + folder.zipResourceId(), null);
+			while (link.getFirstChild() != null) archive.appendChild(link.getFirstChild());
+			link.insertBefore(archive);
+			hrefs.add(archive.getDestination());
+			usedResources.add(folder.zipResourceId());
+		}
 		link.insertBefore(new Text(" ("));
 		for (int i = 0; i < resourceIds.size(); i++) {
 			String resourceId = resourceIds.get(i);

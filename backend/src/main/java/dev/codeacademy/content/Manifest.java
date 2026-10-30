@@ -45,18 +45,28 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 	}
 
 	public record Resource(String resourceId, String lessonId, String sourcePath, String localPath, String mediaType,
-			String stageId, String kind) {
+			String stageId, String kind, String fileName, List<String> memberResourceIds) {
 		public Resource(String resourceId, String lessonId, String sourcePath, String localPath, String mediaType) {
 			this(resourceId, lessonId, sourcePath, localPath, mediaType, null, null);
+		}
+
+		public Resource(String resourceId, String lessonId, String sourcePath, String localPath, String mediaType,
+				String stageId, String kind) {
+			this(resourceId, lessonId, sourcePath, localPath, mediaType, stageId, kind, null, null);
 		}
 	}
 
 	/** Exactly one target: a lesson/stage with fragments, a resource, a folder of resources or the course index. */
 	public record SourceLink(String sourcePath, String lessonId, Map<String, String> fragments, String resourceId,
-			List<String> resourceIds, String courseId, String stageId) {
+			List<String> resourceIds, String courseId, String stageId, String zipResourceId) {
 		public SourceLink(String sourcePath, String lessonId, Map<String, String> fragments, String resourceId,
 				List<String> resourceIds, String courseId) {
 			this(sourcePath, lessonId, fragments, resourceId, resourceIds, courseId, null);
+		}
+
+		public SourceLink(String sourcePath, String lessonId, Map<String, String> fragments, String resourceId,
+				List<String> resourceIds, String courseId, String stageId) {
+			this(sourcePath, lessonId, fragments, resourceId, resourceIds, courseId, stageId, null);
 		}
 	}
 }
