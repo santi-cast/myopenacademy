@@ -1,6 +1,6 @@
 # API — contrato de H2 cerrado
 
-Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md). Las rutas nuevas de etapas siguen pendientes; los recursos ZIP y de etapas disponibles ya usan la ruta de recursos existente. Las imágenes Markdown seguras y el tachado amplían también la carga v1, sin rutas nuevas.
+Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md). H5 añade cinco rutas de etapas, implementadas en el backend y verificadas con contenido sintético; la interfaz y la importación completa siguen pendientes. Los recursos ZIP y de etapas disponibles usan la ruta de recursos existente. Las imágenes Markdown seguras y el tachado amplían también la carga v1, sin rutas nuevas.
 
 ## Acceso, propiedad y efectos
 
@@ -126,9 +126,9 @@ Los errores incluyen `code` y `message`; la UI decide por `code`, no interpreta 
 | 400 | `INVALID_REQUEST` (JSON/campos/tipos), `INVALID_USERNAME` y `INVALID_PASSWORD` en registro, `INVALID_STATE`, `COURSE_MISMATCH`. Login inválido usa 401 genérico, salvo errores de esquema/tipo. |
 | 401 | `AUTHENTICATION_FAILED` (login), `AUTHENTICATION_REQUIRED` (sesión ausente, caducada o versión de credenciales inválida). |
 | 403 | `CSRF_REJECTED`, incluidas operaciones públicas inseguras. `ACCESS_DENIED`: solicitud autenticada a una ruta o acción denegada, distinta de un fallo de CSRF. |
-| 404 | `NOT_FOUND`: curso/lección/ejercicio/recurso inexistente, recurso no autorizado o dato personal ajeno; sin revelar existencia ni rutas. |
+| 404 | `NOT_FOUND`: curso/lección/etapa/ejercicio/recurso inexistente, recurso no autorizado o dato personal ajeno; sin revelar existencia ni rutas. |
 | 406 | `NOT_ACCEPTABLE`: el encabezado `Accept` no admite JSON. Se rechaza antes de ejecutar la operación: sin escrituras ni sesión. Sin `Accept`, `*/*` o `application/json` son válidos. Se evalúan los tipos de medio, no los valores de calidad: `application/json;q=0` se trata como aceptable. |
-| 409 | `USERNAME_TAKEN`, `LESSON_UNAVAILABLE`, `COURSE_NOT_ADDED`. |
+| 409 | `USERNAME_TAKEN`, `LESSON_UNAVAILABLE`, `STAGE_UNAVAILABLE`, `COURSE_NOT_ADDED`. |
 | 500 | `INTERNAL_ERROR`: fallo inesperado sin detalles internos ni secretos; escrituras transaccionales sin efectos parciales. |
 
 Formato único de error:
@@ -141,6 +141,8 @@ Formato único de error:
 ```
 
 ## H5: contrato aditivo de etapas pendiente de implementar
+
+Las cinco rutas y su persistencia ya están implementadas en el backend: 57 pruebas aisladas verifican catálogo, estados, rechazos sin cambios, migración poblada V5→V6, reinicio y concurrencia. El encabezado conserva el ancla existente; la interfaz y el contenido real todavía están pendientes. La migración V6 es aditiva: crea catálogo y estados de etapas y añade una continuación nullable a la inscripción existente. Las pruebas usan PostgreSQL desechable, no la base del propietario.
 
 Proyecto evolutivo será una sección propia dentro de Java, con 14 etapas previstas (12 escritas y 2 pendientes, a contrastar en el commit fijo). No es una fase ni amplía las 199 lecciones previstas. Las 14 rutas H4, sus respuestas y los enums de lecciones/ejercicios conservan su significado; las etapas se consultan por rutas nuevas. No se añade progreso de etapas a `Counts` ni se cambia el denominador de lecciones.
 
@@ -193,7 +195,7 @@ Ejemplo ilustrativo de StageProgress sin inscripción y con una etapa disponible
 
 ## H5: extensión de recursos pendiente de implementar
 
-La entrega de ZIP y recursos de etapas de esta sección ya está implementada; se conserva el ancla documental para enlaces existentes. Las rutas nuevas de etapas y el importador siguen pendientes.
+La entrega de ZIP y recursos de etapas de esta sección ya está implementada; se conserva el ancla documental para enlaces existentes. Las rutas nuevas de etapas están implementadas en el backend; la interfaz y el importador siguen pendientes.
 
 Estado de T2: imágenes Markdown y tachado implementados sobre v1/v2; ZIP v2 y recursos de etapas disponibles implementados con pruebas aisladas de carga y HTTP para dos sesiones sin inscripción. La carga rechaza ZIP no canónicos aunque su hash declarado coincida, sin descomprimirlos ni consultar el origen. La verificación independiente comprobó en Chromium la carga de PNG/JPEG y SVG desde el backend real con PostgreSQL desechable, para dos usuarios autenticados, sin interceptar ni relajar encabezados. Las solicitudes anónimas devolvieron 401 y las imágenes no cargaron. Esto verifica la entrega de recursos, no el recorrido completo de lección en React ni otros navegadores.
 

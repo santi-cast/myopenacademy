@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import dev.codeacademy.api.ApiException;
 import dev.codeacademy.catalog.Catalog.LessonRef;
 import dev.codeacademy.catalog.Catalog.ResourceRef;
+import dev.codeacademy.catalog.Catalog.StageRef;
 import dev.codeacademy.content.CourseContent;
 import dev.codeacademy.content.ExerciseContent;
 import dev.codeacademy.content.LessonContent;
@@ -70,6 +71,20 @@ class CatalogController {
 			String previousLessonId, String nextLessonId) {
 	}
 
+	record StageEntry(String id, String courseId, String title, int position, boolean available) {
+		static StageEntry of(StageRef ref) {
+			var stage = ref.stage();
+			return new StageEntry(stage.id(), ref.course().manifest().course().id(), stage.title(), stage.position(), stage.available());
+		}
+	}
+
+	record StagesView(String courseId, List<StageEntry> stages) {
+	}
+
+	record StageView(StageEntry stage, String bodyHtml, List<ResourceView> resources,
+			String previousStageId, String nextStageId) {
+	}
+
 	private static final Logger log = LoggerFactory.getLogger(CatalogController.class);
 
 	private final Catalog catalog;
@@ -111,6 +126,30 @@ class CatalogController {
 				content.exercises().stream().map(ExerciseView::of).toList(), resources,
 				index > 0 ? available.get(index - 1).id() : null,
 				index < available.size() - 1 ? available.get(index + 1).id() : null);
+	}
+
+	@GetMapping(path = "/api/courses/{courseId}/stages", produces = MediaType.APPLICATION_JSON_VALUE)
+	StagesView stages(@PathVariable String courseId) {
+		CourseContent course = catalog.course(courseId).orElseThrow(CatalogController::notFound);
+		return new StagesView(courseId, Catalog.project(course).stream()
+			.map(stage -> StageEntry.of(new StageRef(course, stage))).toList());
+	}
+
+	@GetMapping(path = "/api/stages/{stageId}", produces = MediaType.APPLICATION_JSON_VALUE)
+	StageView stage(@PathVariable String stageId) {
+		StageRef ref = catalog.stage(stageId).orElseThrow(CatalogController::notFound);
+		if (!ref.stage().available()) {
+			throw new ApiException(HttpStatus.CONFLICT, "STAGE_UNAVAILABLE", "Stage is not available.");
+		}
+		var available = Catalog.project(ref.course()).stream().filter(Manifest.Stage::available).toList();
+		int index = available.indexOf(ref.stage());
+		var resources = ref.course().manifest().resources().stream()
+			.filter(resource -> stageId.equals(resource.stageId()))
+			.map(resource -> new ResourceView(resource.resourceId(), "/api/resources/" + resource.resourceId(),
+				resource.mediaType(), ref.course().resources().get(resource.resourceId()).originalFileName())).toList();
+		return new StageView(StageEntry.of(ref), ref.course().stages().get(stageId).bodyHtml(), resources,
+			index > 0 ? available.get(index - 1).id() : null,
+			index < available.size() - 1 ? available.get(index + 1).id() : null);
 	}
 
 	/**

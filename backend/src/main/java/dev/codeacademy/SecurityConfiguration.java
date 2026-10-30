@@ -77,10 +77,12 @@ class SecurityConfiguration {
 								.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/me").authenticated()
 						.requestMatchers(HttpMethod.GET, "/api/courses", "/api/courses/*", "/api/lessons/*",
-								"/api/resources/*").authenticated()
-						.requestMatchers(HttpMethod.GET, "/api/me/courses", "/api/me/courses/*/progress").authenticated()
+								"/api/resources/*", "/api/courses/*/stages", "/api/stages/*").authenticated()
+						.requestMatchers(HttpMethod.GET, "/api/me/courses", "/api/me/courses/*/progress",
+								"/api/me/courses/*/stage-progress").authenticated()
 						.requestMatchers(HttpMethod.PUT, "/api/me/courses/*", "/api/me/courses/*/continuation",
-								"/api/me/lessons/*/state", "/api/me/exercises/*/state").authenticated()
+								"/api/me/lessons/*/state", "/api/me/exercises/*/state", "/api/me/stages/*/state",
+								"/api/me/courses/*/stage-continuation").authenticated()
 						.anyRequest().denyAll())
 				.build();
 	}

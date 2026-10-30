@@ -19,6 +19,27 @@ final class ProgressViews {
 		}
 	}
 
+	/** Stages intentionally have separate DTOs: no new fields leak into H4 responses. */
+	record StageCounts(int completedStages, int availableStages, int plannedStages, Double percentage) {
+		static StageCounts of(int completed, int available, int planned) {
+			return new StageCounts(completed, available, planned, available == 0 ? null : completed * 100.0 / available);
+		}
+	}
+
+	record StageContinuation(String lastOpenedStageId) {
+	}
+
+	record StageState(String stageId, String state, String updatedAt) {
+	}
+
+	record StageProgress(String courseId, boolean added, List<StageState> stageStates,
+			StageContinuation continuation, StageCounts progress) {
+	}
+
+	record StageStateResult(String courseId, String stageId, String state, String updatedAt,
+			boolean courseAutoAdded, StageContinuation continuation, StageCounts progress) {
+	}
+
 	record Continuation(String lastOpenedLessonId) {
 	}
 
