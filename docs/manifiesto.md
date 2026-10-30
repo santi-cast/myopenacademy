@@ -1,6 +1,6 @@
 # Manifiesto — v1 implementado y contrato H5
 
-El contrato v1 aprobado en H2 está implementado en H4: `content/java/manifest.json` y su carga y validación al arrancar. Las secciones hasta «Comprobación de H4 y límite de H5» describen esa base. Las imágenes Markdown seguras y el tachado de T2 ya funcionan con v1. La [propuesta v2 de H5](#h5-propuesta-v2-pendiente-de-implementar), incluidas etapas y carpetas ZIP, sigue siendo un contrato pendiente. Complementa el [plan principal](../PLAN.md) y el [contrato de API](api.md).
+El contrato v1 aprobado en H2 está implementado en H4: `content/java/manifest.json` y su carga y validación al arrancar. Las secciones hasta «Comprobación de H4 y límite de H5» describen esa base. Las imágenes Markdown seguras y el tachado de T2 ya funcionan con v1. El [contrato v2 de H5](#h5-propuesta-v2-pendiente-de-implementar) ya tiene carga pura de etapas y comprobación de copias; ZIP, importación, persistencia y entrega HTTP de etapas siguen pendientes. Complementa el [plan principal](../PLAN.md) y el [contrato de API](api.md).
 
 ## Alcance de la primera carga
 
@@ -135,6 +135,12 @@ PNG/JPEG registrados se sirven `inline` con el nombre original; SVG y los demás
 
 Contrato de T1 para S1, S3, S5 y S7–S10; implementación y pruebas en T2–T6 del [alcance aprobado](../odd/tasks/h5-content-import.md). No cambia el contenido v1 existente en esta unidad.
 
+**Estado de la primera unidad T4:** `ContentLoader` admite v1 y el subconjunto v2 de archivos normales (`kind: "file"`), con `projectStages` y `provenance` obligatorios. Devuelve cuerpos disponibles en `CourseContent.stages`, separados de `lessons`; no extrae ejercicios de una etapa. Reutiliza el mismo procesamiento Markdown, saneamiento, imágenes, resolución relativa y validación de fragmentos entre lecciones y etapas. V1 conserva la expansión exacta de carpetas y no admite campos nuevos, aunque sean null.
+
+La procedencia debe cubrir exactamente los cuerpos disponibles y recursos registrados, sin repetir rutas locales y coincidiendo con sus rutas fuente. Se verifica `copySha256` contra archivos contenidos sin symlinks. `sourceSha256` se valida como metadato SHA-256, no contra el repositorio fuente: ese contraste pertenece al futuro importador offline. Por ahora solo se admite copia literal (`transformation: null`, ambos hashes iguales); no hay transformaciones reproducibles registradas. Una transformación distinta, `kind: "zip"`, cualquier otro `kind` o archivos generados se rechazan explícitamente. No se inventa procedencia para los archivos v1.
+
+Esta carga no habilita rutas HTTP ni sincronización/persistencia de etapas: antes de instalar un manifiesto real v2 hay que ampliar catálogo, selección de recursos por propietario y entrega, además del progreso independiente. No hay cambios de base, frontend, copia educativa ni contadores en esta unidad. El ZIP y su metadato de carpeta quedan para la siguiente unidad, sin un validador paralelo.
+
 ### Versión, origen e identidad
 
 - El lector H5 admitirá explícitamente `schemaVersion: 1` y `2`; rechazará versiones desconocidas y campos desconocidos según cada versión. V1 conserva su significado: sin etapas, sin ZIP y con expansión de carpetas por archivo. No reinterpretar silenciosamente v1 como v2 ni exigirle campos nuevos.
@@ -181,7 +187,7 @@ V2 añade `stageId` como destino alternativo exclusivo en `sourceToId`; `fragmen
 
 | Extensión v2 | Contrato pendiente |
 |---|---|
-| Recursos de etapas | Cada recurso tiene exactamente un propietario: `lessonId` o `stageId`, del mismo curso. Disponibilidad del propietario condiciona entrega. No exigir inscripción para leer recursos compartidos autenticados. |
+| Recursos de etapas (carga pura implementada; HTTP pendiente) | Cada recurso tiene exactamente un propietario: `lessonId` o `stageId`, del mismo curso. Disponibilidad del propietario condiciona entrega. No exigir inscripción para leer recursos compartidos autenticados. |
 | Imágenes | Resolver Markdown de imagen por `sourceToId` hacia un recurso registrado de tipo PNG/JPEG/SVG, no mediante rutas físicas. Solo `img` con `src` resuelto a `/api/resources/{resourceId}` y `alt` textual; sin imágenes remotas, `data:`, manejadores ni HTML arbitrario. Validar también imágenes en enunciado y solución. |
 | Tachado | Admitir `~~texto~~` como `<del>` saneado; no ampliar permisos de HTML por ello. |
 | Carpeta ZIP | Conservar `sourcePath` terminado en `/` y `resourceIds` explícitos, ordenados, completos y sin duplicados. Añadir `zipResourceId` a esa entrada: no es otro destino independiente, sino el archivo descargable de esa misma carpeta. |

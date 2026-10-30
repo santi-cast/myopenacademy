@@ -34,9 +34,9 @@ import dev.codeacademy.content.Manifest.Resource;
 import dev.codeacademy.content.Manifest.SourceLink;
 
 /**
- * Renders the available lessons of a validated manifest: GitHub heading IDs, extraction of the exercises section,
- * link rewriting through sourceToId and sanitizing. Parsing all lessons first lets links check fragments of other
- * lessons. Every problem names the lesson (and exercise part) where it was found.
+ * Renders available lessons and stages using one Markdown, heading, link and sanitizer pipeline. Stages retain their
+ * entire body; only lessons extract assessed exercises. Parsing all documents first lets links check final fragments
+ * across lessons and stages. Every problem names the document (and exercise part) where it was found.
  * <p>
  * An exercise of the lesson is associated with the manifest exercise whose title is exactly the plain text of its
  * heading after «Ejercicio N · » (code point equality, no normalization); its position and N never identify it.
@@ -68,6 +68,7 @@ final class LessonPipeline {
 		for (SourceLink link : manifest.sourceToId()) {
 			sourceToId.put(link.sourcePath(), link);
 			if (link.lessonId() != null) lessonLinks.put(link.lessonId(), link);
+			if (link.stageId() != null) lessonLinks.put(link.stageId(), link);
 		}
 	}
 
@@ -88,8 +89,12 @@ final class LessonPipeline {
 	private record MatchedExercise(Exercise exercise, Document[] parts) {
 	}
 
+	/** Shared parsed document; stage=true disables lesson exercise extraction and keeps the separate output model. */
 	private static final class ParsedLesson {
-		final Lesson lesson;
+		final String id;
+		final String sourcePath;
+		final List<Exercise> manifestExercises;
+		final boolean stage;
 		final Map<Heading, String> headingIds = new IdentityHashMap<>();
 		Document body;
 		final List<FoundExercise> found = new ArrayList<>();
@@ -97,8 +102,11 @@ final class LessonPipeline {
 		final Set<String> renderedIds = new HashSet<>();
 		final Map<String, String> exerciseHeadings = new HashMap<>();
 
-		ParsedLesson(Lesson lesson) {
-			this.lesson = lesson;
+		ParsedLesson(String id, String sourcePath, List<Exercise> exercises, boolean stage) {
+			this.id = id;
+			this.sourcePath = sourcePath;
+			this.manifestExercises = exercises;
+			this.stage = stage;
 		}
 
 		/** The final fragment for a generated heading ID, or null when no rendered target carries it. */
@@ -110,7 +118,14 @@ final class LessonPipeline {
 	}
 
 	void parse(Lesson lesson, String markdown) {
-		ParsedLesson result = new ParsedLesson(lesson);
+		parse(new ParsedLesson(lesson.id(), lesson.sourcePath(), lesson.exercises(), false), markdown);
+	}
+
+	void parse(Manifest.Stage stage, String markdown) {
+		parse(new ParsedLesson(stage.id(), stage.sourcePath(), List.of(), true), markdown);
+	}
+
+	private void parse(ParsedLesson result, String markdown) {
 		Document document = (Document) Markdown.parse(markdown);
 		HeadingIds ids = new HeadingIds();
 		document.accept(new AbstractVisitor() {
@@ -119,13 +134,15 @@ final class LessonPipeline {
 				result.headingIds.put(heading, ids.next(HeadingIds.plainText(heading)));
 			}
 		});
-		extractExercises(result, document);
+		if (!result.stage) {
+			extractExercises(result, document);
+			associate(result);
+		}
 		result.body = document;
-		associate(result);
 		List<Document> rendered = new ArrayList<>(List.of(document));
 		result.exercises.forEach(matched -> rendered.addAll(List.of(matched.parts())));
 		rendered.forEach(part -> result.renderedIds.addAll(headingIdsIn(part, result.headingIds)));
-		parsed.put(lesson.id(), result);
+		parsed.put(result.id, result);
 	}
 
 	/**
@@ -133,7 +150,7 @@ final class LessonPipeline {
 	 * without manifest entry, a manifest entry without heading or a repeated heading title is an import conflict.
 	 */
 	private void associate(ParsedLesson result) {
-		String lessonId = result.lesson.id();
+		String lessonId = result.id;
 		Map<String, FoundExercise> byTitle = new HashMap<>();
 		Set<String> repeated = new LinkedHashSet<>();
 		for (FoundExercise found : result.found) {
@@ -141,14 +158,14 @@ final class LessonPipeline {
 		}
 		repeated.forEach(title -> problems.add(lessonId + ": more than one exercise heading titled «" + title + "»"));
 		Set<String> manifestTitles = new HashSet<>();
-		result.lesson.exercises().forEach(exercise -> manifestTitles.add(exercise.title()));
+		result.manifestExercises.forEach(exercise -> manifestTitles.add(exercise.title()));
 		for (FoundExercise found : result.found) {
 			if (!manifestTitles.contains(found.title())) {
 				problems.add(lessonId + ": exercise heading «" + found.title()
 						+ "» has no exercise with that title in the manifest");
 			}
 		}
-		for (Exercise exercise : result.lesson.exercises()) {
+		for (Exercise exercise : result.manifestExercises) {
 			FoundExercise found = byTitle.get(exercise.title());
 			if (found == null) {
 				problems.add(lessonId + ": exercise " + exercise.id() + " «" + exercise.title()
@@ -163,7 +180,7 @@ final class LessonPipeline {
 
 	/** Removes the exercises section from the document and records every exercise found in it. */
 	private void extractExercises(ParsedLesson result, Document document) {
-		String lessonId = result.lesson.id();
+		String lessonId = result.id;
 		List<Heading> sections = new ArrayList<>();
 		for (Node node = document.getFirstChild(); node != null; node = node.getNext()) {
 			if (node instanceof Heading heading && HeadingIds.plainText(heading).contains(EXERCISES_SECTION)) {
@@ -266,10 +283,16 @@ final class LessonPipeline {
 
 	// --- rendering ---
 
+	private final Map<String, StageContent> renderedStages = new LinkedHashMap<>();
+
+	Map<String, StageContent> stages() {
+		return Collections.unmodifiableMap(renderedStages);
+	}
+
 	Map<String, LessonContent> render() {
 		Map<String, LessonContent> rendered = new LinkedHashMap<>();
 		for (ParsedLesson lesson : parsed.values()) {
-			String lessonId = lesson.lesson.id();
+			String lessonId = lesson.id;
 			Set<String> used = new LinkedHashSet<>();
 			Set<String> ids = new HashSet<>();
 			String body = render(lesson, new Part(lessonId, lesson.body), used, ids);
@@ -283,7 +306,8 @@ final class LessonPipeline {
 				exercises.add(new ExerciseContent(exerciseId, lessonId, manifest.course().id(), matched.exercise().title(),
 						statement, solution));
 			}
-			rendered.put(lessonId, new LessonContent(lessonId, body, List.copyOf(exercises), List.copyOf(used)));
+			if (lesson.stage) renderedStages.put(lessonId, new StageContent(lessonId, body, List.copyOf(used)));
+			else rendered.put(lessonId, new LessonContent(lessonId, body, List.copyOf(exercises), List.copyOf(used)));
 		}
 		return Collections.unmodifiableMap(rendered);
 	}
@@ -392,7 +416,7 @@ final class LessonPipeline {
 		SourceLink target = sourceTarget(lesson, path);
 		if (target == null) return null;
 
-		if (target.lessonId() != null) return lessonHref(lesson, target, fragment);
+		if (target.lessonId() != null || target.stageId() != null) return lessonHref(lesson, target, fragment);
 		if (fragment != null) return null;
 		if (target.courseId() != null) return "/courses/" + target.courseId();
 		if (target.resourceId() != null) {
@@ -405,8 +429,8 @@ final class LessonPipeline {
 
 	/** One source-document-relative lookup for both links and images, including the v1 folder fallback. */
 	private SourceLink sourceTarget(ParsedLesson lesson, String path) {
-		if (path.isEmpty()) return lessonLinks.get(lesson.lesson.id());
-		String resolved = resolvePath(lesson.lesson.sourcePath(), path);
+		if (path.isEmpty()) return lessonLinks.get(lesson.id);
+		String resolved = resolvePath(lesson.sourcePath, path);
 		if (resolved == null) return null;
 		SourceLink target = sourceToId.get(resolved);
 		if (target == null && !resolved.endsWith("/")) target = sourceToId.get(resolved + "/");
@@ -414,15 +438,16 @@ final class LessonPipeline {
 	}
 
 	private String lessonHref(ParsedLesson current, SourceLink target, String fragment) {
-		String lessonId = target.lessonId();
+		String lessonId = target.stageId() == null ? target.lessonId() : target.stageId();
+		String route = target.stageId() == null ? "/lessons/" : "/stages/";
 		ParsedLesson available = parsed.get(lessonId);
-		if (fragment == null) return "/lessons/" + lessonId;
-		// A pending lesson has no body to check the fragment against: link to the lesson, never a guessed fragment.
-		if (available == null) return "/lessons/" + lessonId;
+		if (fragment == null) return route + lessonId;
+		// A pending document has no body to check: link to its entry, never a guessed fragment.
+		if (available == null) return route + lessonId;
 		Map<String, String> fragments = target.fragments() == null ? Map.of() : target.fragments();
 		String id = available.target(fragments.get(fragment));
 		if (id == null) return null;
-		return available == current ? "#" + id : "/lessons/" + lessonId + "#" + id;
+		return available == current ? "#" + id : route + lessonId + "#" + id;
 	}
 
 	/** The folder text stays as plain text, followed by one link per file named like the original file. */

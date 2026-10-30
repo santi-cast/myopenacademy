@@ -65,6 +65,7 @@ public final class ContentLoader {
 				courseIds.add(lesson.id());
 				lesson.exercises().forEach(exercise -> courseIds.add(exercise.id()));
 			});
+			if (manifest.projectStages() != null) manifest.projectStages().forEach(stage -> courseIds.add(stage.id()));
 			manifest.resources().forEach(resource -> courseIds.add(resource.resourceId()));
 			courseIds.stream().filter(id -> !ids.add(id))
 				.forEach(id -> problems.add("id " + id + " is used by more than one course"));
@@ -105,6 +106,15 @@ public final class ContentLoader {
 			Path body = ContentPaths.file(root, lesson.bodyPath(), "bodyPath of " + lesson.id() + ":", problems);
 			if (body != null) bodies.put(lesson.id(), body);
 		}
+		Map<String, Path> stageBodies = new LinkedHashMap<>();
+		if (manifest.projectStages() != null) {
+			for (Manifest.Stage stage : manifest.projectStages()) {
+				if (!stage.available()) continue;
+				Path body = ContentPaths.file(root, stage.bodyPath(), "bodyPath of " + stage.id() + ":", problems);
+				if (body != null) stageBodies.put(stage.id(), body);
+			}
+		}
+		CopyProvenance.validate(manifest, root, problems);
 		Map<String, ResourceFile> resources = new LinkedHashMap<>();
 		Map<String, String> originalNames = new HashMap<>();
 		for (Resource resource : manifest.resources()) {
@@ -127,10 +137,21 @@ public final class ContentLoader {
 				pipeline.problems().add(lesson.id() + ": body " + lesson.bodyPath() + " is not readable UTF-8 text");
 			}
 		}
+		if (manifest.projectStages() != null) {
+			for (Manifest.Stage stage : manifest.projectStages()) {
+				if (!stage.available()) continue;
+				try {
+					pipeline.parse(stage, Files.readString(stageBodies.get(stage.id()), StandardCharsets.UTF_8));
+				}
+				catch (IOException ex) {
+					pipeline.problems().add(stage.id() + ": body " + stage.bodyPath() + " is not readable UTF-8 text");
+				}
+			}
+		}
 		failIfAny(pipeline.problems());
 		Map<String, LessonContent> lessons = pipeline.render();
 		failIfAny(pipeline.problems());
-		return new CourseContent(manifest, lessons, Collections.unmodifiableMap(resources));
+		return new CourseContent(manifest, lessons, Collections.unmodifiableMap(resources), pipeline.stages());
 	}
 
 	private static Path realRoot(Path contentRoot) {
@@ -144,11 +165,25 @@ public final class ContentLoader {
 
 	private static Manifest read(Path manifestFile) {
 		try {
-			return JSON.readValue(Files.readString(manifestFile, StandardCharsets.UTF_8), Manifest.class);
+			var tree = JSON.readTree(Files.readString(manifestFile, StandardCharsets.UTF_8));
+			if (tree != null && tree.path("schemaVersion").asInt() == 1) {
+				if (tree.has("projectStages") || tree.has("provenance")) {
+					throw new ContentValidationException("schemaVersion 1 does not allow projectStages or provenance");
+				}
+				for (var resource : tree.path("resources")) {
+					if (resource.has("kind") || resource.has("stageId")) {
+						throw new ContentValidationException("schemaVersion 1 does not allow resource kind or stageId");
+					}
+				}
+				for (var link : tree.path("sourceToId")) {
+					if (link.has("stageId")) throw new ContentValidationException("schemaVersion 1 does not allow stageId");
+				}
+			}
+			if (tree == null || tree.isNull()) throw new ContentValidationException("manifest must be an object");
+			return JSON.treeToValue(tree, Manifest.class);
 		}
 		catch (IOException | JacksonException ex) {
-			throw new ContentValidationException("manifest is not valid JSON for schema " + ManifestValidator.SCHEMA_VERSION
-					+ ": " + ex.getMessage().lines().findFirst().orElse(""));
+			throw new ContentValidationException("manifest is not valid JSON for schema 1 or 2: " + ex.getMessage().lines().findFirst().orElse(""));
 		}
 	}
 

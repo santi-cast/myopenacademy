@@ -48,8 +48,10 @@ final class ContentPaths {
 		}
 	}
 
-	private static boolean isPlainRelative(String path) {
-		if (path.startsWith("/") || path.contains("\\") || path.contains(":") || Path.of(path).isAbsolute()) return false;
+	static boolean isPlainRelative(String path) {
+		if (path == null || path.isBlank()) return false;
+		if (path.startsWith("/") || path.contains("\\") || path.contains(":") || path.indexOf('\0') >= 0
+				|| Path.of(path).isAbsolute()) return false;
 		for (String segment : path.split("/", -1)) {
 			if (segment.isEmpty() || segment.equals(".") || segment.equals("..")) return false;
 		}

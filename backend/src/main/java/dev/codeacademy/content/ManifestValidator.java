@@ -24,7 +24,6 @@ import dev.codeacademy.content.Manifest.SourceLink;
  */
 final class ManifestValidator {
 
-	static final int SCHEMA_VERSION = 1;
 	static final String PLACEHOLDER = "PENDIENTE_HASH_COMPLETO_DEL_COMMIT";
 	private static final Pattern COMMIT = Pattern.compile("[0-9a-f]{40}");
 	private static final Pattern NAMESPACE = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*");
@@ -45,8 +44,8 @@ final class ManifestValidator {
 	}
 
 	private void run() {
-		if (!Objects.equals(manifest.schemaVersion(), SCHEMA_VERSION)) {
-			problems.add("schemaVersion " + manifest.schemaVersion() + " is not supported (expected " + SCHEMA_VERSION + ")");
+		if (!Objects.equals(manifest.schemaVersion(), 1) && !Objects.equals(manifest.schemaVersion(), 2)) {
+			problems.add("schemaVersion " + manifest.schemaVersion() + " is not supported (expected 1 or 2)");
 		}
 		String versionRef = manifest.source() == null ? null : manifest.source().versionRef();
 		if (PLACEHOLDER.equals(versionRef)) problems.add("source.versionRef is still the placeholder " + PLACEHOLDER);
@@ -71,8 +70,30 @@ final class ManifestValidator {
 		Map<String, Phase> phases = phases();
 		Map<String, Lesson> lessons = lessons();
 		phaseOrder(phases, lessons);
-		Map<String, Resource> resources = resources(lessons);
-		sourceToId(lessons, resources);
+		Map<String, Manifest.Stage> stages = stages();
+		Map<String, Resource> resources = resources(lessons, stages);
+		sourceToId(lessons, stages, resources);
+		if (Objects.equals(manifest.schemaVersion(), 2)) {
+			Map<String, String> documents = new HashMap<>();
+			lessons.values().forEach(lesson -> document(documents, lesson.sourcePath(), lesson.id()));
+			stages.values().forEach(stage -> document(documents, stage.sourcePath(), stage.id()));
+			resources.values().forEach(resource -> document(documents, resource.sourcePath(), resource.resourceId()));
+			for (SourceLink link : manifest.sourceToId()) {
+				if (link == null || link.sourcePath() == null) continue;
+				String path = link.sourcePath();
+				if (path.endsWith("/")) path = path.substring(0, path.length() - 1);
+				if (!ContentPaths.isPlainRelative(path)) problems.add("invalid sourceToId path " + link.sourcePath());
+			}
+		}
+	}
+
+	private void document(Map<String, String> documents, String path, String id) {
+		if (!ContentPaths.isPlainRelative(path)) problems.add("invalid sourcePath " + path);
+		if (documents.putIfAbsent(path, id) != null) problems.add("duplicate sourcePath " + path);
+		boolean mapped = manifest.sourceToId().stream().filter(Objects::nonNull)
+			.anyMatch(link -> Objects.equals(path, link.sourcePath())
+				&& (id.equals(link.lessonId()) || id.equals(link.stageId()) || id.equals(link.resourceId())));
+		if (!mapped) problems.add("missing sourceToId for " + id);
 	}
 
 	private Map<String, Phase> phases() {
@@ -170,7 +191,36 @@ final class ManifestValidator {
 		return lessons;
 	}
 
-	private Map<String, Resource> resources(Map<String, Lesson> lessons) {
+	private Map<String, Manifest.Stage> stages() {
+		Map<String, Manifest.Stage> stages = new HashMap<>();
+		if (!Objects.equals(manifest.schemaVersion(), 2)) return stages;
+		if (manifest.projectStages() == null) {
+			problems.add("schemaVersion 2 needs projectStages");
+			return stages;
+		}
+		List<Integer> positions = new ArrayList<>();
+		for (Manifest.Stage stage : manifest.projectStages()) {
+			if (stage == null || blank(stage.id()) || blank(stage.title()) || stage.position() == null
+					|| blank(stage.sourcePath()) || stage.sourceAvailable() == null || stage.available() == null) {
+				problems.add("stage needs id, title, position, sourcePath, sourceAvailable and available");
+				continue;
+			}
+			register(stage.id());
+			stages.put(stage.id(), stage);
+			positions.add(stage.position());
+			if (stage.available()) {
+				if (!stage.sourceAvailable()) problems.add(stage.id() + " is available but not sourceAvailable");
+				if (blank(stage.bodyPath())) problems.add(stage.id() + " is available without bodyPath");
+			}
+			else if (stage.bodyPath() != null) problems.add(stage.id() + " is pending but has bodyPath");
+		}
+		if (!positions.stream().sorted().toList().equals(IntStream.rangeClosed(1, positions.size()).boxed().toList())) {
+			problems.add("stage positions must be 1.." + positions.size() + " without gaps or repeats");
+		}
+		return stages;
+	}
+
+	private Map<String, Resource> resources(Map<String, Lesson> lessons, Map<String, Manifest.Stage> stages) {
 		Map<String, Resource> resources = new HashMap<>();
 		Set<String> sourcePaths = new HashSet<>();
 		for (Resource resource : manifest.resources()) {
@@ -182,7 +232,18 @@ final class ManifestValidator {
 			}
 			register(resource.resourceId());
 			resources.put(resource.resourceId(), resource);
-			if (!lessons.containsKey(resource.lessonId())) {
+			if (Objects.equals(manifest.schemaVersion(), 2) && !"file".equals(resource.kind())) {
+				problems.add("resource " + resource.resourceId() + ": unsupported kind " + resource.kind());
+			}
+			if ((resource.lessonId() == null) == (resource.stageId() == null)) {
+				problems.add("resource " + resource.resourceId() + " must have exactly one owner");
+			}
+			else if (resource.stageId() != null) {
+				if (!stages.containsKey(resource.stageId())) {
+					problems.add("resource " + resource.resourceId() + ": unknown stage " + resource.stageId());
+				}
+			}
+			else if (!lessons.containsKey(resource.lessonId())) {
 				problems.add("resource " + resource.resourceId() + ": unknown lesson " + resource.lessonId());
 			}
 			if (!sourcePaths.add(resource.sourcePath())) problems.add("duplicate resource sourcePath " + resource.sourcePath());
@@ -190,7 +251,7 @@ final class ManifestValidator {
 		return resources;
 	}
 
-	private void sourceToId(Map<String, Lesson> lessons, Map<String, Resource> resources) {
+	private void sourceToId(Map<String, Lesson> lessons, Map<String, Manifest.Stage> stages, Map<String, Resource> resources) {
 		Set<String> sourcePaths = new HashSet<>();
 		for (SourceLink link : manifest.sourceToId()) {
 			if (link == null || blank(link.sourcePath())) {
@@ -199,9 +260,9 @@ final class ManifestValidator {
 			}
 			String path = link.sourcePath();
 			if (!sourcePaths.add(path)) problems.add("duplicate sourceToId " + path);
-			long targets = Stream.of(link.lessonId(), link.resourceId(), link.resourceIds(), link.courseId())
+			long targets = Stream.of(link.lessonId(), link.stageId(), link.resourceId(), link.resourceIds(), link.courseId())
 				.filter(Objects::nonNull).count();
-			if (targets != 1 || (link.fragments() != null && link.lessonId() == null)) {
+			if (targets != 1 || (link.fragments() != null && link.lessonId() == null && link.stageId() == null)) {
 				problems.add("sourceToId " + path + " must have exactly one target");
 				continue;
 			}
@@ -210,6 +271,13 @@ final class ManifestValidator {
 				if (lesson == null) problems.add("sourceToId " + path + ": unknown lesson " + link.lessonId());
 				else if (!lesson.sourcePath().equals(path)) {
 					problems.add("sourceToId " + path + " does not match the sourcePath of " + link.lessonId());
+				}
+			}
+			else if (link.stageId() != null) {
+				Manifest.Stage stage = stages.get(link.stageId());
+				if (stage == null) problems.add("sourceToId " + path + ": unknown stage " + link.stageId());
+				else if (!stage.sourcePath().equals(path)) {
+					problems.add("sourceToId " + path + " does not match the sourcePath of " + link.stageId());
 				}
 			}
 			else if (link.resourceId() != null) {

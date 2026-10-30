@@ -19,7 +19,7 @@ final class ContentSanitizer {
 
 	static final Pattern LANGUAGE_CLASS = Pattern.compile("language-[a-z0-9+#-]+");
 	static final Pattern HREF = Pattern.compile(
-			"(/lessons/[A-Za-z0-9._-]+(#[^\\s\"<>]+)?|/courses/[A-Za-z0-9._-]+|/api/resources/[A-Za-z0-9._-]+|#[^\\s\"<>]+|https?://[^\\s\"<>]+)");
+			"(/(?:lessons|stages)/[A-Za-z0-9._-]+(#[^\\s\"<>]+)?|/courses/[A-Za-z0-9._-]+|/api/resources/[A-Za-z0-9._-]+|#[^\\s\"<>]+|https?://[^\\s\"<>]+)");
 	static final String EXTERNAL_TARGET = "_blank";
 	static final String EXTERNAL_REL = "noopener noreferrer";
 

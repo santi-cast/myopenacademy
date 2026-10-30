@@ -72,7 +72,7 @@ class ContentLoaderTest {
 
 	@Test
 	void rejectsUnknownSchemaVersion() {
-		fixture.editManifest(m -> m.put("schemaVersion", 2));
+		fixture.editManifest(m -> m.put("schemaVersion", 3));
 		fixture.rejected("schemaVersion");
 	}
 

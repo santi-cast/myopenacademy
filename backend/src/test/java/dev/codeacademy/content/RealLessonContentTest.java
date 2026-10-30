@@ -83,6 +83,8 @@ class RealLessonContentTest {
 
 	@Test
 	void onlyTheImportedLessonIsRendered() {
+		assertThat(content.manifest().lessons()).hasSize(199);
+		assertThat(content.stages()).isEmpty();
 		assertThat(content.lessons()).containsOnlyKeys(LESSON);
 		assertThat(lesson.lessonId()).isEqualTo(LESSON);
 	}
