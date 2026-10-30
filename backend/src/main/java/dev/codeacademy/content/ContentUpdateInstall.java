@@ -5,8 +5,10 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.TreeMap;
 
 /** A stopped-server directory swap, not a filesystem/database transaction or a recovery framework. */
@@ -24,10 +26,15 @@ final class ContentUpdateInstall {
             }
             if (Files.exists(reserved, LinkOption.NOFOLLOW_LINKS)) throw new IllegalArgumentException("installation paths already exist");
         }
-        // Never remove an arbitrary directory. Even an incomplete stage is retained for explicit operator inspection.
-        Files.createDirectory(stage);
+        if (!Files.getFileStore(active).supportsFileAttributeView("posix")
+            || !Files.getFileStore(stage.getParent()).supportsFileAttributeView("posix")) {
+            throw new IOException("installation requires POSIX permissions");
+        }
+        // Atomic private creation: no copied byte is exposed through default umask permissions.
+        // Never remove an arbitrary directory; retain even an incomplete stage for inspection.
+        Files.createDirectory(stage, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
         try {
-            Map<String, String> expected = new TreeMap<>(comparison.candidate().files());
+            TreeMap<String, String> expected = new TreeMap<>(comparison.candidate().files());
             comparison.base().files().forEach((local, hash) -> {
                 if (!comparison.base().managed().containsKey(local) && !comparison.base().manifests().contains(local)) {
                     expected.putIfAbsent(local, hash);
@@ -39,12 +46,20 @@ final class ContentUpdateInstall {
                     Files.createDirectories(target);
                     continue;
                 }
-                Path from = comparison.candidate().files().containsKey(entry.getKey()) ? paths.candidate() : active;
+                boolean complement = comparison.base().files().containsKey(entry.getKey())
+                    && !comparison.base().managed().containsKey(entry.getKey()) && !comparison.base().manifests().contains(entry.getKey());
+                Path from = complement ? active : paths.candidate();
                 ArrayList<String> problems = new ArrayList<>();
                 Path checked = ContentPaths.file(from, entry.getKey(), "installation copy", problems);
                 if (checked == null) throw new ContentValidationException(problems);
                 Files.createDirectories(target.getParent());
-                Files.copy(checked, target);
+                Files.copy(checked, target, StandardCopyOption.COPY_ATTRIBUTES);
+            }
+            // Restore children before parents, with the staging root still private.
+            for (var entry : expected.descendingMap().entrySet()) {
+                if (!entry.getValue().equals("directory")) continue;
+                Path from = "directory".equals(comparison.base().files().get(entry.getKey())) ? active : paths.candidate();
+                restoreDirectory(from.resolve(entry.getKey()), stage.resolve(entry.getKey()));
             }
             ContentUpdateComparison.Copy installed = ContentUpdateComparison.read(stage);
             if (!installed.files().equals(expected)) throw new IOException("staged copy differs from verified inputs");
@@ -56,6 +71,7 @@ final class ContentUpdateInstall {
             ContentUpdateCli.checked(backup);
             ContentUpdateCli.checked(stage);
             if (Files.exists(backup, LinkOption.NOFOLLOW_LINKS)) throw new IOException("backup appeared during staging");
+            restoreDirectory(active, stage);
             Files.move(active, backup, StandardCopyOption.ATOMIC_MOVE);
             try {
                 Files.move(stage, active, StandardCopyOption.ATOMIC_MOVE);
@@ -73,5 +89,14 @@ final class ContentUpdateInstall {
             throw new IOException("installation failed; inspect retained paths " + stage + " and " + backup
                 + "; " + failure.getMessage(), failure);
         }
+    }
+
+    private static void restoreDirectory(Path from, Path to) throws IOException {
+        PosixFileAttributes attributes = Files.readAttributes(from, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        PosixFileAttributeView target = Files.getFileAttributeView(to, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+        if (target == null) throw new IOException("installation requires POSIX permissions");
+        target.setOwner(attributes.owner());
+        target.setGroup(attributes.group());
+        target.setPermissions(attributes.permissions());
     }
 }

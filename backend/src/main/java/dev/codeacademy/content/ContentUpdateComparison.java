@@ -71,7 +71,13 @@ final class ContentUpdateComparison {
         });
         for (var entry : next.files().entrySet()) {
             String path = entry.getKey();
-            if (entry.getValue().equals("directory")) continue;
+            if (entry.getValue().equals("directory")) {
+                if (base.files().containsKey(path) && !base.files().get(path).equals("directory")
+                    && !base.managed().containsKey(path) && !base.manifests().contains(path)) {
+                    conflicts.add("candidate claims complement " + path);
+                }
+                continue;
+            }
             if (!next.managed().containsKey(path) && !next.manifests().contains(path)) {
                 if (!entry.getValue().equals(base.files().get(path)) || base.managed().containsKey(path)
                     || base.manifests().contains(path)) conflicts.add("unmanaged candidate path " + path);

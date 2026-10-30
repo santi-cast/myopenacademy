@@ -3,6 +3,7 @@ package dev.codeacademy.content;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +91,7 @@ class ContentUpdateCliTest {
             "-Duser.home=" + System.getProperty("user.home"),
             "-cp", System.getProperty("java.class.path"), "dev.codeacademy.content.ContentUpdateCli"));
         command.addAll(List.of(args));
+        command.addAll(0, List.of("sh", "-c", "umask 022; exec \"$@\"", "content-update-test"));
         ProcessBuilder builder = new ProcessBuilder(command);
         // Preserve assigned scratch locations explicitly, without ambient launcher banners on stderr.
         for (String variable : List.of("JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JDK_JAVA_OPTIONS")) {
@@ -153,6 +155,44 @@ class ContentUpdateCliTest {
         assertThat(Files.readString(active.root.resolve("notes.txt"))).isEqualTo("Academy complement");
         assertThat(snapshot(active.root.resolveSibling("content.previous"))).isEqualTo(before);
         assertThat(ContentLoader.loadAll(active.root).getFirst().manifest().lessons().getFirst().position()).isEqualTo(2);
+    }
+
+    @Test void applyPreservesPrivateDirectoriesAndComplementModesUnderUmask022() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(Files.getFileStore(temp).supportsFileAttributeView("posix"));
+        Files.setPosixFilePermissions(active.root, PosixFilePermissions.fromString("rwx------"));
+        Files.setPosixFilePermissions(active.root.resolve("demo"), PosixFilePermissions.fromString("rwx--x---"));
+        Files.setPosixFilePermissions(active.root.resolve("demo/resources"), PosixFilePermissions.fromString("rwxr-x---"));
+        Files.writeString(active.root.resolve("notes.txt"), "private through its parent");
+        Files.setPosixFilePermissions(active.root.resolve("notes.txt"), PosixFilePermissions.fromString("rw-r--r--"));
+        Files.writeString(active.root.resolve("demo/resources/local.txt"), "nested complement");
+        Files.setPosixFilePermissions(active.root.resolve("demo/resources/local.txt"), PosixFilePermissions.fromString("rw-------"));
+        candidate.write("demo/resources/local.txt", "nested complement");
+        Files.setPosixFilePermissions(candidate.root.resolve("demo/resources/local.txt"), PosixFilePermissions.fromString("rw-r--r--"));
+        candidate.addResource("demo-new-resource", "new.txt", "text/plain", "new bytes".getBytes(StandardCharsets.UTF_8));
+        pinCandidate();
+        var before = snapshot(active.root);
+        var candidateBefore = snapshot(candidate.root);
+        var sourceBefore = snapshot(source);
+        Map<String, String> modes = new TreeMap<>();
+        for (String path : List.of("", "demo", "demo/resources", "notes.txt", "demo/resources/local.txt")) {
+            modes.put(path, PosixFilePermissions.toString(Files.getPosixFilePermissions(active.root.resolve(path))));
+        }
+        assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+        Path backup = active.root.resolveSibling("content.previous");
+        assertThat(run("apply")).isEqualTo(new Result(0, "Applied; previous root retained at " + backup + "\n", ""));
+        var expected = new TreeMap<>(candidateBefore);
+        expected.put("notes.txt", before.get("notes.txt"));
+        expected.put("demo/resources/local.txt", before.get("demo/resources/local.txt"));
+        assertThat(snapshot(active.root)).isEqualTo(expected);
+        assertThat(snapshot(backup)).isEqualTo(before);
+        assertThat(snapshot(candidate.root)).isEqualTo(candidateBefore);
+        assertThat(snapshot(source)).isEqualTo(sourceBefore);
+        for (var entry : modes.entrySet()) {
+            assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(active.root.resolve(entry.getKey()))))
+                .as("installed permissions: %s", entry.getKey()).isEqualTo(entry.getValue());
+            assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(backup.resolve(entry.getKey()))))
+                .as("backup permissions: %s", entry.getKey()).isEqualTo(entry.getValue());
+        }
     }
 
     @Test void sourceMismatchRejectsV1BootstrapEvenIfBothCopiesAgree() throws Exception {
@@ -288,6 +328,68 @@ class ContentUpdateCliTest {
         Files.writeString(candidate.root.resolve("notes.txt"), "replacement");
         assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 1\n", ""));
         assertThat(Files.readString(report)).contains("unmanaged candidate path notes.txt");
+        rejected("apply", "comparison contains conflicts");
+    }
+
+    @Test void newResourceDirectoryCannotReplaceAnActiveComplementFile() throws Exception {
+        candidate.addResource("demo-new-resource", "new.txt", "text/plain", "new bytes".getBytes(StandardCharsets.UTF_8));
+        Files.createDirectory(candidate.root.resolve("demo/resources/local"));
+        Files.move(candidate.root.resolve("demo/resources/demo-new-resource"), candidate.root.resolve("demo/resources/local/new.txt"));
+        candidate.editManifest(m -> ContentFixture.resource(m, "demo-new-resource")
+            .put("localPath", "demo/resources/local/new.txt"));
+        pinCandidate();
+        assertThat(ContentLoader.loadAll(candidate.root)).hasSize(1);
+        Files.writeString(active.root.resolve("demo/resources/local"), "preserved complement");
+        directoryCollisionRejected("demo/resources/local");
+    }
+
+    @Test void newCourseDirectoryCannotReplaceAnActiveComplementFile() throws Exception {
+        pinCandidate();
+        // A second course needs distinct source identities as well as distinct IDs and local paths.
+        var manifest = candidate.load().manifest();
+        Map<String, byte[]> files = new TreeMap<>();
+        for (var lesson : manifest.lessons()) if (lesson.available()) {
+            files.put("extra/" + lesson.sourcePath(), Files.readAllBytes(candidate.root.resolve(lesson.bodyPath())));
+        }
+        for (var resource : manifest.resources()) {
+            files.put("extra/" + resource.sourcePath(), Files.readAllBytes(candidate.root.resolve(resource.localPath())));
+        }
+        String ref = git("extra fixture\n".getBytes(StandardCharsets.UTF_8), "commit-tree", tree(files)).strip();
+        var extra = (tools.jackson.databind.node.ObjectNode) JSON.readTree(candidate.read(ContentFixture.MANIFEST).replace("demo", "extra"));
+        for (String field : List.of("lessons", "resources", "sourceToId")) {
+            for (var entry : extra.path(field)) {
+                ((tools.jackson.databind.node.ObjectNode) entry).put("sourcePath", "extra/" + entry.path("sourcePath").asString());
+            }
+        }
+        extra.withObject("/source").put("versionRef", ref);
+        try (var paths = Files.walk(candidate.root.resolve("demo"))) {
+            for (Path path : paths.sorted().toList()) {
+                Path target = candidate.root.resolve(candidate.root.relativize(path).toString().replace("demo", "extra"));
+                if (Files.isDirectory(path)) Files.createDirectories(target);
+                else if (path.getFileName().toString().equals("manifest.json")) {
+                    Files.writeString(target, JSON.writeValueAsString(extra));
+                }
+                else Files.copy(path, target);
+            }
+        }
+        assertThat(ContentLoader.loadAll(candidate.root)).hasSize(2);
+        assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+        assertThat(JSON.readTree(Files.readString(report)).path("conflicts").toString()).isEqualTo("[]");
+        report = temp.resolve("collision.json"); // Use fresh authority; compare never overwrites reports.
+        Files.writeString(active.root.resolve("extra"), "preserved complement");
+        directoryCollisionRejected("extra");
+    }
+
+    void directoryCollisionRejected(String path) throws Exception {
+        var activeBefore = snapshot(active.root);
+        var candidateBefore = snapshot(candidate.root);
+        var sourceBefore = snapshot(source);
+        assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 1\n", ""));
+        assertThat(JSON.readTree(Files.readString(report)).path("conflicts").toString())
+            .isEqualTo("[\"candidate claims complement " + path + "\"]");
+        assertThat(snapshot(active.root)).isEqualTo(activeBefore);
+        assertThat(snapshot(candidate.root)).isEqualTo(candidateBefore);
+        assertThat(snapshot(source)).isEqualTo(sourceBefore);
         rejected("apply", "comparison contains conflicts");
     }
 

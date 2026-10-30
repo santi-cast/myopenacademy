@@ -57,6 +57,10 @@ Mensajes de éxito: `Comparison written; conflicts: N` y `Applied; previous root
 
 Los complementos deben permanecer separados de los archivos gestionados por los manifiestos. Un archivo no gestionado activo se conserva si el candidato no lo cambia ni intenta registrarlo como propio. El candidato solo puede traer un archivo no gestionado si ya existe idéntico como complemento activo. No se borran adaptaciones ni se instalan archivos extra arbitrarios. Los directorios de primer nivel siguen siendo cursos para el cargador normal; no introducir allí una carpeta de complementos sin manifiesto.
 
+Un directorio candidato tampoco puede ocupar el nombre de un complemento activo que sea archivo: se informa `candidate claims complement RUTA` y se rechaza la aplicación.
+
+La instalación requiere permisos POSIX; si no están disponibles, falla sin sustituir la raíz. El stage se crea atómicamente con modo `0700` antes de copiar bytes. Se conservan los atributos de archivos, y los propietarios, grupos y permisos de directorios activos; los directorios nuevos toman los del candidato. La raíz del stage sigue privada hasta restaurar las restricciones anidadas y validar la copia; después recibe los controles de la raíz activa antes del intercambio.
+
 Antes de instalar se reservan dos hermanos de la raíz activa: `content.staged` y `content.previous` para una raíz llamada `content`. Si ya existen, la aplicación rechaza sin sobrescribirlos. Se prepara una sustitución completa en el mismo sistema de archivos, se valida otra vez, se comprueban las huellas y el informe y se realizan renombres atómicos de directorio:
 
 1. raíz activa → `.previous`;
