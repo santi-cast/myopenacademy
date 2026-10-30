@@ -21,6 +21,8 @@ import org.commonmark.node.AbstractVisitor;
 import org.commonmark.node.Document;
 import org.commonmark.node.Heading;
 import org.commonmark.node.HtmlBlock;
+import org.commonmark.node.HtmlInline;
+import org.commonmark.node.Image;
 import org.commonmark.node.Link;
 import org.commonmark.node.Node;
 import org.commonmark.node.Text;
@@ -289,7 +291,24 @@ final class LessonPipeline {
 	/** ids collects the element IDs already rendered in the lesson: one repeated in any field is a validation error. */
 	private String render(ParsedLesson lesson, Part part, Set<String> usedResources, Set<String> ids) {
 		List<Link> links = new ArrayList<>();
+		List<Image> images = new ArrayList<>();
 		part.document().accept(new AbstractVisitor() {
+			@Override
+			public void visit(Image image) {
+				images.add(image);
+				visitChildren(image);
+			}
+
+			@Override
+			public void visit(HtmlBlock html) {
+				checkRawImages(part.label(), html.getLiteral());
+			}
+
+			@Override
+			public void visit(HtmlInline html) {
+				checkRawImages(part.label(), html.getLiteral());
+			}
+
 			@Override
 			public void visit(Link link) {
 				links.add(link);
@@ -298,15 +317,46 @@ final class LessonPipeline {
 		});
 		Set<String> hrefs = new HashSet<>();
 		for (Link link : links) rewrite(lesson, part.label(), link, hrefs, usedResources);
+		Set<String> imageSources = new HashSet<>();
+		for (Image image : images) rewriteImage(lesson, part.label(), image, imageSources, usedResources);
 		String html = Markdown.render(part.document(), lesson.headingIds);
 		List<String> removed = new ArrayList<>();
-		String clean = ContentSanitizer.sanitize(html, headingIdsIn(part.document(), lesson.headingIds), hrefs, removed);
+		String clean = ContentSanitizer.sanitize(html, headingIdsIn(part.document(), lesson.headingIds), hrefs,
+				imageSources, removed);
 		removed.forEach(item -> problems.add(part.label() + ": sanitizer removed " + item));
 		Matcher id = ID_ATTRIBUTE.matcher(clean);
 		while (id.find()) {
 			if (!ids.add(id.group(1))) problems.add(part.label() + ": repeated id " + id.group(1));
 		}
 		return clean;
+	}
+
+	/** Parse raw HTML with the image-free policy, so even a URL also emitted by Markdown cannot grant provenance. */
+	private void checkRawImages(String label, String html) {
+		List<String> removed = new ArrayList<>();
+		ContentSanitizer.sanitize(html, Set.of(), Set.of(), removed);
+		if (removed.contains("<img>")) problems.add(label + ": raw HTML images are not allowed");
+	}
+
+	private void rewriteImage(ParsedLesson lesson, String label, Image image, Set<String> sources,
+			Set<String> usedResources) {
+		String destination = image.getDestination();
+		String path = decode(destination);
+		SourceLink target = null;
+		if (path != null && !path.isEmpty() && !path.contains("?") && !path.contains("#")
+				&& !SCHEME.matcher(path).find() && !path.startsWith("/") && !path.startsWith("\\")) {
+			target = sourceTarget(lesson, path);
+		}
+		Resource resource = target == null ? null : resources.get(target.resourceId());
+		if (resource == null || !Set.of("image/png", "image/jpeg", "image/svg+xml").contains(resource.mediaType())) {
+			problems.add(label + ": unresolved or disallowed image " + destination);
+			image.unlink();
+			return;
+		}
+		String src = "/api/resources/" + resource.resourceId();
+		image.setDestination(src);
+		sources.add(src);
+		usedResources.add(resource.resourceId());
 	}
 
 	private void rewrite(ParsedLesson lesson, String label, Link link, Set<String> hrefs, Set<String> usedResources) {
@@ -339,14 +389,7 @@ final class LessonPipeline {
 		String fragment = hash < 0 ? null : decode(destination.substring(hash + 1));
 		if (path == null || (hash >= 0 && (fragment == null || fragment.isEmpty()))) return null;
 
-		SourceLink target;
-		if (path.isEmpty()) target = lessonLinks.get(lesson.lesson.id());
-		else {
-			String resolved = resolvePath(lesson.lesson.sourcePath(), path);
-			if (resolved == null) return null;
-			target = sourceToId.get(resolved);
-			if (target == null && !resolved.endsWith("/")) target = sourceToId.get(resolved + "/");
-		}
+		SourceLink target = sourceTarget(lesson, path);
 		if (target == null) return null;
 
 		if (target.lessonId() != null) return lessonHref(lesson, target, fragment);
@@ -358,6 +401,16 @@ final class LessonPipeline {
 		}
 		replaceFolder(link, target.resourceIds(), hrefs, usedResources);
 		return "";
+	}
+
+	/** One source-document-relative lookup for both links and images, including the v1 folder fallback. */
+	private SourceLink sourceTarget(ParsedLesson lesson, String path) {
+		if (path.isEmpty()) return lessonLinks.get(lesson.lesson.id());
+		String resolved = resolvePath(lesson.lesson.sourcePath(), path);
+		if (resolved == null) return null;
+		SourceLink target = sourceToId.get(resolved);
+		if (target == null && !resolved.endsWith("/")) target = sourceToId.get(resolved + "/");
+		return target;
 	}
 
 	private String lessonHref(ParsedLesson current, SourceLink target, String fragment) {

@@ -158,7 +158,7 @@ class ContentSanitizerTest {
 
 		ContentValidationException ex = fixture.rejected("demo-01.01");
 
-		assertThat(ex.getMessage()).containsAnyOf("sanitizer removed", "disallowed link");
+		assertThat(ex.getMessage()).containsAnyOf("sanitizer removed", "disallowed link", "disallowed image");
 	}
 
 	@Test

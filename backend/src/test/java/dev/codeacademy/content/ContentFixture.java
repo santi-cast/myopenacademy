@@ -98,6 +98,24 @@ public final class ContentFixture {
 		}
 	}
 
+	/** Registers a synthetic file and its source mapping together, using only the temporary controlled copy. */
+	public void addResource(String id, String sourcePath, String mediaType, byte[] bytes) {
+		String localPath = "demo/resources/" + id;
+		try {
+			Files.write(root.resolve(localPath), bytes);
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+		editManifest(m -> {
+			var resource = ((tools.jackson.databind.node.ArrayNode) m.get("resources")).addObject();
+			resource.put("resourceId", id).put("lessonId", "demo-01.01").put("sourcePath", sourcePath)
+				.put("localPath", localPath).put("mediaType", mediaType);
+			((tools.jackson.databind.node.ArrayNode) m.get("sourceToId")).addObject()
+				.put("sourcePath", sourcePath).put("resourceId", id);
+		});
+	}
+
 	public CourseContent load() {
 		return ContentLoader.load(root, MANIFEST);
 	}

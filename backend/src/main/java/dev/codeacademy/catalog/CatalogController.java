@@ -114,7 +114,7 @@ class CatalogController {
 	}
 
 	/**
-	 * The bytes of a registered resource of an available lesson, as a download under its original name. Not JSON and
+	 * The bytes of a registered resource of an available lesson, under its original name (PNG/JPEG inline). Not JSON and
 	 * not negotiated: a browser's Accept header never blocks it. Unknown, unauthorized or unreadable IDs are 404.
 	 */
 	@GetMapping("/api/resources/{resourceId}")
@@ -129,7 +129,8 @@ class CatalogController {
 		});
 		response.setStatus(HttpServletResponse.SC_OK);
 		response.setContentType(ref.resource().mediaType());
-		response.setHeader("Content-Disposition", attachment(ref.file().originalFileName()));
+		boolean raster = ref.resource().mediaType().equals("image/png") || ref.resource().mediaType().equals("image/jpeg");
+		response.setHeader("Content-Disposition", disposition(raster ? "inline" : "attachment", ref.file().originalFileName()));
 		response.setHeader("X-Content-Type-Options", "nosniff");
 		response.setHeader("Content-Security-Policy", "sandbox");
 		response.setHeader("Cache-Control", "private, no-store");
@@ -139,6 +140,10 @@ class CatalogController {
 
 	/** RFC 6266: an ASCII-safe quoted name for old clients and the exact UTF-8 name in filename*. */
 	static String attachment(String fileName) {
+		return disposition("attachment", fileName);
+	}
+
+	private static String disposition(String type, String fileName) {
 		String fallback = fileName.replaceAll("[^A-Za-z0-9._-]", "_");
 		StringBuilder encoded = new StringBuilder();
 		for (byte b : fileName.getBytes(StandardCharsets.UTF_8)) {
@@ -150,7 +155,7 @@ class CatalogController {
 				encoded.append('%').append(String.format("%02X", b & 0xff));
 			}
 		}
-		return "attachment; filename=\"" + fallback + "\"; filename*=UTF-8''" + encoded;
+		return type + "; filename=\"" + fallback + "\"; filename*=UTF-8''" + encoded;
 	}
 
 	private static ApiException notFound() {

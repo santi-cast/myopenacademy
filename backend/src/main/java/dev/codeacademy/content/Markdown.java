@@ -5,15 +5,16 @@ import java.util.Map;
 
 import org.commonmark.Extension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
 import org.commonmark.node.Heading;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 
-/** CommonMark with GFM tables. Fenced code keeps its language as class language-x, escaped and not highlighted. */
+/** CommonMark with GFM tables and strikethrough. Fenced code keeps its language, escaped and not highlighted. */
 final class Markdown {
 
-	private static final List<Extension> EXTENSIONS = List.of(TablesExtension.create());
+	private static final List<Extension> EXTENSIONS = List.of(TablesExtension.create(), StrikethroughExtension.create());
 	private static final Parser PARSER = Parser.builder().extensions(EXTENSIONS).build();
 
 	private Markdown() {

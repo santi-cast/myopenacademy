@@ -32,7 +32,19 @@ final class ContentSanitizer {
 
 	/** Sanitizes html and appends to removed one entry per discarded element or attribute. */
 	static String sanitize(String html, Set<String> headingIds, Set<String> hrefs, List<String> removed) {
-		PolicyFactory policy = new HtmlPolicyBuilder()
+		return sanitize(html, headingIds, hrefs, Set.of(), removed);
+	}
+
+	/** Image URLs must come from resolved Markdown nodes; raw HTML is checked separately without this permission. */
+	static String sanitize(String html, Set<String> headingIds, Set<String> hrefs, Set<String> imageSources,
+			List<String> removed) {
+		HtmlPolicyBuilder builder = new HtmlPolicyBuilder();
+		if (!imageSources.isEmpty()) {
+			builder.allowElements("img")
+				.allowAttributes("src").matching(imageSources::contains).onElements("img")
+				.allowAttributes("alt").onElements("img");
+		}
+		PolicyFactory policy = builder
 			.allowElements(TEXT_ELEMENTS)
 			.allowElements((name, attributes) -> {
 				int href = attributes.indexOf("href");

@@ -1,6 +1,6 @@
 # Manifiesto — v1 implementado y contrato H5
 
-El contrato v1 aprobado en H2 está implementado en H4: `content/java/manifest.json` y su carga y validación al arrancar. Las secciones hasta «Comprobación de H4 y límite de H5» describen esa base. La [propuesta v2 de H5](#h5-propuesta-v2-pendiente-de-implementar) es un contrato para las tareas siguientes, no funcionalidad disponible. Complementa el [plan principal](../PLAN.md) y el [contrato de API](api.md).
+El contrato v1 aprobado en H2 está implementado en H4: `content/java/manifest.json` y su carga y validación al arrancar. Las secciones hasta «Comprobación de H4 y límite de H5» describen esa base. Las imágenes Markdown seguras y el tachado de T2 ya funcionan con v1. La [propuesta v2 de H5](#h5-propuesta-v2-pendiente-de-implementar), incluidas etapas y carpetas ZIP, sigue siendo un contrato pendiente. Complementa el [plan principal](../PLAN.md) y el [contrato de API](api.md).
 
 ## Alcance de la primera carga
 
@@ -112,8 +112,8 @@ H4 no resuelve comparación, importación completa ni etapas. H5 rechazará reti
 Observaciones heredadas de H4, no recuentos verificados del nuevo commit ni requisitos adicionales:
 
 - Descargar una carpeta de código completa como `.zip`.
-- Añadir `commonmark-ext-gfm-strikethrough`: el tachado `~~` aparece en 5 lecciones.
-- Permitir `<img>` con `src` limitado a `/api/resources/…` y `alt`: el curso tiene 157 PNG/JPG y 60 SVG.
+- Resuelto en la primera unidad T2: `commonmark-ext-gfm-strikethrough` 0.31.0, alineado con CommonMark; la observación heredada contaba tachado `~~` en 5 lecciones.
+- Resuelto en esa unidad: imágenes Markdown registradas con `src` generado y `alt` escapado; el recuento heredado era de 157 PNG/JPG y 60 SVG, no un inventario nuevo.
 - Repetir justo antes de la importación masiva la comprobación del formato «Ejercicio N · Título»; otra variante rechaza la importación.
 - Un subtítulo «Ejercicios…» dentro de la sección de ejercicios daría el error de encabezado mal formado (hoy no hay ninguno).
 - La sección «Proyecto evolutivo» no está modelada en H4; el contrato H5 siguiente la separa de las lecciones.
@@ -122,6 +122,14 @@ Observaciones heredadas de H4, no recuentos verificados del nuevo commit ni requ
 - Un diagrama Mermaid con directivas, frontmatter, interacciones, imágenes o `url()`/`@import` en estilos se muestra como código fuente (hoy ninguno en el curso).
 - En las etiquetas Mermaid solo se admiten las entidades `&quot;`, `&lt;`, `&gt;` y `&amp;`, las únicas que usa el curso (en 5 archivos); un diagrama con cualquier otra entidad se muestra como código. Mermaid parte en dos las palabras más anchas que una línea («Pedi / do»); podría ajustarse con `flowchart.wrappingWidth`.
 - `lessons.phase_id` podría pasar a `NOT NULL` en una migración posterior, cuando todas las bases estén sincronizadas.
+
+## Imágenes y tachado disponibles en v1
+
+La primera unidad T2 amplía el procesamiento de cuerpo, enunciado y solución sin cambiar el esquema. Las imágenes usan la misma resolución relativa al `sourcePath` del documento y el mismo `sourceToId` que los enlaces. El destino debe ser un recurso registrado con tipo PNG/JPEG/SVG; no se aceptan URLs externas o `data:`, rutas absolutas, consultas, fragmentos ni destinos no gráficos. Escribir `/api/resources/...` directamente tampoco acredita procedencia. El HTML crudo no puede introducir `img`, aunque copie una URL resuelta; solo las imágenes Markdown resueltas generan `src` y `alt`, sin otros atributos.
+
+El tachado `~~texto~~` se convierte en `<del>` saneado en los tres campos; los bloques y tramos de código conservan sus literales. Se mantienen los IDs de encabezados, los enlaces y la política Mermaid. La expansión exacta de carpetas v1 por archivos no cambia y aún no hay ZIP.
+
+PNG/JPEG registrados se sirven `inline` con el nombre original; SVG y los demás recursos siguen como descarga. Todos conservan sesión, `nosniff`, CSP `sandbox`, caché privada y comprobación canónica al servir. Las pruebas HTTP cubren estos encabezados y el rechazo de symlinks. Una verificación independiente en Chromium comprobó PNG/JPEG y SVG contra el backend real y PostgreSQL desechable: las imágenes cargaron para dos usuarios autenticados; sin sesión, 401 y sin imagen. SVG conservó sandbox/descarga. No es una prueba del recorrido completo de lección en React.
 
 ## H5: propuesta v2 pendiente de implementar
 
