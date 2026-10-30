@@ -25,15 +25,19 @@ Compose consume `.env` desde la raíz. El backend con perfil `local`, ejecutado 
 
 **Después de inicializar el volumen, no cambies `DB_NAME`, `DB_USERNAME` ni `DB_PASSWORD`.** PostgreSQL conserva la configuración inicial: editar `.env` no cambia las credenciales almacenadas. No soluciones un error de autenticación borrando el volumen. Un cambio requiere mantenimiento y recuperación coordinados.
 
-## Arrancar en tres terminales
+## Arrancar los servicios
 
-Cada terminal empieza en la raíz del proyecto. Esperá a que la base esté sana antes de iniciar el backend.
+Necesitás dos terminales abiertas: una para el backend y otra para el frontend. PostgreSQL funciona en segundo plano, así que podés reutilizar su terminal para arrancar el backend.
+
+Los comandos de cada paso parten de la raíz del proyecto. Si abrís otra terminal, ubicáte primero en esa raíz. Esperá a que la base esté sana antes de iniciar el backend.
 
 **1. PostgreSQL — desde la raíz**
 
 ```sh
 docker compose up -d --wait db
 ```
+
+Cuando el comando termina correctamente y vuelve a aparecer el prompt, PostgreSQL queda funcionando en segundo plano (`-d`). No necesitás mantener esta terminal abierta: podés usarla para el paso 2 o abrir otra.
 
 Compose usa el proyecto `code-academy` y su volumen persistente `code-academy_postgres_data`, separado de las prácticas del curso. PostgreSQL queda en `127.0.0.1:5433` (puerto interno 5432).
 
@@ -43,6 +47,8 @@ Compose usa el proyecto `code-academy` y su volumen persistente `code-academy_po
 cd backend
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
+
+Dejá esta terminal abierta y el comando ejecutándose: el backend funciona en primer plano. Para el paso 3, abrí otra terminal en la raíz del proyecto.
 
 La salud mínima en http://127.0.0.1:8080/actuator/health debe responder `{"status":"UP"}` antes de continuar.
 
@@ -58,6 +64,8 @@ fnm use 24.22.1
 npm ci
 npm run dev
 ```
+
+Dejá también esta terminal abierta y el comando ejecutándose mientras usás la academia.
 
 Abrí http://127.0.0.1:5173. Vite fija loopback y puerto estricto: si está ocupado, falla en vez de elegir otro. El proxy conserva el prefijo `/api` y también reenvía `/actuator/health` al backend. No hace falta abrir CORS; el proxy no sustituye autorización ni CSRF. El frontend no carga el `.env` de la raíz ni recibe sus secretos.
 
