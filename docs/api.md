@@ -1,6 +1,6 @@
 # API — contrato de H2 cerrado
 
-Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md).
+Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md). Las secciones H5 al final son contratos aditivos pendientes de implementación, no rutas actualmente disponibles.
 
 ## Acceso, propiedad y efectos
 
@@ -138,3 +138,64 @@ Formato único de error:
   "message": "Lesson is not available."
 }
 ```
+
+## H5: contrato aditivo de etapas pendiente de implementar
+
+Proyecto evolutivo será una sección propia dentro de Java, con 14 etapas previstas (12 escritas y 2 pendientes, a contrastar en el commit fijo). No es una fase ni amplía las 199 lecciones previstas. Las 14 rutas H4, sus respuestas y los enums de lecciones/ejercicios conservan su significado; las etapas se consultan por rutas nuevas. No se añade progreso de etapas a `Counts` ni se cambia el denominador de lecciones.
+
+### Formas y rutas nuevas
+
+| Forma | Campos JSON y significado |
+|---|---|
+| StageEntry | `id`, `courseId`, `title`, `position`, `available`; ID permanente, posición desde 1 dentro del proyecto. |
+| StageState | `stageId`, `state`, `updatedAt`; estado JSON `not_completed`/`completed`, igual que lecciones. Equivalentes conceptuales `NOT_COMPLETED`/`COMPLETED`; conservar la representación persistida de lecciones (`not_completed`/`completed`) y no aceptar mayúsculas en JSON. |
+| StageContinuation | `lastOpenedStageId`: ID o null, independiente de `Continuation.lastOpenedLessonId`. |
+| StageCounts | `completedStages`, `availableStages`, `plannedStages`, `percentage`; solo etapas disponibles en numerador/denominador del porcentaje, null si no hay disponibles. |
+| StageProgress | `courseId`, `added`, `stageStates` (StageState[] por posición), `continuation` (StageContinuation), `progress` (StageCounts). |
+| StageStateResult | `courseId`, `stageId`, `state`, `updatedAt`, `courseAutoAdded`, `continuation` (StageContinuation), `progress` (StageCounts). |
+
+| Ruta nueva | Entrada JSON | HTTP y salida |
+|---|---|---|
+| GET /api/courses/{courseId}/stages | — | 200, `{ "courseId": ID, "stages": StageEntry[] }`, ordenadas por posición, incluidas pendientes; array vacío válido para curso sin proyecto. |
+| GET /api/stages/{stageId} | — | 200, `{ "stage": StageEntry, "bodyHtml": string, "resources": Resource[], "previousStageId": ID o null, "nextStageId": ID o null }`; vecinos disponibles del mismo curso. Sin ejercicios evaluados ni estados implícitos. |
+| GET /api/me/courses/{courseId}/stage-progress | — | 200, StageProgress, también sin inscripción; 404 si no existe el curso. |
+| PUT /api/me/stages/{stageId}/state | `{ "state": "completed" }` | 200, StageStateResult; admite también `not_completed`. |
+| PUT /api/me/courses/{courseId}/stage-continuation | `{ "stageId": "java-stage-initial" }` | 200, StageProgress confirmada; no crea inscripción. |
+
+La interfaz ofrecerá la sección desde Java y navegará a `/stages/{stageId}`, separada de `/lessons/{lessonId}`. Tras cargar correctamente una etapa, solo si `added: true`, llamará al PUT de continuación de etapas; no al de lecciones ni durante precarga/exploración. «Retomar proyecto» usa la última etapa; la continuación H4 sigue retomando la última lección. Pendientes visibles, sin apertura.
+
+### Inscripción, estados y aislamiento
+
+- Reutilizar la inscripción usuario–curso existente y la identidad de sesión. No crear otra inscripción de proyecto ni aceptar propietario por cuerpo/ruta/query. Estado único por inscripción y etapa, con pertenencia al mismo curso; continuación de etapa opcional en esa inscripción, con restricción compuesta al curso como en lecciones. Sin cascadas que borren progreso.
+- Sin inscripción: `added: false`, `stageStates: []`, `continuation: { "lastOpenedStageId": null }`, completadas 0. Estado ausente significa no completada, sin insertar filas. Añadir explícitamente el curso conserva el comportamiento H4 y deja también vacía la continuación de etapas.
+- Marcar una etapa disponible crea inscripción si falta, guarda estado e inicializa última etapa en una sola transacción; deja última lección vacía. Reutilizar/ampliar la operación de inscripción existente (`ProgressService.enroll`), con su unicidad y manejo de concurrencia, no duplicar su SQL por otra vía. Una inscripción creada por lección/ejercicio deja última etapa vacía. Si ya existe, marcar no cambia ninguna continuación.
+- Abrir contenido, consultar recursos o soluciones nunca completa etapas. Los dos estados son siempre manuales, sin corrección automática, dependencias de lecciones ni orden obligatorio. Repetir el estado conserva `updatedAt` del último cambio real; repetir una adición no reinicia estados ni continuaciones.
+- PUT de continuación valida curso, etapa y disponibilidad antes de escribir. Sin inscripción: 409 `COURSE_NOT_ADDED`. Una etapa de otro curso: 400 `COURSE_MISMATCH`. Abrir, marcar o continuar una pendiente: 409 `STAGE_UNAVAILABLE`, mensaje estable `Stage is not available.`; su entrada de índice sí se devuelve. IDs inexistentes o personales ajenos: 404 `NOT_FOUND`, sin revelar datos.
+- Las rutas nuevas heredan autenticación, CSRF en cada PUT, JSON estricto, 400 `INVALID_REQUEST` por forma y 400 `INVALID_STATE` por enum desconocido (`pending`, `solved`, `COMPLETED` o `Completed` incluidos). Heredan negociación JSON, errores y caché privada de H4. Todo rechazo deja intactos inscripción, estados, fechas, ambas continuaciones y contadores de ambos recorridos.
+
+Ejemplo ilustrativo de StageProgress sin inscripción y con una etapa disponible de dos previstas; no es el inventario real:
+
+```json
+{
+  "courseId": "java",
+  "added": false,
+  "stageStates": [],
+  "continuation": { "lastOpenedStageId": null },
+  "progress": {
+    "completedStages": 0,
+    "availableStages": 1,
+    "plannedStages": 2,
+    "percentage": 0
+  }
+}
+```
+
+## H5: extensión de recursos pendiente de implementar
+
+Se reutiliza `GET /api/resources/{resourceId}`, no se acepta una ruta de archivo ni una URL del cliente. `Resource` conserva sus cuatro campos; ZIP añade un recurso de `mediaType: "application/zip"` con nombre original de carpeta más `.zip`. En v2, el propietario registrado puede ser lección o etapa disponible; 404 para propietario pendiente, recurso desconocido o archivo que falla contención. No se exige inscripción para explorar, sí sesión para cada descarga o imagen.
+
+La resolución parte del documento fuente y de `sourceToId`, como en H4; imágenes y ZIP amplían ese resolutor, no incorporan uno paralelo. El [manifiesto v2](manifiesto.md#copia-verificable-imágenes-y-carpetas-zip) fija miembros explícitos, procedencia y reescritura de carpetas. Se validan enlaces/fragmentos e imágenes en todos los campos HTML antes de ofrecer el contenido. Se conserva la política de saneamiento y Mermaid; se añade `<del>` para tachado.
+
+PNG/JPEG registrados para imagen admiten `Content-Disposition: inline` con nombres seguros y tipo validado; los demás recursos mantienen `attachment`, incluidos ZIP y SVG con CSP `sandbox`. Las imágenes SVG solo se usan en contexto `img`, nunca como HTML/SVG insertado en el DOM ni `object`/`iframe`; T2 debe verificar su visualización autenticada sin relajar el sandbox. Sin imágenes externas, `data:`, scripts ni manejadores. Todos conservan `nosniff`, `Cache-Control: private, no-store`, comprobación canónica de archivo sin symlinks al servir y acceso por ID. Los ZIP se entregan ya generados y validados desde la copia controlada, nunca desde el origen ni por recorrido dinámico de directorios.
+
+Importar/actualizar no es una operación HTTP ni de estudio: véase el [límite offline de comparación y aplicación](manifiesto.md#comparar-antes-de-aplicar-límite-del-importador). La verificación posterior debe cubrir dos usuarios, continuidad independiente, 199 lecciones previstas y rechazo sin cambios de datos; esta unidad documental no afirma que esas pruebas o funciones H5 ya existan.

@@ -1,6 +1,6 @@
-# Manifiesto mínimo — contrato de H2 cerrado para H4
+# Manifiesto — v1 implementado y contrato H5
 
-Contrato aprobado en H2 e implementado en H4: `content/java/manifest.json` y su carga y validación en el backend al arrancar. Complementa el [plan principal](../PLAN.md) y el [contrato de API](api.md). H5 conserva el formato completo, comparación, actualización y reconciliación.
+El contrato v1 aprobado en H2 está implementado en H4: `content/java/manifest.json` y su carga y validación al arrancar. Las secciones hasta «Comprobación de H4 y límite de H5» describen esa base. La [propuesta v2 de H5](#h5-propuesta-v2-pendiente-de-implementar) es un contrato para las tareas siguientes, no funcionalidad disponible. Complementa el [plan principal](../PLAN.md) y el [contrato de API](api.md).
 
 ## Alcance de la primera carga
 
@@ -107,18 +107,96 @@ La entrega aplica la [política de contenido de la API](api.md#contenido-ejercic
 
 H4 comprobó la lección 02.01, la extracción sin duplicación, enlaces y fragmentos, recursos seguros y el fallback Mermaid escapado, además del aislamiento y la persistencia entre dos usuarios. Los recursos SVG y el fallback Mermaid se probaron con contenido de prueba, porque 02.01 no tiene imágenes ni diagramas rotos.
 
-H5 conserva importación completa, comparación, actualización y reconciliación. Este contrato mínimo no resuelve retiradas ni divisiones: ninguna actualización borrará o reasignará progreso silenciosamente.
+H4 no resuelve comparación, importación completa ni etapas. H5 rechazará retiradas y divisiones, sin borrar ni reasignar progreso; no implementará reconciliaciones destructivas automáticas.
 
-Notas para H5:
+Observaciones heredadas de H4, no recuentos verificados del nuevo commit ni requisitos adicionales:
 
 - Descargar una carpeta de código completa como `.zip`.
 - Añadir `commonmark-ext-gfm-strikethrough`: el tachado `~~` aparece en 5 lecciones.
 - Permitir `<img>` con `src` limitado a `/api/resources/…` y `alt`: el curso tiene 157 PNG/JPG y 60 SVG.
 - Repetir justo antes de la importación masiva la comprobación del formato «Ejercicio N · Título»; otra variante rechaza la importación.
 - Un subtítulo «Ejercicios…» dentro de la sección de ejercicios daría el error de encabezado mal formado (hoy no hay ninguno).
-- La sección «Proyecto evolutivo» del índice es contenido del curso que la academia todavía no modela.
+- La sección «Proyecto evolutivo» no está modelada en H4; el contrato H5 siguiente la separa de las lecciones.
 - Jackson acepta posiciones como `"2"` o `2.0` y las convierte en enteros.
 - La negrita y la cursiva dentro de etiquetas Mermaid no se muestran (unos 50 archivos).
 - Un diagrama Mermaid con directivas, frontmatter, interacciones, imágenes o `url()`/`@import` en estilos se muestra como código fuente (hoy ninguno en el curso).
 - En las etiquetas Mermaid solo se admiten las entidades `&quot;`, `&lt;`, `&gt;` y `&amp;`, las únicas que usa el curso (en 5 archivos); un diagrama con cualquier otra entidad se muestra como código. Mermaid parte en dos las palabras más anchas que una línea («Pedi / do»); podría ajustarse con `flowchart.wrappingWidth`.
 - `lessons.phase_id` podría pasar a `NOT NULL` en una migración posterior, cuando todas las bases estén sincronizadas.
+
+## H5: propuesta v2 pendiente de implementar
+
+Contrato de T1 para S1, S3, S5 y S7–S10; implementación y pruebas en T2–T6 del [alcance aprobado](../odd/tasks/h5-content-import.md). No cambia el contenido v1 existente en esta unidad.
+
+### Versión, origen e identidad
+
+- El lector H5 admitirá explícitamente `schemaVersion: 1` y `2`; rechazará versiones desconocidas y campos desconocidos según cada versión. V1 conserva su significado: sin etapas, sin ZIP y con expansión de carpetas por archivo. No reinterpretar silenciosamente v1 como v2 ni exigirle campos nuevos.
+- V2 conserva `source`, `course`, `phases`, `lessons`, `resources` y `sourceToId`; añade `projectStages` y `provenance`. El candidato H5 fija `source.versionRef` a `7e713008e2e04e9993f827ced8a3fe679a35185c`. Toda lectura del origen procede de ese árbol Git inmutable, nunca de HEAD móvil, índice de trabajo o archivos sin commit.
+- Contrastar índice, documentos y recursos de ese árbol: referencia observada de 199 lecciones/21 fases, 164 lecciones disponibles en origen y 14 etapas (12 escritas, 2 pendientes). Una discrepancia se informa y detiene la importación; no se completa material inventado. Las etapas no se incluyen en `lessons` ni alteran su total previsto de 199.
+- Conservar todos los IDs H4 y sus pertenencias. Los nuevos IDs se asignan una sola vez con namespace del curso y se mantienen en el manifiesto; no inferir identidad por posición, similitud de texto o nuevo nombre de archivo. Una ruta movida exige asociación inequívoca y explícita al ID anterior o se rechaza.
+
+### Etapas del Proyecto evolutivo
+
+`projectStages` es un array obligatorio en v2 (vacío para cursos sin proyecto). Cada entrada lleva `id`, `title`, `position`, `sourcePath`, `sourceAvailable`, `available`, `bodyPath`. Posiciones 1..N sin huecos ni repeticiones; IDs globalmente únicos también frente a lecciones, ejercicios y recursos. Títulos y orden proceden del índice fijado. No tienen `phaseId` ni generan ejercicios con estados de lección.
+
+Una etapa disponible exige cuerpo UTF-8 importado y enlaces/recursos válidos; una pendiente tiene `available: false` y `bodyPath: null`. `available: true` exige `sourceAvailable: true`. Se aplican saneamiento, IDs de encabezados, Mermaid seguro y validación final de fragmentos; el cuerpo de etapa no pasa por la extracción de ejercicios de lección. El estado manual y la continuación se definen en la [API de etapas](api.md#h5-contrato-aditivo-de-etapas-pendiente-de-implementar).
+
+Extracto ilustrativo v2, no manifiesto completo ni rutas reales del origen:
+
+```json
+{
+  "projectStages": [
+    {
+      "id": "java-stage-initial",
+      "title": "Etapa inicial",
+      "position": 1,
+      "sourcePath": "proyecto/inicial.md",
+      "sourceAvailable": true,
+      "available": true,
+      "bodyPath": "java/project/inicial.md"
+    }
+  ],
+  "sourceToId": [
+    {
+      "sourcePath": "proyecto/inicial.md",
+      "stageId": "java-stage-initial",
+      "fragments": { "inicio": "inicio" }
+    }
+  ]
+}
+```
+
+V2 añade `stageId` como destino alternativo exclusivo en `sourceToId`; `fragments` se admite para lección o etapa. Resolver desde `sourcePath` del documento emisor con las mismas reglas actuales de decodificación, contención y rechazo de consultas/esquemas no permitidos. Lecciones van a `/lessons/{lessonId}`, etapas a `/stages/{stageId}` e índice a `/courses/{courseId}`. Los fragmentos se validan contra el HTML final; para pendientes se elimina el fragmento y se ofrece «todavía no disponible», como en H4.
+
+### Copia verificable, imágenes y carpetas ZIP
+
+`provenance.files` registra cada cuerpo/recurso copiado mediante `sourcePath`, `localPath`, `sourceSha256`, `copySha256`: hashes SHA-256 hexadecimales de 64 caracteres de los bytes del árbol fijado y de los bytes importados, respectivamente. Cada entrada incluye `transformation`: null para copia literal o identificador versionado de la transformación reproducible del importador si los hashes difieren; una transformación desconocida rechaza la comparación. No se presenta una adaptación de la academia como copia literal. `provenance.files` y `provenance.generated` son arrays obligatorios, vacíos si no hay archivos de su tipo; cada `localPath` gestionado aparece una sola vez. El manifiesto conserva la asociación de identidad; un hash no es un ID. Los complementos quedan fuera de las rutas gestionadas y nunca se sobrescriben.
+
+| Extensión v2 | Contrato pendiente |
+|---|---|
+| Recursos de etapas | Cada recurso tiene exactamente un propietario: `lessonId` o `stageId`, del mismo curso. Disponibilidad del propietario condiciona entrega. No exigir inscripción para leer recursos compartidos autenticados. |
+| Imágenes | Resolver Markdown de imagen por `sourceToId` hacia un recurso registrado de tipo PNG/JPEG/SVG, no mediante rutas físicas. Solo `img` con `src` resuelto a `/api/resources/{resourceId}` y `alt` textual; sin imágenes remotas, `data:`, manejadores ni HTML arbitrario. Validar también imágenes en enunciado y solución. |
+| Tachado | Admitir `~~texto~~` como `<del>` saneado; no ampliar permisos de HTML por ello. |
+| Carpeta ZIP | Conservar `sourcePath` terminado en `/` y `resourceIds` explícitos, ordenados, completos y sin duplicados. Añadir `zipResourceId` a esa entrada: no es otro destino independiente, sino el archivo descargable de esa misma carpeta. |
+| Recurso ZIP | En `resources`, añadir una entrada con `kind: "zip"`, `resourceId`, propietario, `sourcePath` de carpeta, `localPath` de ZIP generado, `mediaType: "application/zip"`, `fileName` (nombre original de carpeta más `.zip`) y `memberResourceIds` idénticos a `resourceIds`. Los archivos normales v2 usan `kind: "file"` y conservan sus campos v1. |
+
+El ZIP se genera solo desde miembros registrados copiados, nunca recorriendo una carpeta del servidor a petición del cliente. Sus entradas conservan rutas relativas a la carpeta fuente, sin rutas absolutas, `..`, symlinks ni nombres duplicados. Excluir el ZIP de su propia lista de miembros. Registrar el archivo generado en `provenance.generated` con `localPath`, `copySha256` y `inputResourceIds`; no inventar hash de un ZIP inexistente en origen.
+
+En v2 el texto original de carpeta se convierte en enlace a `/api/resources/{zipResourceId}`, seguido de los enlaces individuales de H4 en el mismo orden y con sus nombres originales. V1 conserva exactamente la expansión documental previa. No añadir rutas de descarga por path. PNG/JPEG usados como imágenes podrán servirse `inline`; SVG mantiene descarga con sandbox (su visualización debe comprobarse en T2), ZIP y demás archivos conservan descarga. Todos mantienen sesión, tipo correcto, `nosniff`, CSP `sandbox`, caché privada sin almacenamiento y comprobación de contención al servir. Véase la [extensión de entrega](api.md#h5-extensión-de-recursos-pendiente-de-implementar).
+
+### Comparar antes de aplicar: límite del importador
+
+Se distinguen dos operaciones offline, aún sin comando implementado: preparar/comparar un candidato fuera de la copia activa y aplicar un candidato ya comparado. Esta unidad no fija nombre de ejecutable ni opciones; T3 deberá documentar invocación exacta y `--help` junto a sus pruebas antes de anunciar un CLI utilizable. No habrá endpoint web de importación ni importación desde el origen durante solicitudes.
+
+1. **Preparar y comparar sin escrituras activas ni base de datos.** Leer el commit fijado, el manifiesto/copia aceptados y sus huellas; producir candidato e informe con revisión base/destino, IDs afectados, altas, cambios de bytes/metadatos y conflictos con motivo. Validar todo el candidato con el mismo cargador/resolutor que servirá contenido. Para la primera transición v1, reconstruir la copia esperada desde el commit H4 y su transformación conocida; si no se puede verificar, rechazar, no bendecir los archivos actuales como base limpia.
+2. **Rechazar conflictos antes de aplicar.** Cambios locales respecto de la huella aceptada son adaptaciones, incluso si el origen también cambió. Retítulos de identidades existentes, retiradas, divisiones/fusiones, reasignación de curso/lección/propietario, pérdida de disponibilidad e identidad ambigua son conflictos explícitos, no migraciones automáticas. Nuevos ejercicios de una lección válida se permiten con nuevos IDs y encabezados exactos; ejercicios existentes conservan título y pertenencia. Cambios de orden/fase conservan la regla H4 si no hay conflicto de identidad. Las capacidades de actualización de títulos del sincronizador H4 no autorizan retitular automáticamente en el importador H5.
+3. **Aplicar solo sobre la base comparada.** Volver a verificar revisión, manifiesto y hashes de copia activa y candidato; si cambiaron desde la comparación, rechazar sin sobrescribir nada. Un informe con conflictos nunca es aplicable; no incluir `--force` ni inferir equivalencias. Actualizar únicamente contenido gestionado verificado y procedencia; no tocar complementos ni tablas personales. La instalación debe evitar una copia activa parcial si falla.
+4. **Sincronizar catálogo después de validar.** Hoy `CatalogConfiguration` une carga y sincronización al arrancar: separar la validación pura para comparar offline sin abrir Spring/DB. Reutilizar `ContentLoader`, resolución de enlaces y `CatalogSynchronizer`, ampliados para v2, en lugar de crear validadores o inserciones paralelas. La sincronización sigue transaccional, con comprobaciones de identidad antes de escrituras y sin cascadas destructoras. Una incompatibilidad con catálogo persistido rechaza el arranque y no modifica la base.
+
+La aplicación offline de archivos no se presenta como una transacción distribuida con PostgreSQL. No hay actualización en caliente: validar e instalar con servidor detenido, luego cargar/sincronizar; ante conflicto de base, conservar datos y no servir un catálogo parcialmente actualizado. Un conflicto requiere resolución explícita fuera de este flujo seguro, no autoriza una migración arbitraria.
+
+### Evidencia exigida a las tareas siguientes
+
+- Importación contrastada con el árbol fijo, enlaces e imágenes/ZIP validados y ambas versiones del manifiesto cubiertas con pruebas deterministas.
+- Una actualización incremental exitosa conserva IDs, estados, fechas y ambas continuaciones de dos usuarios; las nuevas unidades no reciben estados precargados.
+- Rechazos por adaptación, retítulo, retirada, identidad ambigua y base cambiada dejan intactos archivos activos, datos personales y contadores. Un conflicto detectado al sincronizar deja intacta la base.
+- Las etapas tienen estados binarios manuales y continuación propia; nunca entran en los contadores de lecciones. Verificar persistencia, propietario, inscripción y CSRF en pruebas aisladas, no en la base del propietario.
