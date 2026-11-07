@@ -7,6 +7,8 @@ import { LoginPage } from './pages/LoginPage'
 import { MyCoursesPage } from './pages/MyCoursesPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { ProjectPage } from './pages/ProjectPage'
+import { StagePage } from './pages/StagePage'
 import { SessionProvider } from './session/SessionProvider'
 import './App.css'
 
@@ -24,6 +26,8 @@ function App() {
           <Route path="/courses" element={<CatalogPage />} />
           <Route path="/courses/:courseId" element={<CourseIndexPage />} />
           <Route path="/lessons/:lessonId" element={<LessonPage />} />
+          <Route path="/courses/:courseId/project" element={<ProjectPage />} />
+          <Route path="/stages/:stageId" element={<StagePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

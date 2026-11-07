@@ -1,6 +1,6 @@
 # API — contrato de H2 cerrado
 
-Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md). H5 añade cinco rutas de etapas, implementadas en el backend y verificadas con contenido sintético; la interfaz y la importación completa siguen pendientes. Los recursos ZIP y de etapas disponibles usan la ruta de recursos existente. Las imágenes Markdown seguras y el tachado amplían también la carga v1, sin rutas nuevas.
+Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md). H5 añade cinco rutas de etapas, implementadas en el backend y verificadas con contenido sintético; la interfaz de etapas ya tiene índice, contenido, estado manual y continuación independiente; la importación completa sigue pendiente. Los recursos ZIP y de etapas disponibles usan la ruta de recursos existente. Las imágenes Markdown seguras y el tachado amplían también la carga v1, sin rutas nuevas.
 
 ## Acceso, propiedad y efectos
 
@@ -142,9 +142,9 @@ Formato único de error:
 
 ## H5: contrato aditivo de etapas pendiente de implementar
 
-Las cinco rutas y su persistencia ya están implementadas en el backend: 57 pruebas aisladas verifican catálogo, estados, rechazos sin cambios, migración poblada V5→V6, reinicio y concurrencia. El encabezado conserva el ancla existente; la interfaz y el contenido real todavía están pendientes. La migración V6 es aditiva: crea catálogo y estados de etapas y añade una continuación nullable a la inscripción existente. Las pruebas usan PostgreSQL desechable, no la base del propietario.
+Las cinco rutas y su persistencia ya están implementadas en el backend: 57 pruebas aisladas verifican catálogo, estados, rechazos sin cambios, migración poblada V5→V6, reinicio y concurrencia. El encabezado conserva el ancla existente; la interfaz consume esas rutas y el contenido real todavía está pendiente de la importación completa. La migración V6 es aditiva: crea catálogo y estados de etapas y añade una continuación nullable a la inscripción existente. Las pruebas usan PostgreSQL desechable, no la base del propietario.
 
-Proyecto evolutivo será una sección propia dentro de Java, con 14 etapas previstas (12 escritas y 2 pendientes, a contrastar en el commit fijo). No es una fase ni amplía las 199 lecciones previstas. Las 14 rutas H4, sus respuestas y los enums de lecciones/ejercicios conservan su significado; las etapas se consultan por rutas nuevas. No se añade progreso de etapas a `Counts` ni se cambia el denominador de lecciones.
+Proyecto evolutivo tiene una sección propia dentro de Java, con un inventario aprobado de 14 etapas escritas en `c8e29163d59f41830eff2d449bf8b02a19905f61`. La importación completa sigue pendiente: la UI muestra la disponibilidad efectiva que devuelve la API, no la deduce del inventario. No es una fase ni amplía las 199 lecciones previstas. Las 14 rutas H4, sus respuestas y los enums de lecciones/ejercicios conservan su significado; las etapas se consultan por rutas nuevas. No se añade progreso de etapas a `Counts` ni se cambia el denominador de lecciones.
 
 ### Formas y rutas nuevas
 
@@ -165,7 +165,7 @@ Proyecto evolutivo será una sección propia dentro de Java, con 14 etapas previ
 | PUT /api/me/stages/{stageId}/state | `{ "state": "completed" }` | 200, StageStateResult; admite también `not_completed`. |
 | PUT /api/me/courses/{courseId}/stage-continuation | `{ "stageId": "java-stage-initial" }` | 200, StageProgress confirmada; no crea inscripción. |
 
-La interfaz ofrecerá la sección desde Java y navegará a `/stages/{stageId}`, separada de `/lessons/{lessonId}`. Tras cargar correctamente una etapa, solo si `added: true`, llamará al PUT de continuación de etapas; no al de lecciones ni durante precarga/exploración. «Retomar proyecto» usa la última etapa; la continuación H4 sigue retomando la última lección. Pendientes visibles, sin apertura.
+La interfaz ofrece la sección desde el índice de Java en `/courses/{courseId}/project` y navega a `/stages/{stageId}`, separada de `/lessons/{lessonId}`. Tras cargar correctamente una etapa, solo si `added: true`, llama al PUT de continuación de etapas; no al de lecciones ni durante precarga/exploración. «Retomar proyecto» usa la última etapa; la continuación H4 sigue retomando la última lección. Pendientes visibles, sin apertura.
 
 ### Inscripción, estados y aislamiento
 
@@ -195,7 +195,7 @@ Ejemplo ilustrativo de StageProgress sin inscripción y con una etapa disponible
 
 ## H5: extensión de recursos pendiente de implementar
 
-La entrega de ZIP y recursos de etapas de esta sección ya está implementada; se conserva el ancla documental para enlaces existentes. Las rutas nuevas de etapas están implementadas en el backend; la interfaz y el importador siguen pendientes.
+La entrega de ZIP y recursos de etapas de esta sección ya está implementada; se conserva el ancla documental para enlaces existentes. Las rutas nuevas de etapas están implementadas en el backend y consumidas por la interfaz; la importación completa sigue pendiente.
 
 Estado de T2: imágenes Markdown y tachado implementados sobre v1/v2; ZIP v2 y recursos de etapas disponibles implementados con pruebas aisladas de carga y HTTP para dos sesiones sin inscripción. La carga rechaza ZIP no canónicos aunque su hash declarado coincida, sin descomprimirlos ni consultar el origen. La verificación independiente comprobó en Chromium la carga de PNG/JPEG y SVG desde el backend real con PostgreSQL desechable, para dos usuarios autenticados, sin interceptar ni relajar encabezados. Las solicitudes anónimas devolvieron 401 y las imágenes no cargaron. Esto verifica la entrega de recursos, no el recorrido completo de lección en React ni otros navegadores.
 
