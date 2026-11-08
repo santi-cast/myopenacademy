@@ -382,10 +382,27 @@ class ContentLoaderTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "codigo/.envrc", "codigo/env", "../../.env" })
+	@ValueSource(strings = { "codigo/%2Eenv", "codigo/.%65nv", "codigo%2F.env", "codigo/.env#", "./.env", "%2E%2E/.env",
+		"codigo/.env/", "codigo//.env", "codigo/.env.local", ".git", "codigo/.git/config" })
+	void keepsOnlyTheTextOfEncodedOrRelativeProtectedLinks(String destination) {
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [protegido](" + destination + ").");
+		String html = fixture.load().lessons().get("demo-01.01").bodyHtml();
+		assertThat(html).contains("protegido").doesNotContain("<a href=\"" + destination, ".env", ".git", "%2E", "%65");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "codigo/.envrc", "codigo/env", "../../.env", "codigo/.ENV", "codigo/.GIT/config",
+		"codigo/.env_x", "codigo/.gitignore", "%2E%2E/%2E%2E/.env", "codigo/.git/../missing.md", "codigo/.env?x" })
 	void stillRejectsUnresolvedLinksThatAreNotProtected(String destination) {
 		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [x](" + destination + ").");
 		fixture.rejected("demo-01.01: unresolved link " + destination);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "/x/.env", "file:.env", "javascript:.env" })
+	void stillDisallowsAbsoluteOrSchemeLinksToProtectedNames(String destination) {
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [x](" + destination + ").");
+		fixture.rejected("demo-01.01: disallowed link " + destination);
 	}
 
 	@Test
