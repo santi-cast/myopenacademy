@@ -42,12 +42,16 @@ class CatalogSynchronizationTest {
 	@TempDir
 	Path tempDir;
 
+	/** The real course takes seconds to load and no test changes it, so every test shares one load. */
+	private static Manifest realJava;
+
 	Manifest java;
 	ContentFixture demo;
 
 	@BeforeEach
 	void synchronizedBase() {
-		java = ContentLoader.load(CatalogApiTest.CONTENT, "java/manifest.json").manifest();
+		if (realJava == null) realJava = ContentLoader.load(CatalogApiTest.CONTENT, "java/manifest.json").manifest();
+		java = realJava;
 		demo = ContentFixture.copyInto(tempDir);
 		synchronizer.synchronize(List.of(java, demo.load().manifest()));
 	}
