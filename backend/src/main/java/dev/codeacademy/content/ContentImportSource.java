@@ -7,8 +7,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -80,23 +78,8 @@ final class ContentImportSource implements AutoCloseable {
 			}
 		}
 		return new ContentImportSource(commit, blobs, others, Set.copyOf(directories),
-			start(repository, "cat-file", "--batch"));
-	}
-
-	/**
-	 * The shared immutable Git reader only returns complete output, so the streaming object reader starts its own
-	 * process with the same rules: no inherited {@code GIT_*} override may select another object database or read user
-	 * configuration, and Git diagnostics never reach the caller.
-	 */
-	private static Process start(Path source, String... args) throws IOException {
-		List<String> command = new ArrayList<>(List.of("git", "--no-replace-objects", "--no-pager", "-C", source.toString()));
-		command.addAll(List.of(args));
-		ProcessBuilder builder = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD);
-		builder.environment().keySet().removeIf(key -> key.startsWith("GIT_"));
-		builder.environment().put("GIT_LITERAL_PATHSPECS", "1");
-		builder.environment().put("GIT_CONFIG_NOSYSTEM", "1");
-		builder.environment().put("GIT_CONFIG_GLOBAL", "/dev/null");
-		return builder.start();
+			// The shared reader only returns complete output, so the streaming object reader starts its own process.
+			ContentUpdateComparison.gitProcess(repository, "cat-file", "--batch").start());
 	}
 
 	String commit() {
