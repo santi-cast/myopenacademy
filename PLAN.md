@@ -1,5 +1,7 @@
 # Code Academy — Plan del proyecto
 
+> **⚠️ Plan heredado de Code Academy.** Desde el 8 de noviembre de 2026 este repositorio es la academia de **MyOpenAcademy** (ver `CLAUDE.md`, `ESTADO.md` y `../PLAN.md`, apartado 8.5). Este plan describe lo hecho hasta H5 y se reescribirá con el autor tras la prueba de importación.
+
 Academia web para estudiar programación, empezando por Java. El objetivo es usarla personalmente cuando esté funcionando y presentarla como proyecto de portfolio, con apoyo de agentes de IA para desarrollarla.
 
 **Estado:** H1–H5 cerrados. H4 se integró en `main` mediante `a3d3976` y H5 mediante `1333ed8`: contenido real importado desde `c8e29163d59f41830eff2d449bf8b02a19905f61` (199 lecciones y 14 etapas), con etapas, recursos y actualización comparada implementados, y la conservación del progreso de dos usuarios verificada. Solo trabajo local; la publicación requiere autorización aparte (H7).
