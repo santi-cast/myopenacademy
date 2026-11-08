@@ -1,0 +1,48 @@
+{
+  "formato": 1,
+  "tipo": "curso",
+  "id": "ejemplo",
+  "titulo": "Curso de ejemplo",
+  "descripcion": "Un curso pequeño que cumple FORMATO.md, para las pruebas del kit.",
+  "version": "1.0.0",
+  "idioma": "es",
+  "repositorio": "https://github.com/myopenacademy/curso-ejemplo",
+  "conviene_saber_antes": ["inicial"],
+  "partes": [
+    { "id": "ejemplo.parte.basico", "titulo": "Lo básico", "fases": ["ejemplo.fase.primeros-pasos"] }
+  ],
+  "fases": [
+    {
+      "id": "ejemplo.fase.primeros-pasos",
+      "carpeta": "fase-01-primeros-pasos",
+      "titulo": "Primeros pasos",
+      "retos": "fase-01-primeros-pasos/retos.md",
+      "modulos": [
+        {
+          "id": "ejemplo.ficheros-json",
+          "fichero": "fase-01-primeros-pasos/01-ficheros-json.md",
+          "titulo": "Ficheros JSON",
+          "ejercicios": [
+            { "id": "ejemplo.ficheros-json.un-pedido", "titulo": "Un pedido de la tienda" },
+            { "id": "ejemplo.ficheros-json.la-coma-de-mas", "titulo": "La coma de más" }
+          ]
+        },
+        {
+          "id": "ejemplo.ficheros-yaml",
+          "fichero": "fase-01-primeros-pasos/02-ficheros-yaml.md",
+          "titulo": "Ficheros YAML",
+          "disponible": false,
+          "ejercicios": []
+        }
+      ]
+    }
+  ],
+  "proyecto": {
+    "tipo": "etapas",
+    "titulo": "Mi catálogo",
+    "etapas": [
+      { "id": "ejemplo.etapa.primer-catalogo", "fichero": "proyecto/01-primer-catalogo.md", "titulo": "El primer catálogo" }
+    ]
+  },
+  "equivalencias": []
+}
