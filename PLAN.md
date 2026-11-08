@@ -58,7 +58,7 @@ Los números de la columna «Cambios» son los de la lista de `ESTADO.md` («Lis
 
 ### H7. Cursos como DLC
 
-- **Curso de ejemplo pequeño** en el repositorio, con lo que la fase 1 del inicial no tiene (glosario, enlace a otro curso, código con ZIP, imagen, retos, módulo pendiente, proyecto). Las pruebas dejan de usar el curso de Java real.
+- **Curso de ejemplo pequeño:** un solo curso de ejemplo para el kit y la academia (decisión del autor, 9 de noviembre de 2026). Es el curso «bueno» de las pruebas del kit (`../Cursos/kit-cursos/herramientas/pruebas/cursos/bueno/`), que vive allí; la academia guarda en el repositorio **una copia sacada de un commit fijo del kit** (solo comandos de Git de lectura), con ese commit anotado, y la renueva cuando haga falta. Lo que le falte se pide al kit. Las pruebas dejan de usar el curso de Java real.
 - **Importador que lee `curso.json`** y da de alta cursos nuevos. El manifiesto interno se genera desde `curso.json` (punto de partida: `tools/curso_a_manifiesto.py`, más el cálculo de las anclas); no lee las filas del índice ni inventa identificadores. Los módulos con `"disponible": false` entran como pendientes.
 - **Identificadores tal cual**, con el prefijo `<curso>.` y la forma de `FORMATO.md` 3.3.
 - **`--source` con rutas relativas y `..`** (`../Cursos/curso-inicial`), conservando las comprobaciones de enlaces simbólicos, `.env` y solapamiento.

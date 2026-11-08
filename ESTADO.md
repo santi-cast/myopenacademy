@@ -63,7 +63,7 @@ Ordenada por dependencia. Estimación orientativa, con sus pruebas: **P** = medi
 
 | # | Cambio | Por qué (hallazgo) | Tamaño |
 |---|---|---|---|
-| 1 | **Curso de ejemplo pequeño** en el repositorio, con todo lo que la fase 1 no tiene: glosario, enlace a otro curso, código con ZIP, imagen, retos, módulo pendiente, proyecto. Las pruebas dejan de usar el curso de Java real | 9; `../PLAN.md` 8.5 | M |
+| 1 | **Curso de ejemplo pequeño:** copia, desde un commit fijo del kit, de su curso «bueno» (`../Cursos/kit-cursos/herramientas/pruebas/cursos/bueno/`), para que haya un solo curso de ejemplo. Ya tiene módulo disponible y pendiente, ejercicios con pistas, preguntas de repaso, Mermaid, imagen SVG, código, retos, proyecto por etapas, partes y un enlace a otro curso. Lo que falta se ha pedido al kit (ver «Dependencias»). Las pruebas dejan de usar el curso de Java real | 9; `../PLAN.md` 8.5 | M |
 | 2 | **Importador que lee `curso.json`** y da de alta cursos nuevos sin manifiesto previo. El manifiesto interno pasa a generarse desde `curso.json` (sale de `tools/curso_a_manifiesto.py`, más el cálculo de las anclas), deja de leer las filas `NN.NN` del índice y no inventa identificadores de lecciones ni de ejercicios. Los módulos con `"disponible": false` entran como pendientes desde `curso.json` | 2, 4, 6, 7 | G |
 | 3 | **Identificadores tal cual**, con punto: el validador exige el prefijo `<curso>.` y la forma de `FORMATO.md` 3.3 (minúsculas sin tildes, cifras, guiones y puntos) | 3 | P |
 | 4 | **`--source` con rutas relativas y `..`** (`../Cursos/curso-inicial`). Es de solo lectura (solo objetos Git del commit), así que basta con normalizar la ruta; se mantienen las comprobaciones de enlaces simbólicos, `.env` y solapamiento. `--active`, `--output` y `--report` siguen como están | 1 | P |
@@ -114,6 +114,7 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 |---|---|---|---|
 | Curso inicial | Fase 1 escrita, con `curso.json` | La prueba de importación | **Hecho** (aprobada por el autor el 8 de noviembre de 2026) |
 | Kit | `FORMATO.md` estable | Saber qué tiene que importar | Versión 1, con ajustes dentro de la versión mientras no haya nada publicado |
+| Kit | Ampliar su curso «bueno» para que sirva también a la academia: un segundo curso pequeño de destino (id `inicial`, `repositorio` el del curso inicial) con `glosario.md`, un módulo y el proyecto de tipo «modulo»; desde «bueno», un enlace a un módulo de ese curso con ancla y otro a un término del glosario; y que el «Siguiente» del último módulo disponible lleve a `retos.md`. Y ajustar `FORMATO.md` 14: el curso de ejemplo vive en el kit y la academia guarda una copia desde un commit fijo | Curso de ejemplo de H7 (cambio 1) y pruebas de H8 | **Pedido** el 9 de noviembre de 2026; no bloquea el arranque de H7 (se empieza con «bueno» tal cual) |
 
 | Otros esperan de la academia | Qué | Para | Estado |
 |---|---|---|---|
