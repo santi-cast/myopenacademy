@@ -793,7 +793,7 @@ class ContentImportCliTest {
 		listed.remove(listed.size() - 1);
 		assertRefusedBeforeWriting(JSON.treeToValue(omitted, Manifest.class), archives,
 			// The omitted file breaks the folder entry and, with it, the archive that decorates that folder.
-			"ZIP must decorate its exact ordered folder: demo-stage-01-zip-hola-d34d1a2a",
+			"ZIP must decorate the folder that lists its members: demo-stage-01-zip-hola-d34d1a2a",
 			"folder fase-01/codigo/hola/ does not list exactly its resources",
 			"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
 		// A folder that lists a file nobody claims beneath it is refused by the same single validation.
@@ -1043,6 +1043,30 @@ class ContentImportCliTest {
 		}
 		// The runtime loader revalidates the canonical ZIP bytes and every registered copy.
 		assertThat(ContentLoader.loadAll(output)).hasSize(1);
+	}
+
+	@Test void aDirectLinkToAProtectedFileIsReportedAndKeepsOnlyItsText() throws Exception {
+		// The linked file is excluded by the same policy as a folder member: reported, never read, and the run goes on.
+		files.put("fase-01/codigo/hola/.env", "SECRETO_DIDACTICO=uno\n".getBytes(StandardCharsets.UTF_8));
+		files.put("proyecto/01-inicial.md",
+			"# Etapa 1\n\nCopia [la configuración](../fase-01/codigo/hola/.env) antes.\n".getBytes(StandardCharsets.UTF_8));
+		String changed = commit(files, "protected direct link\n");
+		Map<String, String> activeBefore = snapshot(active.root);
+		Map<String, String> sourceBefore = snapshot(source);
+		assertThat(generate("--commit", changed)).isEqualTo(new Result(0,
+			"Candidate written; lessons: 3; stages: 2; resources: 4; reported: 1\n", ""));
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).containsExactly("protected source path excluded by policy: fase-01/codigo/hola/.env");
+		String html = ContentLoader.loadAll(output).getFirst().stages().get("demo-stage-01").bodyHtml();
+		assertThat(html).contains("la configuración").doesNotContain(".env", "<a");
+		try (var all = Files.walk(output)) {
+			for (Path path : all.filter(Files::isRegularFile).toList()) {
+				assertThat(new String(Files.readAllBytes(path), StandardCharsets.ISO_8859_1))
+					.as(path.toString()).doesNotContain("SECRETO_DIDACTICO");
+			}
+		}
+		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
+		assertThat(snapshot(source)).isEqualTo(sourceBefore);
 	}
 
 	@Test void protectedSourcePathsAreExcludedAndReportedWithoutSerializingTheirBytes() throws Exception {

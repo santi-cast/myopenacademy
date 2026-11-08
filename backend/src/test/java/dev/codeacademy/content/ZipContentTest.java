@@ -228,6 +228,25 @@ class ZipContentTest {
 		assertThat(snapshot()).isEqualTo(before);
 	}
 
+	@Test void reportsAnArchiveWithNullMembersInsteadOfFailing() throws Exception {
+		fixture.editManifest(m -> ContentFixture.resource(m, ZipFixture.ZIP).putNull("memberResourceIds"));
+		Map<String, String> before = snapshot();
+		var problems = assertThrows(ContentValidationException.class, fixture::load).problems();
+		assertThat(snapshot()).isEqualTo(before);
+		assertThat(problems).containsExactly(
+			"invalid ZIP metadata for demo-folder-zip",
+			"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
+	}
+
+	@Test void reportsAnArchiveWithoutMembersInsteadOfFailing() throws Exception {
+		fixture.editManifest(m -> ContentFixture.resource(m, ZipFixture.ZIP).remove("memberResourceIds"));
+		Map<String, String> before = snapshot();
+		assertThat(assertThrows(ContentValidationException.class, fixture::load).problems()).containsExactly(
+			"invalid ZIP metadata for demo-folder-zip",
+			"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
+		assertThat(snapshot()).isEqualTo(before);
+	}
+
 	@ParameterizedTest @ValueSource(strings = { "invalidFolder", "omittedMember", "unknownArchive" })
 	void reportsTheSameProblemsForBrokenFoldersAndArchives(String rule) throws Exception {
 		fixture.editManifest(m -> {
@@ -245,13 +264,13 @@ class ZipContentTest {
 		assertThat(snapshot()).isEqualTo(before);
 		switch (rule) {
 			case "invalidFolder" -> assertThat(problems).containsExactly(
-				"ZIP must decorate its exact ordered folder: demo-folder-zip",
+				"ZIP must decorate the folder that lists its members: demo-folder-zip",
 				"folder fase-01/codigo/hola/ does not list exactly its resources",
 				"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
 			case "omittedMember" -> assertThat(problems).containsExactly(
 				"ZIP does not match registered copied members: demo-folder-zip");
 			default -> assertThat(problems).containsExactly(
-				"ZIP must decorate its exact ordered folder: demo-folder-zip",
+				"ZIP must decorate the folder that lists its members: demo-folder-zip",
 				"folder ZIP does not match ordered members: fase-01/codigo/hola/");
 		}
 	}

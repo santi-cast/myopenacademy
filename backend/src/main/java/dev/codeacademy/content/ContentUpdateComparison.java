@@ -252,15 +252,7 @@ final class ContentUpdateComparison {
     }
 
     static byte[] git(Path source, String... args) throws IOException {
-        List<String> command = new ArrayList<>(List.of("git", "--no-replace-objects", "--no-pager", "-C", source.toString()));
-        command.addAll(List.of(args));
-        ProcessBuilder builder = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD);
-        // Do not inherit Git overrides that could select a different object database or read user configuration.
-        builder.environment().keySet().removeIf(key -> key.startsWith("GIT_"));
-        builder.environment().put("GIT_LITERAL_PATHSPECS", "1");
-        builder.environment().put("GIT_CONFIG_NOSYSTEM", "1");
-        builder.environment().put("GIT_CONFIG_GLOBAL", "/dev/null");
-        Process process = builder.start();
+        Process process = gitProcess(source, args).start();
         process.getOutputStream().close();
         byte[] output = process.getInputStream().readAllBytes();
         try { return process.waitFor() == 0 ? output : null; }
@@ -268,6 +260,21 @@ final class ContentUpdateComparison {
             Thread.currentThread().interrupt();
             throw new IOException("source verification interrupted", ex);
         }
+    }
+
+    /**
+     * The one set of rules for every Git process that reads a source repository: no inherited {@code GIT_*} override
+     * may select another object database or read user configuration, and Git diagnostics never reach the caller.
+     */
+    static ProcessBuilder gitProcess(Path source, String... args) {
+        List<String> command = new ArrayList<>(List.of("git", "--no-replace-objects", "--no-pager", "-C", source.toString()));
+        command.addAll(List.of(args));
+        ProcessBuilder builder = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD);
+        builder.environment().keySet().removeIf(key -> key.startsWith("GIT_"));
+        builder.environment().put("GIT_LITERAL_PATHSPECS", "1");
+        builder.environment().put("GIT_CONFIG_NOSYSTEM", "1");
+        builder.environment().put("GIT_CONFIG_GLOBAL", "/dev/null");
+        return builder;
     }
 
     static String fingerprint(Map<String, String> files) { return sha(JSON.writeValueAsBytes(files)); }
