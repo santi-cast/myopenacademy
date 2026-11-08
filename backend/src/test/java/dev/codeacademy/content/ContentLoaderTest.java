@@ -389,6 +389,26 @@ class ContentLoaderTest {
 	}
 
 	@Test
+	void rejectsAResourceIdWithCombiningMarks() {
+		renameSolo("demo-01.01-r-año");
+		fixture.rejected("resource id demo-01.01-r-año contains combining marks; use composed (NFC) characters");
+	}
+
+	@Test
+	void acceptsAResourceIdWithComposedLetters() {
+		renameSolo("demo-01.01-r-año");
+		assertThat(fixture.load().resources()).containsKey("demo-01.01-r-año");
+	}
+
+	private void renameSolo(String id) {
+		fixture.editManifest(m -> {
+			ContentFixture.resource(m, "demo-01.01-r-solo").put("resourceId", id);
+			ContentFixture.link(m, "fase-01/codigo/solo/Solo.java").put("resourceId", id);
+			((ArrayNode) ContentFixture.link(m, "fase-01/codigo/solo/").get("resourceIds")).set(0, id);
+		});
+	}
+
+	@Test
 	void rejectsALinkThatClimbsAboveTheSourceRoot() {
 		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [fuera](../../00-indice.md).");
 		fixture.rejected("demo-01.01: unresolved link ../../00-indice.md");

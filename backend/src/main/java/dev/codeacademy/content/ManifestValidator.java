@@ -26,6 +26,7 @@ final class ManifestValidator {
 
 	static final String PLACEHOLDER = "PENDIENTE_HASH_COMPLETO_DEL_COMMIT";
 	private static final Pattern COMMIT = Pattern.compile("[0-9a-f]{40}");
+	private static final Pattern COMBINING_MARK = Pattern.compile("\\p{M}");
 	private static final Pattern NAMESPACE = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*");
 
 	private final Manifest manifest;
@@ -257,6 +258,11 @@ final class ManifestValidator {
 				continue;
 			}
 			register(resource.resourceId());
+			// Resource links admit letters and digits but never combining marks, so a decomposed ID could not be linked.
+			if (COMBINING_MARK.matcher(resource.resourceId()).find()) {
+				problems.add("resource id " + resource.resourceId()
+					+ " contains combining marks; use composed (NFC) characters");
+			}
 			resources.put(resource.resourceId(), resource);
 			if (Objects.equals(manifest.schemaVersion(), 2)) {
 				if ("zip".equals(resource.kind())) {
