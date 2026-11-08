@@ -22,6 +22,24 @@ Lo que ya existe en los otros proyectos:
 4. **Escribir la lista concreta de cambios** que necesita el importador (y el resto de la academia) para instalar cursos según `FORMATO.md`, ordenada y estimada. Si algo del formato no encaja con la academia, avisar al autor para la sesión del kit.
 5. Con esa lista, **reescribir con el autor `PLAN.md`** para MyOpenAcademy: los hitos nuevos a partir de H6 hasta el pack base 1.0 (`../PLAN.md`, apartado 8.5).
 
+## Prueba de importación de la fase 1 (en curso, 8 y 9 de noviembre de 2026)
+
+Plan aprobado por el autor: el manifiesto inicial lo genera un script desde `curso.json` (`tools/curso_a_manifiesto.py`, primer borrador del importador nuevo; sin commit todavía) y se mira en el navegador contra una **base desechable** (contenedor `myopenacademy-prueba-importacion`, en memoria, puerto 5440), no contra la base de `myopenacademy`: el backend no arranca si desaparece un identificador ya guardado, y los de esta prueba son provisionales. El `.env` propio ya existe (contraseña generada, sin mostrar). Trabajo en `backend/target/prueba-importacion/` (fuera de Git). Curso inicial fijado en `c2bfba83d056fb2fc37aef412a0728cfde6a860c`; la comprobación del kit sobre esa copia: 0 errores.
+
+Hallazgos hasta ahora:
+
+1. **`--source` no admite `..`** («path escapes are not allowed»), y el plan común pone los cursos en `../Cursos/<curso>/`. En la prueba se resuelve la ruta al ejecutar.
+2. **No puede dar de alta un curso.** Con un contenido vacío: «has no course». Con el de Java: intenta regenerar Java contra el repositorio del inicial (22.836 hallazgos). Solo regenera lo que ya está en el manifiesto aceptado.
+3. **Forma de los identificadores:** la academia exige `<curso>-…`; `FORMATO.md` usa `<curso>.<nombre>`. El script traduce el primer punto por un guion (`inicial.que-es-programar` → `inicial-que-es-programar`).
+4. **El índice manda, no `curso.json`:** el importador lee las filas `NN.NN` con enlace de `00-indice.md`. Los 27 módulos pendientes no llevan enlace en el índice, así que con el temario completo da 27 hallazgos «has no source index row». Con solo los 4 disponibles, pasa.
+5. **Retos:** el enlace «Siguiente» de 01.04 a `retos.md` bloquea (documento sin identidad). Para seguir se usó una variante desechable con ese enlace en texto. Los retos no se importan ni se ven.
+6. **Ejercicios con identificadores inventados:** los 35 salen como `inicial-que-es-programar-e01…`, no con los de `curso.json`.
+7. **Fragmentos:** el script no calcula las anclas de los enlaces (lo hace el importador); por eso el modo «completo» del script no carga. El importador nuevo tendrá que calcularlas al leer `curso.json`.
+8. **Lo que funciona:** las 4 lecciones y los 35 ejercicios pasan el procesado (sección de ejercicios, saneado del HTML, enlaces entre módulos y al índice); las pistas quedan plegadas en el enunciado, antes de la solución; las preguntas de repaso salen plegadas en el cuerpo (sin modo test); la cabecera (versiones, conviene saber antes, tiempo, nivel) sale como una cita de texto, sin usarse como datos.
+9. **Sin probar con la fase 1:** enlaces al glosario y a otros cursos, carpetas de código y ZIP, imágenes, partes, proyecto de tipo «modulo», módulos pendientes visibles. Hará falta el curso de ejemplo pequeño (o fases posteriores).
+
+Falta: la revisión del autor en el navegador y, con todo, la lista de cambios ordenada y estimada (paso 4 del «Siguiente paso»).
+
 ## Pendientes heredados que no hay que olvidar
 
 - **H6 de Code Academy:** el autor usa la academia para estudiar y anota lo que encuentra. Tiene prioridad sobre funciones nuevas (`../PLAN.md`, apartado 8.5).
