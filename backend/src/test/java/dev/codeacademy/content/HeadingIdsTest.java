@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,5 +57,12 @@ class HeadingIdsTest {
 		String lesson = Files.readString(REAL_LESSON, StandardCharsets.UTF_8);
 
 		assertThat(HeadingIds.forMarkdown(lesson)).containsExactlyElementsOf(expectedIds("real"));
+	}
+
+	@Test
+	void slugDropsMarksAndLowercasesSingletons() {
+		assertThat(HeadingIds.slug("an\u0303o")).isEqualTo("ano");
+		assertThat(HeadingIds.slug("\u212B")).isEqualTo("\u00E5");
+		assertThat(Normalizer.isNormalized(HeadingIds.slug("\u1F71"), Normalizer.Form.NFC)).isFalse();
 	}
 }
