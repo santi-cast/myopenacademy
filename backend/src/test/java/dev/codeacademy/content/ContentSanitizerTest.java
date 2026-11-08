@@ -151,6 +151,13 @@ class ContentSanitizerTest {
 			"[dato](data:text/html,hola)",
 			"[archivo](file:///etc/passwd)",
 			"[vb](VBScript:msgbox(1))",
+			// A dropped formatting element is inert only as written without attributes: a handler, an id or a style
+			// it carried still fails, even though the element and the attribute both leave the output.
+			"<span onclick=\"alert(1)\">x</span>",
+			"Texto <span onmouseover=\"x()\">x</span> fin.",
+			"<section onclick=\"x()\">x</section>",
+			"<div id=\"evil\">x</div>",
+			"<div style=\"background:url(https://e.invalid/x.png)\">x</div>",
 	})
 	void theLoaderRejectsALessonTheSanitizerWouldAlter(String malicious) {
 		ContentFixture fixture = ContentFixture.copyInto(tempDir);
@@ -164,8 +171,51 @@ class ContentSanitizerTest {
 	@Test
 	void theLoaderNamesTheExercisePartWhereTheSanitizerRemovedSomething() {
 		ContentFixture fixture = ContentFixture.copyInto(tempDir);
-		fixture.replace(ContentFixture.INTRO, "Solución uno,", "<span onclick=\"x()\">Solución</span> uno,");
+		// The event handler is what keeps failing the load, and the message still names the exercise part.
+		fixture.replace(ContentFixture.INTRO, "Solución uno,", "Solución uno con <p onclick=\"x()\">nota</p>,");
 
-		fixture.rejected("demo-01.01 demo-01.01-e01 solution: sanitizer removed <span>");
+		fixture.rejected("demo-01.01 demo-01.01-e01 solution: sanitizer removed attribute [onclick] on <p>");
+	}
+
+	@Test
+	void inertFormattingRemovalsAreToleratedAndTheRenderedHtmlStaysSanitized() {
+		ContentFixture fixture = ContentFixture.copyInto(tempDir);
+		fixture.replace(ContentFixture.INTRO, "Solución uno,", "<span>Solución</span> <u>uno</u>,");
+
+		ExerciseContent exercise = fixture.load().lessons().get("demo-01.01").exercises().get(0);
+
+		assertThat(exercise.solutionHtml()).contains("Solución uno").doesNotContain("<span", "<u>");
+	}
+
+	@Test
+	void anAttributeOnADroppedFormattingElementIsReportedWhileTheOutputStaysTheSame() {
+		List<String> bare = new ArrayList<>();
+		List<String> written = new ArrayList<>();
+
+		String expected = sanitize("<p>a <span>x</span> <div>y</div></p>", bare);
+		String clean = sanitize("<p>a <span onclick=\"alert(1)\">x</span> <div id=\"evil\" style=\"color:red\">y</div></p>",
+				written);
+
+		assertThat(clean).isEqualTo(expected);
+		assertThat(bare).allSatisfy(removed -> assertThat(ContentSanitizer.inert(removed)).as(removed).isTrue());
+		assertThat(written).contains("attribute [onclick] on <span>", "attribute [id, style] on <div>")
+			.anySatisfy(removed -> assertThat(ContentSanitizer.inert(removed)).as(removed).isFalse());
+	}
+
+	@Test
+	void onlyInertFormattingTagsAreTolerated() {
+		assertThat(ContentSanitizer.inert("<span>")).isTrue();
+		assertThat(ContentSanitizer.inert("<u>")).isTrue();
+		assertThat(ContentSanitizer.inert("<div>")).isTrue();
+		// A removed anchor is inert formatting: the element and its href are gone, its text stays, and no link
+		// capability reaches the reader. Anything else an anchor loses, an event handler above all, keeps failing.
+		assertThat(ContentSanitizer.inert("<a>")).isTrue();
+		assertThat(ContentSanitizer.inert("attribute [href] on <a>")).isTrue();
+		for (String removed : List.of("<script>", "<iframe>", "<frame>", "<img>", "<object>", "<style>",
+				"<form>", "attribute [onclick] on <p>", "attribute [id] on <h2>", "attribute [style] on <p>", "<svg>",
+				"attribute [href, onclick] on <a>", "attribute [onclick] on <a>", "attribute [name] on <a>",
+				"attribute [target] on <a>", "attribute [id] on <a>", "<button>")) {
+			assertThat(ContentSanitizer.inert(removed)).as(removed).isFalse();
+		}
 	}
 }

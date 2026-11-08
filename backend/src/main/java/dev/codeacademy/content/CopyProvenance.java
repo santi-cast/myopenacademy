@@ -67,6 +67,7 @@ final class CopyProvenance {
 		}
 		if (!seen.equals(expected.keySet())) problems.add("provenance.files must cover exactly the managed copies");
 		Set<String> generatedSeen = new HashSet<>();
+		Map<String, Manifest.Resource> registered = FolderZip.resources(manifest);
 		for (Manifest.GeneratedFile file : provenance.generated()) {
 			if (file == null) {
 				problems.add("generated provenance must not be null");
@@ -82,7 +83,7 @@ final class CopyProvenance {
 			}
 			// Inspect bytes before hashing: never trust a matching attacker-supplied digest as archive validation.
 			int before = problems.size();
-			FolderZip.validate(manifest, root, archive, problems);
+			FolderZip.validate(registered, root, archive, problems);
 			if (problems.size() != before) continue;
 			Path copy = ContentPaths.file(root, file.localPath(), "generated copy", problems);
 			if (copy != null) verifyHash(copy, file.copySha256(), file.localPath(), problems);

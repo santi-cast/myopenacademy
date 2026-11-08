@@ -49,6 +49,9 @@ final class LessonPipeline {
 	private static final Pattern EXTERNAL = Pattern.compile("(?i)https?://[^\\s/?#]+.*");
 	private static final Pattern DETAILS_OPEN = Pattern.compile("(?is)<details>.*");
 	private static final Pattern DETAILS_CLOSE = Pattern.compile("(?is).*</details>");
+	private static final Pattern DETAILS_TAG = Pattern.compile("(?i)<(/?)details(?=[\\s>])");
+	private static final Pattern SUMMARY = Pattern.compile("(?is)<summary[^>]*>(.*?)</summary>");
+	private static final String SOLUTION_SUMMARY = "Ver solución";
 	private static final Pattern ID_ATTRIBUTE = Pattern.compile("\\sid=\"([^\"]*)\"");
 
 	private final Manifest manifest;
@@ -59,6 +62,7 @@ final class LessonPipeline {
 	private final Map<String, SourceLink> lessonLinks = new HashMap<>();
 	private final Map<String, ParsedLesson> parsed = new LinkedHashMap<>();
 	private final List<String> problems = new ArrayList<>();
+	private final List<String> warnings = new ArrayList<>();
 
 	LessonPipeline(Manifest manifest, Map<String, String> originalNames) {
 		this.manifest = manifest;
@@ -74,6 +78,11 @@ final class LessonPipeline {
 
 	List<String> problems() {
 		return problems;
+	}
+
+	/** Non-blocking observations: only inert formatting the sanitizer removed, with its document path and exact tag. */
+	List<String> warnings() {
+		return warnings;
 	}
 
 	// --- parsing and exercise extraction ---
@@ -100,6 +109,7 @@ final class LessonPipeline {
 		final List<FoundExercise> found = new ArrayList<>();
 		final List<MatchedExercise> exercises = new ArrayList<>();
 		final Set<String> renderedIds = new HashSet<>();
+		final Set<String> extracted = new HashSet<>();
 		final Map<String, String> exerciseHeadings = new HashMap<>();
 
 		ParsedLesson(String id, String sourcePath, List<Exercise> exercises, boolean stage) {
@@ -178,7 +188,48 @@ final class LessonPipeline {
 		}
 	}
 
-	/** Removes the exercises section from the document and records every exercise found in it. */
+	/**
+	 * The exercise titles one lesson body declares, in document order, with exactly the runtime extraction rule. The
+	 * offline generator uses it to keep the accepted exercises and to give every new heading a stable ID.
+	 */
+	static List<String> exerciseTitles(String markdown) {
+		List<String> titles = new ArrayList<>();
+		Heading section = section((Document) Markdown.parse(markdown));
+		if (section == null) return titles;
+		for (Node node : sectionNodes(section)) {
+			if (!(node instanceof Heading heading)) continue;
+			Matcher matcher = EXERCISE_HEADING.matcher(HeadingIds.plainText(heading));
+			if (matcher.matches()) titles.add(matcher.group(1));
+		}
+		return titles;
+	}
+
+	/** The single «Ejercicios prácticos resueltos» heading, or null when the document has none or more than one. */
+	private static Heading section(Document document) {
+		Heading found = null;
+		for (Node node = document.getFirstChild(); node != null; node = node.getNext()) {
+			if (node instanceof Heading heading && HeadingIds.plainText(heading).contains(EXERCISES_SECTION)) {
+				if (found != null) return null;
+				found = heading;
+			}
+		}
+		return found;
+	}
+
+	/** Every node below the section heading and above the next heading of its own level or a higher one. */
+	private static List<Node> sectionNodes(Heading section) {
+		List<Node> nodes = new ArrayList<>();
+		for (Node node = section.getNext(); node != null; node = node.getNext()) {
+			if (node instanceof Heading heading && heading.getLevel() <= section.getLevel()) break;
+			nodes.add(node);
+		}
+		return nodes;
+	}
+
+	/**
+	 * Removes the exercises section from the document and records every exercise found in it. Exercise and grade
+	 * headings leave with the section; authored prose outside an exercise stays in the lesson body, never dropped.
+	 */
 	private void extractExercises(ParsedLesson result, Document document) {
 		String lessonId = result.id;
 		List<Heading> sections = new ArrayList<>();
@@ -193,13 +244,11 @@ final class LessonPipeline {
 			return;
 		}
 		Heading section = sections.get(0);
-		List<Node> nodes = new ArrayList<>();
-		for (Node node = section.getNext(); node != null; node = node.getNext()) {
-			if (node instanceof Heading heading && heading.getLevel() <= section.getLevel()) break;
-			nodes.add(node);
-		}
+		List<Node> nodes = sectionNodes(section);
+		String sectionId = result.headingIds.get(section);
 		section.unlink();
-		nodes.forEach(Node::unlink);
+		// The section heading has no rendered target: a fragment that names it resolves to this document's entry.
+		if (sectionId != null) result.extracted.add(sectionId);
 
 		List<Node> current = null;
 		List<List<Node>> exerciseNodes = new ArrayList<>();
@@ -209,6 +258,7 @@ final class LessonPipeline {
 			if (node instanceof Heading heading) {
 				// CommonMark already trimmed the heading text; the title is compared as is, with no further trimming.
 				Matcher matcher = EXERCISE_HEADING.matcher(HeadingIds.plainText(heading));
+				heading.unlink();
 				if (matcher.matches()) {
 					current = new ArrayList<>();
 					exerciseNodes.add(current);
@@ -224,9 +274,7 @@ final class LessonPipeline {
 				}
 			}
 			else if (current != null) current.add(node);
-			else if (!(node instanceof ThematicBreak)) {
-				problems.add(lessonId + ": content outside any exercise in «" + EXERCISES_SECTION + "»");
-			}
+			else if (node instanceof ThematicBreak) node.unlink();
 		}
 		for (int i = 0; i < exerciseNodes.size(); i++) {
 			result.found.add(new FoundExercise(titles.get(i), headingIds.get(i),
@@ -234,12 +282,26 @@ final class LessonPipeline {
 		}
 	}
 
-	/** Statement up to the &lt;details&gt; block, and the solution block itself. */
+	/**
+	 * Statement up to the solution block and, from it on, the solution itself. The solution is the top-level
+	 * &lt;details&gt; whose &lt;summary&gt; announces «Ver solución», matched with balanced open and close so a nested
+	 * block cannot end it early; without one, the first open and the first close are used. Everything after the
+	 * solution stays inside it: authored content is never dropped. The thematic breaks that close the exercise leave
+	 * with the section, as in H4, so the lesson body never keeps them.
+	 */
 	private Document[] split(String lessonId, String title, List<Node> nodes) {
 		int open = -1;
 		int close = -1;
-		for (int i = 0; i < nodes.size(); i++) {
-			if (nodes.get(i) instanceof HtmlBlock html) {
+		for (Span span : spans(nodes)) {
+			if (announcesSolution(nodes, span)) {
+				open = span.open();
+				close = span.close();
+				break;
+			}
+		}
+		if (open < 0) {
+			for (int i = 0; i < nodes.size(); i++) {
+				if (!(nodes.get(i) instanceof HtmlBlock html)) continue;
 				String literal = html.getLiteral().strip();
 				if (open < 0 && DETAILS_OPEN.matcher(literal).matches()) open = i;
 				if (open >= 0 && DETAILS_CLOSE.matcher(literal).matches()) {
@@ -257,11 +319,50 @@ final class LessonPipeline {
 			problems.add(name + " has an empty statement");
 			return null;
 		}
-		if (nodes.subList(close + 1, nodes.size()).stream().anyMatch(node -> !(node instanceof ThematicBreak))) {
-			problems.add(name + " has content after its solution");
-			return null;
+		int end = nodes.size();
+		while (end > close + 1 && nodes.get(end - 1) instanceof ThematicBreak) end--;
+		nodes.subList(end, nodes.size()).forEach(Node::unlink);
+		return new Document[] { document(nodes.subList(0, open)), document(nodes.subList(open, end)) };
+	}
+
+	/** One top-level &lt;details&gt; block: the node that opens it and the node that closes it. */
+	private record Span(int open, int close) {
+	}
+
+	/** Top-level details blocks of one exercise, from balanced open/close counting inside the raw HTML nodes. */
+	private static List<Span> spans(List<Node> nodes) {
+		List<Span> spans = new ArrayList<>();
+		int depth = 0;
+		int open = -1;
+		for (int i = 0; i < nodes.size(); i++) {
+			if (!(nodes.get(i) instanceof HtmlBlock html)) continue;
+			Matcher tag = DETAILS_TAG.matcher(html.getLiteral());
+			while (tag.find()) {
+				if (tag.group(1).isEmpty()) {
+					if (depth == 0) open = i;
+					depth++;
+				}
+				else if (depth > 0) {
+					depth--;
+					if (depth == 0) spans.add(new Span(open, i));
+				}
+			}
 		}
-		return new Document[] { document(nodes.subList(0, open)), document(nodes.subList(open, close + 1)) };
+		return spans;
+	}
+
+	/** True when the block declares a &lt;summary&gt; whose visible text is exactly «Ver solución». */
+	private static boolean announcesSolution(List<Node> nodes, Span span) {
+		StringBuilder raw = new StringBuilder();
+		for (int i = span.open(); i <= span.close(); i++) {
+			if (nodes.get(i) instanceof HtmlBlock html) raw.append(html.getLiteral()).append('\n');
+		}
+		Matcher summary = SUMMARY.matcher(raw);
+		while (summary.find()) {
+			String text = summary.group(1).replaceAll("<[^>]*>", "").strip();
+			if (text.equals(SOLUTION_SUMMARY)) return true;
+		}
+		return false;
 	}
 
 	private static Document document(List<Node> nodes) {
@@ -347,7 +448,11 @@ final class LessonPipeline {
 		List<String> removed = new ArrayList<>();
 		String clean = ContentSanitizer.sanitize(html, headingIdsIn(part.document(), lesson.headingIds), hrefs,
 				imageSources, removed);
-		removed.forEach(item -> problems.add(part.label() + ": sanitizer removed " + item));
+		for (String item : removed) {
+			// Only an inert formatting tag is a reported finding; anything else the sanitizer would alter still fails.
+			if (ContentSanitizer.inert(item)) warnings.add(lesson.sourcePath + ": sanitizer removed " + item);
+			else problems.add(part.label() + ": sanitizer removed " + item);
+		}
 		Matcher id = ID_ATTRIBUTE.matcher(clean);
 		while (id.find()) {
 			if (!ids.add(id.group(1))) problems.add(part.label() + ": repeated id " + id.group(1));
@@ -417,8 +522,9 @@ final class LessonPipeline {
 		if (target == null) return null;
 
 		if (target.lessonId() != null || target.stageId() != null) return lessonHref(lesson, target, fragment);
-		if (fragment != null) return null;
+		// The course index is not imported: its own entry answers every fragment, as with a pending document.
 		if (target.courseId() != null) return "/courses/" + target.courseId();
+		if (fragment != null) return null;
 		if (target.resourceId() != null) {
 			usedResources.add(target.resourceId());
 			return "/api/resources/" + target.resourceId();
@@ -445,8 +551,12 @@ final class LessonPipeline {
 		// A pending document has no body to check: link to its entry, never a guessed fragment.
 		if (available == null) return route + lessonId;
 		Map<String, String> fragments = target.fragments() == null ? Map.of() : target.fragments();
-		String id = available.target(fragments.get(fragment));
-		if (id == null) return null;
+		String mapped = fragments.get(fragment);
+		String id = available.target(mapped);
+		if (id == null) {
+			// The extracted exercises section leaves no rendered heading: offer the document entry, not an anchor.
+			return mapped != null && available.extracted.contains(mapped) ? route + lessonId : null;
+		}
 		return available == current ? "#" + id : route + lessonId + "#" + id;
 	}
 
@@ -489,8 +599,8 @@ final class LessonPipeline {
 		}
 	}
 
-	/** Percent-decoded text, or null when the encoding is malformed. */
-	private static String decode(String text) {
+	/** Percent-decoded text, or null when the encoding is malformed. Shared with the offline generator. */
+	static String decode(String text) {
 		try {
 			return URLDecoder.decode(text.replace("+", "%2B"), StandardCharsets.UTF_8);
 		}

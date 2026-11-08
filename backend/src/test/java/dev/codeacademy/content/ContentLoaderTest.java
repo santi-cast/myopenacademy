@@ -337,6 +337,21 @@ class ContentLoaderTest {
 	}
 
 	@Test
+	void rejectsTwoLessonsThatShareAFileOutsideAnyFolder() {
+		// Only a lesson and a stage may share one source path; two lessons sharing it is a content conflict.
+		fixture.addResource("demo-01.01-r-shared", "fase-01/extra/Shared.java", "text/plain; charset=utf-8",
+				"class Shared {}\n".getBytes());
+		fixture.addResource("demo-01.02-r-shared", "fase-01/extra/Shared.java", "text/plain; charset=utf-8",
+				"class Shared {}\n".getBytes());
+		fixture.editManifest(m -> {
+			resource(m, "demo-01.02-r-shared").put("lessonId", "demo-01.02");
+			ArrayNode links = (ArrayNode) m.get("sourceToId");
+			links.remove(links.size() - 1);
+		});
+		fixture.rejected("duplicate resource sourcePath fase-01/extra/Shared.java");
+	}
+
+	@Test
 	void rejectsAFolderThatMissesOneOfItsFiles() {
 		fixture.editManifest(m -> ((ArrayNode) link(m, "fase-01/codigo/hola/").get("resourceIds")).remove(1));
 		fixture.rejected("folder fase-01/codigo/hola/ does not list exactly its resources");
@@ -369,11 +384,25 @@ class ContentLoaderTest {
 	}
 
 	@Test
-	void rejectsAFragmentToTheRemovedExercisesSection() {
+	void resolvesAFragmentToTheRemovedExercisesSection() {
+		// The section is extracted into the exercise list, so its own heading has no rendered target: the reader is
+		// offered the lesson entry instead of a guessed anchor, exactly like a pending document.
 		fixture.editManifest(m -> ((ObjectNode) link(m, "fase-01/01-intro.md").get("fragments"))
 			.put("5-ejercicios-prácticos-resueltos", "5-ejercicios-prácticos-resueltos"));
 		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [ejercicios](#5-ejercicios-prácticos-resueltos).");
-		fixture.rejected("demo-01.01: unresolved link #5-ejercicios-prácticos-resueltos");
+
+		LessonContent intro = fixture.load().lessons().get("demo-01.01");
+
+		assertThat(intro.bodyHtml()).contains("<a href=\"/lessons/demo-01.01\">ejercicios</a>");
+	}
+
+	@Test
+	void resolvesAFragmentOnTheCourseIndexToItsEntry() {
+		fixture.replace(INTRO, "[índice](../00-indice.md)", "[índice](../00-indice.md#proyecto-evolutivo)");
+
+		LessonContent intro = fixture.load().lessons().get("demo-01.01");
+
+		assertThat(intro.bodyHtml()).contains("<a href=\"/courses/demo\">índice</a>");
 	}
 
 	@Test
@@ -483,6 +512,60 @@ class ContentLoaderTest {
 	void rejectsDuplicatedHeadingIdsFromRawHtml() {
 		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo.\n\n<h2 id=\"qué-aprenderás\">x</h2>");
 		fixture.rejected("demo-01.01: repeated id qué-aprenderás");
+	}
+
+	@Test
+	void keepsTheExercisesSectionLeadInInTheLessonBody() {
+		// Authored prose between the section heading and its first exercise is not assessment material: it stays
+		// rendered in the lesson body. The grade heading that introduces the exercises still leaves with the section.
+		fixture.replace(INTRO, "## 5. Ejercicios prácticos resueltos\n\n### 🟢 Básico",
+			"## 5. Ejercicios prácticos resueltos\n\nAntes de empezar, repasa [la teoría](#qué-aprenderás).\n\n### 🟢 Básico");
+
+		LessonContent intro = fixture.load().lessons().get("demo-01.01");
+
+		assertThat(intro.bodyHtml()).contains("Antes de empezar, repasa <a href=\"#qué-aprenderás\">la teoría</a>")
+			.doesNotContain("Ejercicios prácticos", "Básico", "Enunciado", "Solución");
+		assertThat(intro.exercises()).extracting(ExerciseContent::id)
+			.containsExactly("demo-01.01-e01", "demo-01.01-e02");
+		assertThat(intro.exercises().get(0).statementHtml()).doesNotContain("Antes de empezar");
+	}
+
+	@Test
+	void theExercisesSectionTakesItsOwnTrailingThematicBreakWithIt() {
+		// The break that closes the last exercise leaves with the section, as in H4: the body keeps only its own break.
+		String body = fixture.load().lessons().get("demo-01.01").bodyHtml();
+
+		assertThat(body).doesNotContainPattern("<hr />\\s*<hr />");
+		assertThat(body.split("<hr />", -1)).hasSize(2);
+	}
+
+	@Test
+	void theSolutionIsTheBalancedBlockThatAnnouncesVerSolucion() {
+		// The statement carries its own top-level <details> and the solution nests another block: counting open and
+		// close keeps the whole solution together, and everything after it belongs to the solution instead of failing.
+		fixture.replace(INTRO, "Enunciado dos.\n\n<details>\n<summary>Ver solución</summary>\n\nSolución dos.\n\n</details>",
+			"Enunciado dos.\n\n<details>\n<summary>Una pista</summary>\n\nPista.\n\n</details>\n\n"
+				+ "<details>\n<summary>Ver solución</summary>\n\nSolución dos.\n\n"
+				+ "<details>\n<summary>Ampliar</summary>\n\nM\u00e1s detalle.\n\n</details>\n\n</details>\n\n"
+				+ "Nota final de la solución.");
+
+		ExerciseContent second = fixture.load().lessons().get("demo-01.01").exercises().get(1);
+
+		assertThat(second.statementHtml()).contains("Pista").doesNotContain("Solución dos", "<summary>Ver solución</summary>");
+		assertThat(second.solutionHtml()).startsWith("<details>")
+			.contains("<summary>Ver solución</summary>", "Solución dos", "Ampliar", "M\u00e1s detalle",
+				"Nota final de la solución");
+	}
+
+	@Test
+	void withoutAVerSolucionSummaryTheFirstDetailsBlockStaysTheSolution() {
+		fixture.replace(INTRO, "<details>\n<summary>Ver solución</summary>\n\nSolución dos.",
+			"<details>\n<summary>Solución</summary>\n\nSolución dos.");
+
+		ExerciseContent second = fixture.load().lessons().get("demo-01.01").exercises().get(1);
+
+		assertThat(second.statementHtml()).doesNotContain("Solución dos");
+		assertThat(second.solutionHtml()).startsWith("<details>").contains("<summary>Solución</summary>", "Solución dos");
 	}
 
 	@Test

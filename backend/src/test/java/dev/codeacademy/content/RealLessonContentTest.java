@@ -132,6 +132,12 @@ class RealLessonContentTest {
 	}
 
 	@Test
+	void theBodyKeepsTheH4ThematicBreaksWithoutTheOneThatClosedTheExercises() {
+		assertThat(lesson.bodyHtml().split("<hr />", -1)).hasSize(7);
+		assertThat(lesson.bodyHtml()).doesNotContainPattern("<hr />\\s*<hr />");
+	}
+
+	@Test
 	void theFragmentLinkToExerciseEightPointsToTheExerciseId() {
 		assertThat(lesson.bodyHtml()).contains("<a href=\"#java-02.01-e08\">ejercicio 8</a>");
 		assertThat(String.join("", allHtml())).doesNotContain("ejercicio-8--");

@@ -171,11 +171,12 @@ final class ContentUpdateComparison {
         entities.put(id, new Entity(kind, title, owner, source, available, sourceAvailable, JSON.writeValueAsString(metadata)));
     }
 
+    /** Kind, owner and source path: a lesson and a stage may own the same path without becoming ambiguous. */
     private static Map<String, String> identities(Copy copy, List<String> conflicts) {
         Map<String, String> result = new TreeMap<>();
         copy.entities().forEach((id, entity) -> {
             if (!entity.source().isEmpty()) {
-                String key = entity.kind() + ":" + entity.source();
+                String key = entity.kind() + ":" + entity.owner() + ":" + entity.source();
                 if (result.putIfAbsent(key, id) != null) conflicts.add("ambiguous identity " + id);
             }
         });
@@ -205,7 +206,8 @@ final class ContentUpdateComparison {
         return result;
     }
 
-    private static void safeNames(String path) {
+    // Package-private so the offline generator reuses the same protected-name and Git-object rules (visibility only).
+    static void safeNames(String path) {
         for (String segment : path.split("/")) {
             if (segment.equals(".git") || segment.equals(".env") || segment.startsWith(".env.")) {
                 throw new IllegalArgumentException("protected paths are not allowed");
@@ -213,7 +215,7 @@ final class ContentUpdateComparison {
         }
     }
 
-    private static void safeSource(String path) {
+    static void safeSource(String path) {
         if (!ContentPaths.isPlainRelative(path)) throw new IllegalArgumentException("invalid source path " + path);
         safeNames(path);
     }
@@ -249,7 +251,7 @@ final class ContentUpdateComparison {
         }
     }
 
-    private static byte[] git(Path source, String... args) throws IOException {
+    static byte[] git(Path source, String... args) throws IOException {
         List<String> command = new ArrayList<>(List.of("git", "--no-replace-objects", "--no-pager", "-C", source.toString()));
         command.addAll(List.of(args));
         ProcessBuilder builder = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD);
@@ -269,7 +271,7 @@ final class ContentUpdateComparison {
     }
 
     static String fingerprint(Map<String, String> files) { return sha(JSON.writeValueAsBytes(files)); }
-    private static String sha(byte[] bytes) {
+    static String sha(byte[] bytes) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
         catch (NoSuchAlgorithmException ex) { throw new IllegalStateException(ex); }
     }

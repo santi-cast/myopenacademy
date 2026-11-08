@@ -32,6 +32,7 @@ final class ManifestValidator {
 	private final List<String> problems = new ArrayList<>();
 	private final Set<String> ids = new HashSet<>();
 	private String prefix = "";
+	private int folderPasses;
 
 	private ManifestValidator(Manifest manifest) {
 		this.manifest = manifest;
@@ -41,6 +42,13 @@ final class ManifestValidator {
 		ManifestValidator validator = new ManifestValidator(manifest);
 		validator.run();
 		return validator.problems;
+	}
+
+	/** Passes over the registered resources that the folder rule of one validation makes; tests bound its cost. */
+	static int folderPasses(Manifest manifest) {
+		ManifestValidator validator = new ManifestValidator(manifest);
+		validator.run();
+		return validator.folderPasses;
 	}
 
 	private void run() {
@@ -77,8 +85,19 @@ final class ManifestValidator {
 			Map<String, String> documents = new HashMap<>();
 			lessons.values().forEach(lesson -> document(documents, lesson.sourcePath(), lesson.id()));
 			stages.values().forEach(stage -> document(documents, stage.sourcePath(), stage.id()));
-			resources.values().stream().filter(resource -> !"zip".equals(resource.kind()))
-				.forEach(resource -> document(documents, resource.sourcePath(), resource.resourceId()));
+			// A lesson and a stage may own the same source path, so a file resource is unique per path and owner kind.
+			Set<String> owned = new HashSet<>();
+			Set<String> mapped = new HashSet<>();
+			manifest.sourceToId().stream().filter(Objects::nonNull).filter(link -> link.resourceId() != null)
+				.forEach(link -> mapped.add(link.sourcePath()));
+			for (Resource resource : resources.values()) {
+				if ("zip".equals(resource.kind())) continue;
+				String path = resource.sourcePath();
+				if (!ContentPaths.isPlainRelative(path)) problems.add("invalid sourcePath " + path);
+				if (documents.containsKey(path)) problems.add("duplicate sourcePath " + path);
+				if (!owned.add(path + "\u0000" + ownerKind(resource))) problems.add("duplicate sourcePath " + path);
+				if (!mapped.contains(path)) problems.add("missing sourceToId for " + resource.resourceId());
+			}
 			for (SourceLink link : manifest.sourceToId()) {
 				if (link == null || link.sourcePath() == null) continue;
 				String path = link.sourcePath();
@@ -224,6 +243,12 @@ final class ManifestValidator {
 	private Map<String, Resource> resources(Map<String, Lesson> lessons, Map<String, Manifest.Stage> stages) {
 		Map<String, Resource> resources = new HashMap<>();
 		Set<String> sourcePaths = new HashSet<>();
+		// The entries that name each archive, in sourceToId order: a ZIP finds its folder without scanning every link.
+		Map<String, List<SourceLink>> decorations = new HashMap<>();
+		if (Objects.equals(manifest.schemaVersion(), 2)) {
+			manifest.sourceToId().stream().filter(Objects::nonNull).filter(link -> link.zipResourceId() != null)
+				.forEach(link -> decorations.computeIfAbsent(link.zipResourceId(), id -> new ArrayList<>()).add(link));
+		}
 		for (Resource resource : manifest.resources()) {
 			if (resource == null || blank(resource.resourceId()) || blank(resource.sourcePath()) || blank(resource.mediaType())
 					|| (resource.sourcePath().endsWith("/") && !"zip".equals(resource.kind()))) {
@@ -242,9 +267,10 @@ final class ManifestValidator {
 							|| !name.equals(resource.fileName()) || resource.memberResourceIds() == null) {
 						problems.add("invalid ZIP metadata for " + resource.resourceId());
 					}
-					boolean mapped = manifest.sourceToId().stream().filter(Objects::nonNull)
-						.anyMatch(link -> resource.resourceId().equals(link.zipResourceId()) && folder.equals(link.sourcePath())
-							&& Objects.equals(resource.memberResourceIds(), link.resourceIds()));
+					// A shared folder keeps one archive: its members are the ordered subset of the listed files.
+					boolean mapped = decorations.getOrDefault(resource.resourceId(), List.of()).stream()
+						.anyMatch(link -> folder.equals(link.sourcePath())
+							&& link.resourceIds() != null && link.resourceIds().containsAll(resource.memberResourceIds()));
 					if (!mapped) problems.add("ZIP must decorate its exact ordered folder: " + resource.resourceId());
 				}
 				else if (!"file".equals(resource.kind())) {
@@ -265,13 +291,17 @@ final class ManifestValidator {
 			else if (!lessons.containsKey(resource.lessonId())) {
 				problems.add("resource " + resource.resourceId() + ": unknown lesson " + resource.lessonId());
 			}
-			if (!sourcePaths.add(resource.sourcePath())) problems.add("duplicate resource sourcePath " + resource.sourcePath());
+			// One path belongs to at most one lesson and one stage, never to two lessons or two stages.
+			if (!sourcePaths.add(resource.sourcePath() + "\u0000" + ownerKind(resource))) {
+				problems.add("duplicate resource sourcePath " + resource.sourcePath());
+			}
 		}
 		return resources;
 	}
 
 	private void sourceToId(Map<String, Lesson> lessons, Map<String, Manifest.Stage> stages, Map<String, Resource> resources) {
 		Set<String> sourcePaths = new HashSet<>();
+		Map<String, Set<String>> folders = folderMembers(resources);
 		for (SourceLink link : manifest.sourceToId()) {
 			if (link == null || blank(link.sourcePath())) {
 				problems.add("a sourceToId entry needs sourcePath");
@@ -310,7 +340,7 @@ final class ManifestValidator {
 				}
 			}
 			else if (link.resourceIds() != null) {
-				folder(link, resources);
+				folder(link, resources, folders);
 			}
 			else if (!link.courseId().equals(manifest.course().id())) {
 				problems.add("sourceToId " + path + ": unknown course " + link.courseId());
@@ -318,34 +348,86 @@ final class ManifestValidator {
 		}
 	}
 
-	private void folder(SourceLink link, Map<String, Resource> resources) {
+	/**
+	 * The non-ZIP resources under each listed folder, from one pass over the resources. Only a folder that ends in '/'
+	 * is ever compared with its contents, and a path starts with such a folder exactly when the folder is one of the
+	 * path's own prefixes that end in '/', so looking those prefixes up finds the same members as a scan per folder.
+	 */
+	private Map<String, Set<String>> folderMembers(Map<String, Resource> resources) {
+		Map<String, Set<String>> members = new HashMap<>();
+		manifest.sourceToId().stream().filter(Objects::nonNull).filter(link -> link.resourceIds() != null)
+			.map(SourceLink::sourcePath).filter(path -> path != null && path.endsWith("/"))
+			.forEach(path -> members.put(path, new HashSet<>()));
+		if (members.isEmpty()) return members;
+		folderPasses++;
+		for (Resource resource : resources.values()) {
+			if ("zip".equals(resource.kind())) continue;
+			String path = resource.sourcePath();
+			for (int slash = path.indexOf('/'); slash >= 0; slash = path.indexOf('/', slash + 1)) {
+				Set<String> inside = members.get(path.substring(0, slash + 1));
+				if (inside != null) inside.add(resource.resourceId());
+			}
+		}
+		return members;
+	}
+
+	private void folder(SourceLink link, Map<String, Resource> resources, Map<String, Set<String>> folders) {
 		String folder = link.sourcePath();
 		for (String id : link.resourceIds()) {
 			if (!resources.containsKey(id)) problems.add("sourceToId " + folder + ": unknown resource " + id);
 		}
-		Set<String> inside = new HashSet<>();
-		resources.values().stream().filter(resource -> !"zip".equals(resource.kind()) && resource.sourcePath().startsWith(folder))
-			.forEach(resource -> inside.add(resource.resourceId()));
+		Set<String> inside = folders.getOrDefault(folder, Set.of());
+		// The owners that claim the folder are the owners of the files its entry lists: at most one lesson and one
+		// stage, because only a lesson and a stage may share a path without being a content conflict.
+		Set<String> claims = new HashSet<>();
+		Set<String> lessons = new HashSet<>();
+		Set<String> stages = new HashSet<>();
+		for (String id : link.resourceIds()) {
+			Resource member = resources.get(id);
+			if (member == null) continue;
+			claims.add(owner(member));
+			if (member.stageId() != null) stages.add(member.stageId());
+			else if (member.lessonId() != null) lessons.add(member.lessonId());
+		}
+		if (lessons.size() > 1 || stages.size() > 1) {
+			problems.add("folder " + folder + " cannot be claimed by two lessons or two stages");
+		}
 		if (!folder.endsWith("/") || link.resourceIds().size() != new HashSet<>(link.resourceIds()).size()
 				|| !inside.equals(new HashSet<>(link.resourceIds()))) {
 			problems.add("folder " + folder + " does not list exactly its resources");
 		}
 		if (link.zipResourceId() != null) {
 			Resource zip = resources.get(link.zipResourceId());
-			if (zip == null || !"zip".equals(zip.kind()) || !folder.equals(zip.sourcePath())
-					|| !link.resourceIds().equals(zip.memberResourceIds())) {
+			if (zip == null || !"zip".equals(zip.kind()) || !folder.equals(zip.sourcePath())) {
 				problems.add("folder ZIP does not match ordered members: " + folder);
 				return;
 			}
-			for (String id : link.resourceIds()) {
+			// A shared folder keeps one archive: its members are a subset of the listed files of its owners.
+			Set<String> listed = new HashSet<>(link.resourceIds());
+			List<String> members = zip.memberResourceIds();
+			if (members == null || members.size() != new HashSet<>(members).size() || !listed.containsAll(members)) {
+				problems.add("folder ZIP members must be a subset of its folder files: " + folder);
+				return;
+			}
+			for (String id : members) {
 				Resource member = resources.get(id);
 				if (member == null) continue;
-				if (!"file".equals(member.kind()) || !Objects.equals(member.lessonId(), zip.lessonId())
-						|| !Objects.equals(member.stageId(), zip.stageId())) {
-					problems.add("ZIP member must be a file of the same owner: " + id);
+				if (!"file".equals(member.kind()) || !claims.contains(owner(member))) {
+					problems.add("ZIP member must be a file of an owner that claims the folder: " + id);
 				}
 			}
+			if (!claims.contains(owner(zip))) {
+				problems.add("folder ZIP must be owned by an owner that claims the folder: " + folder);
+			}
 		}
+	}
+
+	private static String owner(Resource resource) {
+		return resource.lessonId() != null ? resource.lessonId() : resource.stageId();
+	}
+
+	private static String ownerKind(Resource resource) {
+		return resource.lessonId() != null ? "lesson" : "stage";
 	}
 
 	private void register(String id) {

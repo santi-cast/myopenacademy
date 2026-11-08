@@ -2,7 +2,12 @@ package dev.codeacademy.content;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.zip.ZipInputStream;
 
@@ -221,6 +226,105 @@ class ZipContentTest {
 		Map<String, String> before = snapshot();
 		v1.rejected("schemaVersion 1 does not allow");
 		assertThat(snapshot()).isEqualTo(before);
+	}
+
+	@ParameterizedTest @ValueSource(strings = { "invalidFolder", "omittedMember", "unknownArchive" })
+	void reportsTheSameProblemsForBrokenFoldersAndArchives(String rule) throws Exception {
+		fixture.editManifest(m -> {
+			ObjectNode folder = ContentFixture.link(m, ZipFixture.FOLDER);
+			switch (rule) {
+				case "invalidFolder" -> ((ArrayNode) folder.get("resourceIds")).remove(2);
+				case "omittedMember" -> ((ArrayNode) ContentFixture.resource(m, ZipFixture.ZIP).get("memberResourceIds")).remove(2);
+				case "unknownArchive" -> folder.put("zipResourceId", "demo-unknown");
+				default -> throw new AssertionError(rule);
+			}
+		});
+		if (rule.equals("omittedMember")) ZipFixture.refresh(fixture);
+		Map<String, String> before = snapshot();
+		var problems = assertThrows(ContentValidationException.class, fixture::load).problems();
+		assertThat(snapshot()).isEqualTo(before);
+		switch (rule) {
+			case "invalidFolder" -> assertThat(problems).containsExactly(
+				"ZIP must decorate its exact ordered folder: demo-folder-zip",
+				"folder fase-01/codigo/hola/ does not list exactly its resources",
+				"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
+			case "omittedMember" -> assertThat(problems).containsExactly(
+				"ZIP does not match registered copied members: demo-folder-zip");
+			default -> assertThat(problems).containsExactly(
+				"ZIP must decorate its exact ordered folder: demo-folder-zip",
+				"folder ZIP does not match ordered members: fase-01/codigo/hola/");
+		}
+	}
+
+	@Test void provenanceBuildsOneResourceMapHoweverManyArchivesItChecks() throws Exception {
+		int oneArchive = provenanceResourcePasses();
+		installSoloZip();
+		assertThat(fixture.load().manifest().resources()).filteredOn(r -> "zip".equals(r.kind())).hasSize(2);
+		assertThat(provenanceResourcePasses()).as("passes over the resources with two archives").isEqualTo(oneArchive);
+	}
+
+	@Test void folderMembershipIsIndexedInOnePassOverTheResources() throws Exception {
+		installSoloZip();
+		Manifest manifest = fixture.load().manifest();
+		assertThat(manifest.sourceToId()).filteredOn(link -> link.resourceIds() != null).hasSize(2);
+		assertThat(ManifestValidator.folderPasses(manifest)).as("passes over the resources for two folders").isEqualTo(1);
+	}
+
+	@Test void archivesFindTheirFolderWithoutScanningTheSourceLinksEachTime() throws Exception {
+		int oneArchive = validatorLinkPasses();
+		installSoloZip();
+		assertThat(validatorLinkPasses()).as("passes over sourceToId with two archives").isEqualTo(oneArchive);
+	}
+
+	/** A second registered archive, for the one-file folder of the fixture, written by the canonical helper. */
+	void installSoloZip() {
+		fixture.editManifest(m -> {
+			String folder = "fase-01/codigo/solo/";
+			ContentFixture.link(m, folder).put("zipResourceId", "demo-solo-zip");
+			ObjectNode zip = ((ArrayNode) m.get("resources")).addObject();
+			zip.put("resourceId", "demo-solo-zip").put("lessonId", "demo-01.01").put("kind", "zip")
+				.put("sourcePath", folder).put("localPath", "demo/resources/solo.zip").put("mediaType", "application/zip")
+				.put("fileName", "solo.zip").putArray("memberResourceIds").add("demo-01.01-r-solo");
+			try (var output = Files.newOutputStream(fixture.root.resolve("demo/resources/solo.zip"))) {
+				Manifest manifest = tools.jackson.databind.json.JsonMapper.builder().build().treeToValue(m, Manifest.class);
+				FolderZip.write(manifest, fixture.root, "demo-solo-zip", output);
+			}
+			catch (Exception ex) { throw new IllegalStateException(ex); }
+		});
+		ZipFixture.refresh(fixture);
+	}
+
+	int provenanceResourcePasses() throws Exception {
+		Manifest manifest = fixture.load().manifest();
+		var resources = new CountingList<>(manifest.resources());
+		List<String> problems = new ArrayList<>();
+		CopyProvenance.validate(counting(manifest, resources, manifest.sourceToId()), fixture.root.toRealPath(), problems);
+		assertThat(problems).isEmpty();
+		return resources.passes;
+	}
+
+	int validatorLinkPasses() {
+		Manifest manifest = fixture.load().manifest();
+		var links = new CountingList<>(manifest.sourceToId());
+		assertThat(ManifestValidator.validate(counting(manifest, manifest.resources(), links))).isEmpty();
+		return links.passes;
+	}
+
+	static Manifest counting(Manifest m, List<Manifest.Resource> resources, List<Manifest.SourceLink> links) {
+		return new Manifest(m.schemaVersion(), m.source(), m.course(), m.phases(), m.lessons(), resources, links,
+			m.projectStages(), m.provenance());
+	}
+
+	/** Counts every traversal of a read-only list: loops, streams, forEach and bulk copies all start an iterator. */
+	static final class CountingList<T> extends AbstractList<T> {
+		final List<T> items;
+		int passes;
+
+		CountingList(List<T> items) { this.items = items; }
+		@Override public T get(int index) { return items.get(index); }
+		@Override public int size() { return items.size(); }
+		@Override public Iterator<T> iterator() { passes++; return super.iterator(); }
+		@Override public ListIterator<T> listIterator(int index) { passes++; return super.listIterator(index); }
 	}
 
 	void rejectUnchanged() throws Exception {
