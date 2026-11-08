@@ -293,4 +293,14 @@ class RealLessonContentTest {
 		assertThat(HeadingIdsTest.expectedIds("real")).hasSize(64);
 		assertThat(HeadingIds.forMarkdown(source)).hasSize(64);
 	}
+
+	@Test
+	void theOnlyNonAsciiResourceKeepsItsDownloadLink() {
+		String body = content.lessons().get("java-12.16").bodyHtml();
+
+		assertThat(body).contains("<a href=\"/api/resources/java-12.16-r-presupuesto-a");
+		assertThat(body).contains("presupuesto año 2026.txt</a>");
+		String anchor = "<a href=\"/api/resources/java-12.16-r-presupuesto-año-2026txt-0979a0bb\">presupuesto año 2026.txt</a>";
+		assertThat(body.split(Pattern.quote(anchor), -1)).as("one anchor in each of the three listings").hasSize(4);
+	}
 }

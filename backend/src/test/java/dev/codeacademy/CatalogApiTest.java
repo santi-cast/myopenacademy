@@ -256,6 +256,18 @@ class CatalogApiTest {
 	}
 
 	@Test
+	void aResourceWhoseIdHasAUnicodeLetterDownloadsThroughItsEncodedLink() throws Exception {
+		String id = "java-12.16-r-presupuesto-año-2026txt-0979a0bb";
+		byte[] expected = Files.readAllBytes(CONTENT.resolve("java/resources/" + id));
+
+		var response = browser.download("/api/resources/" + java.net.URLEncoder.encode(id, StandardCharsets.UTF_8), "*/*");
+
+		assertThat(response.statusCode()).isEqualTo(200);
+		assertThat(response.body()).isEqualTo(expected);
+		assertThat(response.headers().allValues("X-Content-Type-Options")).containsExactly("nosniff");
+	}
+
+	@Test
 	void pathLikeResourceIdsNeverReachAFile() throws Exception {
 		for (String path : List.of("/api/resources/..%2F..%2Fjava%2Fmanifest.json",
 				"/api/resources/..%2F..%2Fcontent%2Fjava%2Fresources%2F" + HELLO + ".java",

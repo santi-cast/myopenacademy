@@ -75,6 +75,44 @@ class ContentSanitizerTest {
 	}
 
 	@Test
+	void aResourceLinkMayNameUnicodeLettersWhileEveryOtherFormStaysStrict() {
+		String unicode = "/api/resources/java-12.16-r-presupuesto-año-2026txt-0979a0bb";
+		List<String> bad = List.of("/api/resources/a/b", "/api/resources/a%2Fb", "/api/resources/a b",
+				"/api/resources/año\u0000", "/lessons/demo-año", "/stages/demo-año", "/courses/demo-año");
+		Set<String> hrefs = new java.util.HashSet<>(bad);
+		hrefs.add(unicode);
+		List<String> removed = new ArrayList<>();
+
+		String clean = ContentSanitizer.sanitize("<p><a href=\"" + unicode + "\">presupuesto año 2026.txt</a></p>", IDS,
+				hrefs, removed);
+
+		assertThat(removed).isEmpty();
+		assertThat(clean).contains("<a href=\"/api/resources/java-12.16-r-presupuesto-a").contains("presupuesto año 2026.txt</a>");
+		for (String href : bad) {
+			List<String> dropped = new ArrayList<>();
+			ContentSanitizer.sanitize("<p><a href=\"" + href + "\">x</a></p>", IDS, hrefs, dropped);
+			assertThat(dropped).as(href).isNotEmpty();
+		}
+	}
+
+	@Test
+	void unicodeResourceLinksRejectLookalikeSeparatorsInvisiblesAndAnythingOutsideTheSet() {
+		String p = "/api/resources/";
+		for (String href : List.of(p + "a／b", p + "a∕b", p + "a⁄b", p + "a‮b", p + "a​b", p + "a﻿b",
+				p + "̃", p + "ñ", p + "a?b", p + "a#b", p + "a\\b", p + "a:b", p + "a\u0085", p + "a b", p)) {
+			List<String> removed = new ArrayList<>();
+			ContentSanitizer.sanitize("<p><a href=\"" + href + "\">x</a></p>", IDS, Set.of(href), removed);
+			assertThat(removed).as(href).isNotEmpty();
+		}
+		String real = p + "java-12.16-r-presupuesto-año-2026txt-0979a0bb";
+		List<String> removed = new ArrayList<>();
+		String clean = ContentSanitizer.sanitize("<p><a href=\"" + real + "\">ok</a> <a href=\"" + p + "ajeno-ñ\">no</a></p>", IDS,
+				Set.of(real), removed);
+		assertThat(clean).isEqualTo("<p><a href=\"" + real + "\">ok</a> no</p>");
+		assertThat(removed).containsExactly("<a>", "attribute [href] on <a>");
+	}
+
+	@Test
 	void sourceTargetAndRelAreDiscardedAndReplacedByThePolicy() {
 		List<String> removed = new ArrayList<>();
 

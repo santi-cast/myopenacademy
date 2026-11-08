@@ -21,8 +21,10 @@ import org.owasp.html.PolicyFactory;
 final class ContentSanitizer {
 
 	static final Pattern LANGUAGE_CLASS = Pattern.compile("language-[a-z0-9+#-]+");
+	// Resource IDs keep the letters of their source file name (for example «año»), so only that segment admits
+	// Unicode letters and digits; lesson, stage and course IDs stay ASCII, and no form admits '/', '%' or spaces.
 	static final Pattern HREF = Pattern.compile(
-			"(/(?:lessons|stages)/[A-Za-z0-9._-]+(#[^\\s\"<>]+)?|/courses/[A-Za-z0-9._-]+|/api/resources/[A-Za-z0-9._-]+|#[^\\s\"<>]+|https?://[^\\s\"<>]+)");
+			"(/(?:lessons|stages)/[A-Za-z0-9._-]+(#[^\\s\"<>]+)?|/courses/[A-Za-z0-9._-]+|/api/resources/[\\p{L}\\p{N}._-]+|#[^\\s\"<>]+|https?://[^\\s\"<>]+)");
 	static final String EXTERNAL_TARGET = "_blank";
 	static final String EXTERNAL_REL = "noopener noreferrer";
 
