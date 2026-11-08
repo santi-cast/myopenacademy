@@ -2,7 +2,7 @@
 
 Academia web para estudiar programación, empezando por Java. El objetivo es usarla personalmente cuando esté funcionando y presentarla como proyecto de portfolio, con apoyo de agentes de IA para desarrollarla.
 
-**Estado:** H1–H4 cerrados; H4 integrado en `main` mediante `a3d3976` (base actual `9920abe`). H5 autorizado y en curso en `feat/h5-content-import`: contenido real importado desde `c8e29163d59f41830eff2d449bf8b02a19905f61` (199 lecciones y 14 etapas), con etapas, recursos y actualización comparada implementados, y la conservación del progreso de dos usuarios verificada (T6). Implementación de H5 completa (T1–T7) en la rama local `feat/h5/07-content-import`; solo queda el merge, que requiere autorización aparte, igual que la publicación.
+**Estado:** H1–H5 cerrados. H4 se integró en `main` mediante `a3d3976` y H5 mediante `1333ed8`: contenido real importado desde `c8e29163d59f41830eff2d449bf8b02a19905f61` (199 lecciones y 14 etapas), con etapas, recursos y actualización comparada implementados, y la conservación del progreso de dos usuarios verificada. Solo trabajo local; la publicación requiere autorización aparte (H7).
 Este archivo es el plan principal versionado; Engram complementa su continuidad, no lo reemplaza.
 
 ## 1. Decisiones confirmadas
@@ -185,7 +185,7 @@ Secuencia de trabajo con estado explícito; los hitos futuros se detallarán en 
 | H2. Diseño | Cerrado | Pantallas, modelo, API, arquitectura y manifiesto mínimo | Recorrido, separación de datos y contratos aprobados en diseño |
 | H3. Base técnica | Cerrado | Frontend, backend, entorno local y pruebas iniciales | Arranque reproducible documentado y comprobaciones técnicas e independientes completadas |
 | H4. Primer recorrido | Cerrado e integrado en main (`a3d3976`) | Una lección real importada (02.01), cuentas y avance persistente | Cumplido: dos usuarios conservan avances distintos tras reiniciar el backend, sin acceso cruzado (recorrido E2E aislado, `npm run test:e2e:journey`) |
-| H5. Contenido disponible | Autorizado; en curso, no completado | 199 lecciones y 14 etapas disponibles del origen fijado (importadas), Proyecto evolutivo separado, imágenes/tachado/ZIP y actualización comparada | Inventario contrastado, recursos seguros y actualización incremental con conservación del progreso de dos usuarios en pruebas aisladas |
+| H5. Contenido disponible | Cerrado e integrado en main (`1333ed8`) | 199 lecciones y 14 etapas disponibles del origen fijado (importadas), Proyecto evolutivo separado, imágenes/tachado/ZIP y actualización comparada | Cumplido: inventario contrastado, recursos seguros y actualización incremental con conservación del progreso de dos usuarios en pruebas aisladas |
 | H6. Validación de estudio | No completado; pendiente | Uso real por el propietario | Recorrido probado y problemas registrados/priorizados |
 | H7. Publicación | No completado; pendiente | Alojamiento, seguridad, respaldos y despliegue | Preparación revisada y autorización explícita antes de publicar |
 
@@ -227,7 +227,7 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 
 **H4 integrado; H5 autorizado en su rama de trabajo.** El [archivo de tareas de H4](odd/tasks/h4-first-journey.md) conserva su evidencia; el [alcance aprobado y tareas de H5](odd/tasks/h5-content-import.md) rige lo que queda por cerrar. El agente no lee ni modifica `.env` o `.env.example`, no usa la base del propietario para verificar ni borra volúmenes.
 
-**Próximo paso:** con los [contratos H5 del manifiesto](docs/manifiesto.md#h5-propuesta-v2-pendiente-de-implementar), la [API de etapas](docs/api.md#h5-contrato-aditivo-de-etapas-pendiente-de-implementar) el contenido real importado y la conservación del progreso verificada, H5 está lista para que el propietario decida el merge, que requiere una aprobación aparte. Búsqueda, personalización y publicación quedan fuera.
+**Próximo paso:** H6, validación de estudio: el propietario usa la aplicación con el curso completo y se registran y priorizan los problemas encontrados. La deuda técnica que dejó H5 está anotada en el [registro de H5](odd/tasks/h5-content-import.md) (L65). Búsqueda, personalización y publicación siguen fuera.
 
 El antiguo «Pendiente de seguridad para H4» quedó resuelto: los 403 que no son de CSRF responden `ACCESS_DENIED`.
 
