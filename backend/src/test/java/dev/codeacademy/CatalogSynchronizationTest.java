@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -48,9 +49,13 @@ class CatalogSynchronizationTest {
 	Manifest java;
 	ContentFixture demo;
 
+	@BeforeAll
+	static void loadRealCourse() {
+		realJava = ContentLoader.load(CatalogApiTest.CONTENT, "java/manifest.json").manifest();
+	}
+
 	@BeforeEach
 	void synchronizedBase() {
-		if (realJava == null) realJava = ContentLoader.load(CatalogApiTest.CONTENT, "java/manifest.json").manifest();
 		java = realJava;
 		demo = ContentFixture.copyInto(tempDir);
 		synchronizer.synchronize(List.of(java, demo.load().manifest()));

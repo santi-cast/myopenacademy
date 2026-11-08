@@ -393,7 +393,7 @@ class ContentLoaderTest {
 	@ParameterizedTest
 	@ValueSource(strings = { "codigo/.envrc", "codigo/env", "../../.env", "codigo/.ENV", "codigo/.GIT/config",
 		"codigo/.env_x", "codigo/.gitignore", "%2E%2E/%2E%2E/.env", "codigo/.git/../missing.md", "codigo/.env?x",
-		"codigo/.environment", "codigo/x.env", "codigo/.git.bak/x" })
+		"codigo/.environment", "codigo/x.env", "codigo/.git.bak/x", "codigo/.env.x?y" })
 	void stillRejectsUnresolvedLinksThatAreNotProtected(String destination) {
 		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [x](" + destination + ").");
 		fixture.rejected("demo-01.01: unresolved link " + destination);
@@ -408,8 +408,8 @@ class ContentLoaderTest {
 
 	@Test
 	void rejectsAResourceIdWithCombiningMarks() {
-		renameSolo("demo-01.01-r-año");
-		fixture.rejected("resource id demo-01.01-r-año contains combining marks; use composed (NFC) characters");
+		renameSolo("demo-01.01-r-an\u0303o");
+		fixture.rejected("resource id demo-01.01-r-an\u0303o contains combining marks; use composed (NFC) characters");
 	}
 
 	@ParameterizedTest
@@ -421,8 +421,15 @@ class ContentLoaderTest {
 
 	@Test
 	void acceptsAResourceIdWithComposedLetters() {
-		renameSolo("demo-01.01-r-año");
-		assertThat(fixture.load().resources()).containsKey("demo-01.01-r-año");
+		renameSolo("demo-01.01-r-a\u00f1o");
+		assertThat(fixture.load().resources()).containsKey("demo-01.01-r-a\u00f1o");
+	}
+
+	@Test
+	void rejectsAResourceIdThatIsNotInComposedForm() {
+		// U+212B ANGSTROM SIGN is a letter without combining marks, but NFC turns it into U+00C5.
+		renameSolo("demo-01.01-r-\u212B");
+		fixture.rejected("resource id demo-01.01-r-\u212B is not in composed (NFC) form");
 	}
 
 	private void renameSolo(String id) {

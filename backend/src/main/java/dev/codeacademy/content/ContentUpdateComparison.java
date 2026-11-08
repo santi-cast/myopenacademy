@@ -208,11 +208,15 @@ final class ContentUpdateComparison {
 
     // Package-private so the offline generator reuses the same protected-name and Git-object rules (visibility only).
     static void safeNames(String path) {
+        if (protectedName(path)) throw new IllegalArgumentException("protected paths are not allowed");
+    }
+
+    /** Whether any segment is .git, .env or .env.*: the names the protection policy never reads or copies. */
+    static boolean protectedName(String path) {
         for (String segment : path.split("/")) {
-            if (segment.equals(".git") || segment.equals(".env") || segment.startsWith(".env.")) {
-                throw new IllegalArgumentException("protected paths are not allowed");
-            }
+            if (segment.equals(".git") || segment.equals(".env") || segment.startsWith(".env.")) return true;
         }
+        return false;
     }
 
     static void safeSource(String path) {
