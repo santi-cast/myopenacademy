@@ -217,7 +217,7 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 - Sin remotos configurados ni contenido publicado en GitHub. No se crean remotos en este cierre.
 - El segundo commit documental `a6f5206` ya cerró H2 y separó los contratos en `docs/api.md` y `docs/manifiesto.md`, con el mensaje `docs: close H2 design and split API and manifest contracts`.
 - Trabajo de H3 en `feat/h3-base`, con commits locales pequeños y coherentes como unidades de revisión; sin cadenas de ramas ni PR. El propietario autorizó integrarlo en `main` tras superar las pruebas, con `--no-ff` y el mensaje `Merge H3: technical foundation`. No se autoriza publicar ni crear remotos. Pruebas/documentación acompañan al comportamiento; no versionar secretos, datos personales ni temporales.
-- H4 se trabajó en `feat/h4-first-journey` (desde `main` `b5847fa`) y se integró con `a3d3976`. H5 parte de `main` `9920abe` en `feat/h5-content-import`, con unidades revisables y commits solo locales a cargo del orquestador. La autorización de H5 no autoriza merge, remotos ni push.
+- H4 se trabajó en `feat/h4-first-journey` (desde `main` `b5847fa`) y se integró con `a3d3976`. H5 partió de `main` `9920abe` como cadena local de ramas (`feat/h5-content-import` y `feat/h5/02` a `07`), con unidades revisables y commits solo locales; el propietario aprobó aparte el merge `1333ed8` y después se borraron las ramas integradas. Sin remotos ni push.
 - Antes de publicar, decidir visibilidad, licencias y material del curso distribuible. Portfolio distinguirá autoría educativa y contribuciones de plataforma.
 - Desarrollo con agentes de IA, sin exigir dominar previamente React, TypeScript o Spring ni convertir cada implementación en una clase. Aprendizaje gradual sin bloquear entregas.
 - Otro modelo podrá actuar como asesor; sus recomendaciones se evaluarán, sin otorgarle escritura ni autoridad para cambiar alcance por sí solo.
@@ -225,7 +225,7 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 
 ## 8. Próximo paso
 
-**H4 integrado; H5 autorizado en su rama de trabajo.** El [archivo de tareas de H4](odd/tasks/h4-first-journey.md) conserva su evidencia; el [alcance aprobado y tareas de H5](odd/tasks/h5-content-import.md) rige lo que queda por cerrar. El agente no lee ni modifica `.env` o `.env.example`, no usa la base del propietario para verificar ni borra volúmenes.
+**H4 y H5 integrados.** Los archivos de tareas de [H4](odd/tasks/h4-first-journey.md) y [H5](odd/tasks/h5-content-import.md) conservan su evidencia. El agente no lee ni modifica `.env` o `.env.example`, no usa la base del propietario para verificar ni borra volúmenes.
 
 **Próximo paso:** H6, validación de estudio: el propietario usa la aplicación con el curso completo y se registran y priorizan los problemas encontrados. La deuda técnica que dejó H5 está anotada en el [registro de H5](odd/tasks/h5-content-import.md) (L65). Búsqueda, personalización y publicación siguen fuera.
 
