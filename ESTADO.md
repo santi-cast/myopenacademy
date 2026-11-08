@@ -18,6 +18,8 @@ Lo que ya existe en los otros proyectos:
 
 **9 de noviembre de 2026:** prueba de importación hecha y **`PLAN.md` reescrito con el autor** para MyOpenAcademy, con los hitos H6 a H11 hasta el pack base 1.0 (unos 20 días de trabajo). **Siguiente: H7, cursos como DLC** (`PLAN.md`, apartado 4): rama `feat/h7-…`, tareas en `odd/tasks/` y, como primer paso, el curso de ejemplo pequeño. H6 (uso real) va en paralelo.
 
+**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`).
+
 Decisiones del autor del 9 de noviembre de 2026, recogidas en `PLAN.md`:
 
 - **Java mientras tanto, en el Code Academy original**, que sigue intacto y con Java importado. H7 saca `content/java/` sin mantener la lectura del manifiesto antiguo. El original y esta academia no se arrancan a la vez (puerto `5433`, hasta H10).
