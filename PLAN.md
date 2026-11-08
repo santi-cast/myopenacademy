@@ -2,7 +2,7 @@
 
 Academia web para estudiar programación, empezando por Java. El objetivo es usarla personalmente cuando esté funcionando y presentarla como proyecto de portfolio, con apoyo de agentes de IA para desarrollarla.
 
-**Estado:** H1–H4 cerrados; H4 integrado en `main` mediante `a3d3976` (base actual `9920abe`). H5 autorizado y en curso en `feat/h5-content-import`: contenido real importado desde `c8e29163d59f41830eff2d449bf8b02a19905f61` (199 lecciones y 14 etapas), con etapas, recursos y actualización comparada implementados; quedan la verificación T6 con dos usuarios sobre el contenido real, la conciliación final T7 y el merge. Solo trabajo local; merge y publicación requieren autorización aparte.
+**Estado:** H1–H4 cerrados; H4 integrado en `main` mediante `a3d3976` (base actual `9920abe`). H5 autorizado y en curso en `feat/h5-content-import`: contenido real importado desde `c8e29163d59f41830eff2d449bf8b02a19905f61` (199 lecciones y 14 etapas), con etapas, recursos y actualización comparada implementados, y la conservación del progreso de dos usuarios verificada (T6). Implementación de H5 completa (T1–T7) en la rama local `feat/h5/07-content-import`; solo queda el merge, que requiere autorización aparte, igual que la publicación.
 Este archivo es el plan principal versionado; Engram complementa su continuidad, no lo reemplaza.
 
 ## 1. Decisiones confirmadas
@@ -227,7 +227,7 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 
 **H4 integrado; H5 autorizado en su rama de trabajo.** El [archivo de tareas de H4](odd/tasks/h4-first-journey.md) conserva su evidencia; el [alcance aprobado y tareas de H5](odd/tasks/h5-content-import.md) rige lo que queda por cerrar. El agente no lee ni modifica `.env` o `.env.example`, no usa la base del propietario para verificar ni borra volúmenes.
 
-**Próximo paso:** con los [contratos H5 del manifiesto](docs/manifiesto.md#h5-propuesta-v2-pendiente-de-implementar), la [API de etapas](docs/api.md#h5-contrato-aditivo-de-etapas-pendiente-de-implementar) y el contenido real ya importado, falta T6 (actualización aislada con conservación del progreso de dos usuarios sobre el contenido real) y la conciliación final T7. Búsqueda, personalización y publicación quedan fuera. El merge requiere una aprobación aparte del propietario.
+**Próximo paso:** con los [contratos H5 del manifiesto](docs/manifiesto.md#h5-propuesta-v2-pendiente-de-implementar), la [API de etapas](docs/api.md#h5-contrato-aditivo-de-etapas-pendiente-de-implementar) el contenido real importado y la conservación del progreso verificada, H5 está lista para que el propietario decida el merge, que requiere una aprobación aparte. Búsqueda, personalización y publicación quedan fuera.
 
 El antiguo «Pendiente de seguridad para H4» quedó resuelto: los 403 que no son de CSRF responden `ACCESS_DENIED`.
 
