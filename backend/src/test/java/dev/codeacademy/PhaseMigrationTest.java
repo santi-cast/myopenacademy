@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class PhaseMigrationTest {
 
-	private static final List<String> PROGRESS = List.of("users", "enrollments", "lesson_states", "exercise_states");
+	private static final List<String> PROGRESS = List.of("users", "lesson_states", "exercise_states");
 
 	static PostgreSQLContainer postgres;
 	static JdbcTemplate jdbc;
@@ -58,6 +58,7 @@ class PhaseMigrationTest {
 		synchronizeAsV4(java);
 		markProgressAsV4();
 		var progress = progressSnapshot();
+		var enrollments = legacyEnrollmentsSnapshot();
 		List<Map<String, Object>> lessons = jdbc.queryForList(
 				"select id, course_id, title, position, available, source_available from code_academy.lessons order by id");
 		assertThat(lessons).hasSize(199);
@@ -87,6 +88,9 @@ class PhaseMigrationTest {
 				"select id, course_id, title, position, available, source_available from code_academy.lessons order by id"))
 			.isEqualTo(lessons);
 		assertThat(progressSnapshot()).isEqualTo(progress);
+		assertThat(legacyEnrollmentsSnapshot()).isEqualTo(enrollments);
+		assertThat(jdbc.queryForList("select last_opened_stage_id from code_academy.enrollments order by id",
+				String.class)).hasSize(enrollments.size()).containsOnlyNulls();
 	}
 
 	private static void migrateTo(String version) {
@@ -122,6 +126,12 @@ class PhaseMigrationTest {
 		jdbc.update("insert into code_academy.exercise_states (enrollment_id, course_id, exercise_id, state, updated_at) "
 				+ "values (?, 'java', 'java-02.01-e01', 'solved', ?), (?, 'java', 'java-02.01-e02', 'in_progress', ?)",
 				enrollment, at, enrollment, at);
+	}
+
+	/** Every V4 enrollment column, without the independent stage continuation added at V6. */
+	private static List<Map<String, Object>> legacyEnrollmentsSnapshot() {
+		return jdbc.queryForList("select id, user_id, course_id, last_opened_lesson_id, created_at "
+				+ "from code_academy.enrollments order by id");
 	}
 
 	private static List<Map<String, Object>> progressSnapshot() {

@@ -37,8 +37,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * One server for the progress tests, synchronized from a copy of the real Java course plus the synthetic demo course:
- * java has 199 lessons with only java-02.01 available (9 exercises); demo has demo-01.01 (2 exercises) and demo-01.02
- * available and demo-02.01 pending. Subclasses share this context and its database.
+ * java has all 199 lessons available (java-02.01 keeps its 9 exercises); demo has demo-01.01 (2 exercises) and
+ * demo-01.02 available and demo-02.01 pending, the one genuinely pending lesson. Subclasses share this context and its
+ * database.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)

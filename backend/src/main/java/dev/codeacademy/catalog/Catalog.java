@@ -20,7 +20,10 @@ public final class Catalog {
 	record LessonRef(CourseContent course, Lesson lesson) {
 	}
 
-	/** A registered resource with the lesson it belongs to. */
+	record StageRef(CourseContent course, Manifest.Stage stage) {
+	}
+
+	/** A registered resource with exactly one lesson or stage owner. */
 	record ResourceRef(CourseContent course, Manifest.Resource resource, ResourceFile file) {
 	}
 
@@ -29,6 +32,7 @@ public final class Catalog {
 	private final Map<String, CourseContent> coursesById = new LinkedHashMap<>();
 	private final Map<String, LessonRef> lessons = new LinkedHashMap<>();
 	private final Map<String, ResourceRef> resources = new LinkedHashMap<>();
+	private final Map<String, StageRef> stages = new LinkedHashMap<>();
 
 	private Catalog(Path contentRoot, List<CourseContent> courses) {
 		this.contentRoot = contentRoot;
@@ -36,6 +40,7 @@ public final class Catalog {
 		for (CourseContent course : courses) {
 			coursesById.put(course.manifest().course().id(), course);
 			course.manifest().lessons().forEach(lesson -> lessons.put(lesson.id(), new LessonRef(course, lesson)));
+			project(course).forEach(stage -> stages.put(stage.id(), new StageRef(course, stage)));
 			course.manifest().resources().forEach(resource -> resources.put(resource.resourceId(),
 					new ResourceRef(course, resource, course.resources().get(resource.resourceId()))));
 		}
@@ -62,8 +67,29 @@ public final class Catalog {
 		return Optional.ofNullable(lessons.get(lessonId));
 	}
 
+	Optional<StageRef> stage(String stageId) {
+		return Optional.ofNullable(stages.get(stageId));
+	}
+
+	/** V1 has no project; stages have their own independent position space. */
+	static List<Manifest.Stage> project(CourseContent course) {
+		List<Manifest.Stage> stages = course.manifest().projectStages();
+		return stages == null ? List.of() : stages.stream().sorted(Comparator.comparing(Manifest.Stage::position)).toList();
+	}
+
 	Optional<ResourceRef> resource(String resourceId) {
 		return Optional.ofNullable(resources.get(resourceId));
+	}
+
+	/** Availability is resolved only within the resource's validated course and exact declared owner. */
+	static boolean ownerAvailable(ResourceRef ref) {
+		Manifest.Resource resource = ref.resource();
+		if (resource.lessonId() != null) {
+			return ref.course().manifest().lessons().stream()
+				.anyMatch(lesson -> lesson.id().equals(resource.lessonId()) && lesson.available());
+		}
+		return ref.course().manifest().projectStages() != null && ref.course().manifest().projectStages().stream()
+			.anyMatch(stage -> stage.id().equals(resource.stageId()) && stage.available());
 	}
 
 	/** The course's phases in syllabus order. */

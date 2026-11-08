@@ -25,6 +25,11 @@ import dev.codeacademy.progress.ProgressViews.LessonStateResult;
 import dev.codeacademy.progress.ProgressViews.MyCourse;
 import dev.codeacademy.progress.ProgressViews.MyCourses;
 import dev.codeacademy.progress.ProgressViews.Progress;
+import dev.codeacademy.progress.ProgressViews.StageContinuation;
+import dev.codeacademy.progress.ProgressViews.StageCounts;
+import dev.codeacademy.progress.ProgressViews.StageProgress;
+import dev.codeacademy.progress.ProgressViews.StageState;
+import dev.codeacademy.progress.ProgressViews.StageStateResult;
 
 /**
  * Enrollments, states and continuation of one user, always the session's: no method takes another owner. Catalog
@@ -41,7 +46,10 @@ class ProgressService {
 	private record ExerciseRow(String id, String courseId, String lessonId, boolean lessonAvailable) {
 	}
 
-	private record EnrollmentRow(long id, String lastOpenedLessonId) {
+	private record EnrollmentRow(long id, String lastOpenedLessonId, String lastOpenedStageId) {
+	}
+
+	private record StageRow(String id, String courseId, boolean available) {
 	}
 
 	/** The enrollment a mark writes into, and whether this very operation created it. */
@@ -61,11 +69,12 @@ class ProgressService {
 	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	MyCourses courses(UUID user) {
 		List<MyCourse> courses = jdbc.query("""
-				select c.id, c.title, e.id as enrollment_id, e.last_opened_lesson_id
+				select c.id, c.title, e.id as enrollment_id, e.last_opened_lesson_id, e.last_opened_stage_id
 				from code_academy.enrollments e join code_academy.courses c on c.id = e.course_id
 				where e.user_id = ? order by c.id
 				""", (row, i) -> {
-			var enrollment = new EnrollmentRow(row.getLong("enrollment_id"), row.getString("last_opened_lesson_id"));
+			var enrollment = new EnrollmentRow(row.getLong("enrollment_id"), row.getString("last_opened_lesson_id"),
+					row.getString("last_opened_stage_id"));
 			return new MyCourse(new CourseView(row.getString("id"), row.getString("title")),
 					enrollment(row.getString("id"), enrollment));
 		}, user);
@@ -167,7 +176,7 @@ class ProgressService {
 				update code_academy.enrollments set last_opened_lesson_id = ?
 				where id = ? and last_opened_lesson_id is distinct from ?
 				""", lesson.id(), enrollment.id(), lesson.id());
-		return enrollment(courseId, new EnrollmentRow(enrollment.id(), lesson.id()));
+		return enrollment(courseId, new EnrollmentRow(enrollment.id(), lesson.id(), enrollment.lastOpenedStageId()));
 	}
 
 	/**
@@ -176,14 +185,96 @@ class ProgressService {
 	 * operation reports the creation and the others read the committed enrollment (READ COMMITTED sees it).
 	 */
 	private Enrolled enroll(UUID user, String courseId, String initialLessonId) {
+		return enroll(user, courseId, initialLessonId, null);
+	}
+
+	/** One insertion path for explicit additions and all kinds of first mark, including concurrent races. */
+	private Enrolled enroll(UUID user, String courseId, String initialLessonId, String initialStageId) {
 		List<Long> created = jdbc.queryForList("""
-				insert into code_academy.enrollments (user_id, course_id, last_opened_lesson_id, created_at)
-				values (?, ?, ?, now())
+				insert into code_academy.enrollments (user_id, course_id, last_opened_lesson_id, last_opened_stage_id, created_at)
+				values (?, ?, ?, ?, now())
 				on conflict (user_id, course_id) do nothing
 				returning id
-				""", Long.class, user, courseId, initialLessonId);
-		if (!created.isEmpty()) return new Enrolled(new EnrollmentRow(created.getFirst(), initialLessonId), true);
+				""", Long.class, user, courseId, initialLessonId, initialStageId);
+		if (!created.isEmpty()) return new Enrolled(new EnrollmentRow(created.getFirst(), initialLessonId, initialStageId), true);
 		return new Enrolled(findEnrollment(user, courseId).orElseThrow(), false);
+	}
+
+	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+	StageProgress stageProgress(UUID user, String courseId) {
+		requireCourse(courseId);
+		return stageProgress(courseId, findEnrollment(user, courseId).orElse(null));
+	}
+
+	private StageProgress stageProgress(String courseId, EnrollmentRow enrollment) {
+		if (enrollment == null) {
+			return new StageProgress(courseId, false, List.of(), new StageContinuation(null), stageCounts(courseId, null));
+		}
+		List<StageState> states = jdbc.query("""
+				select s.stage_id, s.state, s.updated_at
+				from code_academy.stage_states s join code_academy.project_stages p on p.id = s.stage_id
+				where s.enrollment_id = ? order by p.position
+				""", (row, i) -> new StageState(row.getString("stage_id"), row.getString("state"), utc(row)), enrollment.id());
+		return new StageProgress(courseId, true, states, new StageContinuation(enrollment.lastOpenedStageId()),
+			stageCounts(courseId, enrollment.id()));
+	}
+
+	@Transactional
+	StageStateResult markStage(UUID user, String stageId, String state) {
+		StageRow stage = requireStage(stageId);
+		if (!stage.available()) throw stageUnavailable();
+		Enrolled enrolled = enroll(user, stage.courseId(), null, stage.id());
+		long id = enrolled.enrollment().id();
+		jdbc.update("""
+				insert into code_academy.stage_states (enrollment_id, course_id, stage_id, state, updated_at)
+				values (?, ?, ?, ?, now())
+				on conflict (enrollment_id, stage_id) do update set state = excluded.state, updated_at = excluded.updated_at
+				where stage_states.state is distinct from excluded.state
+				""", id, stage.courseId(), stage.id(), state);
+		SavedState saved = jdbc.queryForObject("""
+				select state, updated_at from code_academy.stage_states where enrollment_id = ? and stage_id = ?
+				""", (row, i) -> new SavedState(row.getString("state"), utc(row)), id, stage.id());
+		return new StageStateResult(stage.courseId(), stage.id(), saved.state(), saved.updatedAt(), enrolled.created(),
+			new StageContinuation(enrolled.enrollment().lastOpenedStageId()), stageCounts(stage.courseId(), id));
+	}
+
+	@Transactional
+	StageProgress continueStageAt(UUID user, String courseId, String stageId) {
+		requireCourse(courseId);
+		StageRow stage = requireStage(stageId);
+		if (!stage.courseId().equals(courseId)) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "COURSE_MISMATCH", "Stage belongs to another course.");
+		}
+		if (!stage.available()) throw stageUnavailable();
+		EnrollmentRow enrollment = findEnrollment(user, courseId).orElseThrow(() ->
+			new ApiException(HttpStatus.CONFLICT, "COURSE_NOT_ADDED", "Course is not added."));
+		jdbc.update("""
+				update code_academy.enrollments set last_opened_stage_id = ?
+				where id = ? and last_opened_stage_id is distinct from ?
+				""", stage.id(), enrollment.id(), stage.id());
+		return stageProgress(courseId, new EnrollmentRow(enrollment.id(), enrollment.lastOpenedLessonId(), stage.id()));
+	}
+
+	private StageRow requireStage(String stageId) {
+		if (!queryable(stageId)) throw notFound();
+		return jdbc.query("select id, course_id, available from code_academy.project_stages where id = ?",
+			(row, i) -> new StageRow(row.getString("id"), row.getString("course_id"), row.getBoolean("available")), stageId)
+			.stream().findFirst().orElseThrow(ProgressService::notFound);
+	}
+
+	private StageCounts stageCounts(String courseId, Long enrollmentId) {
+		return jdbc.queryForObject("""
+				select count(*) filter (where p.available) as available, count(*) as planned,
+				       count(*) filter (where p.available and s.state = 'completed') as completed
+				from code_academy.project_stages p
+				left join code_academy.stage_states s
+				       on s.stage_id = p.id and s.course_id = p.course_id and s.enrollment_id = ?
+				where p.course_id = ?
+				""", (row, i) -> StageCounts.of(row.getInt("completed"), row.getInt("available"), row.getInt("planned")), enrollmentId, courseId);
+	}
+
+	private static ApiException stageUnavailable() {
+		return new ApiException(HttpStatus.CONFLICT, "STAGE_UNAVAILABLE", "Stage is not available.");
 	}
 
 	private Optional<LessonRow> findLesson(String lessonId) {
@@ -195,8 +286,8 @@ class ProgressService {
 
 	private Optional<EnrollmentRow> findEnrollment(UUID user, String courseId) {
 		return jdbc.query("""
-				select id, last_opened_lesson_id from code_academy.enrollments where user_id = ? and course_id = ?
-				""", (row, i) -> new EnrollmentRow(row.getLong("id"), row.getString("last_opened_lesson_id")),
+				select id, last_opened_lesson_id, last_opened_stage_id from code_academy.enrollments where user_id = ? and course_id = ?
+				""", (row, i) -> new EnrollmentRow(row.getLong("id"), row.getString("last_opened_lesson_id"), row.getString("last_opened_stage_id")),
 				user, courseId).stream().findFirst();
 	}
 

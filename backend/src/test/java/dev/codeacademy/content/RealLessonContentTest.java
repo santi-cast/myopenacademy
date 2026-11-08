@@ -82,8 +82,13 @@ class RealLessonContentTest {
 	}
 
 	@Test
-	void onlyTheImportedLessonIsRendered() {
-		assertThat(content.lessons()).containsOnlyKeys(LESSON);
+	void everyImportedLessonAndStageIsRendered() {
+		assertThat(content.manifest().lessons()).hasSize(199).allSatisfy(l -> assertThat(l.available()).isTrue());
+		assertThat(content.lessons().keySet())
+			.containsExactlyInAnyOrderElementsOf(content.manifest().lessons().stream().map(Manifest.Lesson::id).toList());
+		assertThat(content.manifest().projectStages()).hasSize(14);
+		assertThat(content.stages().keySet()).containsExactlyInAnyOrderElementsOf(
+				content.manifest().projectStages().stream().map(Manifest.Stage::id).toList());
 		assertThat(lesson.lessonId()).isEqualTo(LESSON);
 	}
 
@@ -130,29 +135,50 @@ class RealLessonContentTest {
 	}
 
 	@Test
+	void theBodyKeepsTheH4ThematicBreaksWithoutTheOneThatClosedTheExercises() {
+		assertThat(lesson.bodyHtml().split("<hr />", -1)).hasSize(7);
+		assertThat(lesson.bodyHtml()).doesNotContainPattern("<hr />\\s*<hr />");
+	}
+
+	@Test
 	void theFragmentLinkToExerciseEightPointsToTheExerciseId() {
 		assertThat(lesson.bodyHtml()).contains("<a href=\"#java-02.01-e08\">ejercicio 8</a>");
 		assertThat(String.join("", allHtml())).doesNotContain("ejercicio-8--");
 	}
 
+	/** Pending targets drop their fragment (ContentLoaderTest); since H5 the fase-01 targets are available. */
 	@Test
-	void linksToPendingLessonsDropTheirFragment() {
+	void linksToAvailableLessonsKeepFragmentsThatNameARenderedHeading() {
 		Pattern lessonHref = Pattern.compile("href=\"(/lessons/[^\"]*)\"");
-		List<String> pendingFaseOne = allHtml().stream().flatMap(html -> all(lessonHref, html).stream())
+		List<String> faseOne = allHtml().stream().flatMap(html -> all(lessonHref, html).stream())
 			.filter(href -> href.startsWith("/lessons/java-01.")).toList();
 		// 12 links to fase-01 lessons, 7 of them carried a fragment in the source.
-		assertThat(pendingFaseOne).hasSize(12).allSatisfy(href -> assertThat(href).doesNotContain("#"));
-		assertThat(new HashSet<>(pendingFaseOne)).containsExactlyInAnyOrder("/lessons/java-01.01", "/lessons/java-01.02",
-				"/lessons/java-01.03", "/lessons/java-01.04", "/lessons/java-01.05", "/lessons/java-01.09");
-		assertThat(String.join("", allHtml())).doesNotContain("21-tu-primer-proyecto-en-intellij",
-				"12-el-recorrido-completo", "17-javac-a-fondo");
+		assertThat(faseOne).hasSize(12);
+		assertThat(faseOne.stream().filter(href -> href.contains("#"))).hasSize(7)
+			.allSatisfy(RealLessonContentTest::assertHeadingTarget);
+		assertThat(faseOne.stream().map(href -> href.replaceFirst("#.*", "")).distinct()).containsExactlyInAnyOrder(
+				"/lessons/java-01.01", "/lessons/java-01.02", "/lessons/java-01.03", "/lessons/java-01.04",
+				"/lessons/java-01.05", "/lessons/java-01.09");
+		assertThat(faseOne).contains("/lessons/java-01.02#21-tu-primer-proyecto-en-intellij",
+				"/lessons/java-01.03#12-el-recorrido-completo", "/lessons/java-01.04#17-javac-a-fondo");
+	}
+
+	/** A cross-lesson fragment names an id that the rendered target lesson carries on a heading. */
+	private static void assertHeadingTarget(String href) {
+		String target = href.substring("/lessons/".length(), href.indexOf('#'));
+		String id = href.substring(href.indexOf('#') + 1);
+		LessonContent targetLesson = content.lessons().get(target);
+		assertThat(targetLesson).as(href).isNotNull();
+		assertThat(targetLesson.bodyHtml()).as(href).containsPattern("<h[1-6] id=\"" + Pattern.quote(id) + "\">");
 	}
 
 	@Test
 	void folderLinksBecomeOneLinkPerFileNamedLikeTheOriginalFile() {
 		String all = String.join("", allHtml());
+		// Since H5 the folder text itself links its ZIP, followed by the same per-file links as before.
 		assertThat(lesson.bodyHtml()).contains(
-				"<code>codigo/01-primer-programa/ejemplos/2.1-hola-mundo/</code> (<a href=\"/api/resources/java-02.01-r-2.1-hello\">Hello.java</a>)");
+				"<a href=\"/api/resources/java-02.01-zip-21-hola-mundo-91513597\"><code>codigo/01-primer-programa/ejemplos/2.1-hola-mundo/</code></a>"
+						+ " (<a href=\"/api/resources/java-02.01-r-2.1-hello\">Hello.java</a>)");
 		assertThat(all).contains("(<a href=\"/api/resources/java-02.01-r-ej04-backup-notice\">BackupNotice.java</a>, "
 				+ "<a href=\"/api/resources/java-02.01-r-ej04-backup-notice-readable\">BackupNoticeReadable.java</a>)");
 		Pattern resourceLink = Pattern.compile("<a href=\"/api/resources/([^\"]+)\">([^<]*)</a>");
@@ -165,8 +191,25 @@ class RealLessonContentTest {
 			links++;
 		}
 		assertThat(links).isGreaterThanOrEqualTo(22);
+		Pattern zipLink = Pattern.compile("<a href=\"/api/resources/([^\"]+)\"><code>([^<]*)</code></a>");
+		Matcher zips = zipLink.matcher(all);
+		int zipLinks = 0;
+		while (zips.find()) {
+			ResourceFile zip = content.resources().get(zips.group(1));
+			assertThat(zip).as(zips.group(1)).isNotNull();
+			assertThat(zip.mediaType()).isEqualTo("application/zip");
+			assertThat(zips.group(2)).endsWith("/").endsWith(zip.originalFileName().replaceFirst("\\.zip$", "/"));
+			zipLinks++;
+		}
+		assertThat(zipLinks).isGreaterThanOrEqualTo(19);
 		assertThat(all).doesNotContain("href=\"codigo/", "href=\"../", ".md\"");
-		assertThat(new LinkedHashSet<>(lesson.resourceIds())).hasSize(22).isEqualTo(content.resources().keySet());
+		// The 22 H4 files keep their identities next to the 19 folder ZIPs; the lesson owns exactly its manifest resources.
+		List<String> owned = content.manifest().resources().stream().filter(r -> LESSON.equals(r.lessonId()))
+			.map(Manifest.Resource::resourceId).toList();
+		assertThat(owned).hasSize(41);
+		assertThat(owned.stream().filter(id -> id.startsWith("java-02.01-r-"))).hasSize(22);
+		assertThat(new LinkedHashSet<>(lesson.resourceIds())).isEqualTo(new LinkedHashSet<>(owned));
+		assertThat(content.resources().keySet()).containsAll(owned);
 	}
 
 	@Test
@@ -225,7 +268,8 @@ class RealLessonContentTest {
 					assertThat(bodyIds.contains(target) || exerciseIds.contains(target)).as(value).isTrue();
 				}
 				else if (value.startsWith("/lessons/")) {
-					assertThat(value).matches("/lessons/java-\\d\\d\\.\\d\\d");
+					assertThat(value).matches("/lessons/java-\\d\\d\\.\\d\\d(#.+)?");
+					if (value.contains("#")) assertHeadingTarget(value);
 				}
 				else if (value.startsWith("/api/resources/")) {
 					assertThat(content.resources()).containsKey(value.substring("/api/resources/".length()));
@@ -248,5 +292,15 @@ class RealLessonContentTest {
 		String source = Files.readString(CONTENT.resolve("java/lessons/java-02.01.md"), StandardCharsets.UTF_8);
 		assertThat(HeadingIdsTest.expectedIds("real")).hasSize(64);
 		assertThat(HeadingIds.forMarkdown(source)).hasSize(64);
+	}
+
+	@Test
+	void theOnlyNonAsciiResourceKeepsItsDownloadLink() {
+		String body = content.lessons().get("java-12.16").bodyHtml();
+
+		assertThat(body).contains("<a href=\"/api/resources/java-12.16-r-presupuesto-a");
+		assertThat(body).contains("presupuesto año 2026.txt</a>");
+		String anchor = "<a href=\"/api/resources/java-12.16-r-presupuesto-año-2026txt-0979a0bb\">presupuesto año 2026.txt</a>";
+		assertThat(body.split(Pattern.quote(anchor), -1)).as("one anchor in each of the three listings").hasSize(4);
 	}
 }

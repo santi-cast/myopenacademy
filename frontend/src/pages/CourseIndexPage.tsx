@@ -86,6 +86,7 @@ export function CourseIndexPage() {
           </Link>
         )}
       </div>
+      {courseId === 'java' && <p><Link to={`/courses/${encodeURIComponent(courseId)}/project`}>Proyecto evolutivo</Link></p>}
       <p hidden id={PENDING_DESCRIPTION_ID}>Lección pendiente: todavía no disponible, no se puede abrir.</p>
       <div className="phase-grid">
         {phases.map((phase) => (

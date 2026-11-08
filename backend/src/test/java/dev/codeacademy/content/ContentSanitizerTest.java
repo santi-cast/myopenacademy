@@ -75,6 +75,44 @@ class ContentSanitizerTest {
 	}
 
 	@Test
+	void aResourceLinkMayNameUnicodeLettersWhileEveryOtherFormStaysStrict() {
+		String unicode = "/api/resources/java-12.16-r-presupuesto-año-2026txt-0979a0bb";
+		List<String> bad = List.of("/api/resources/a/b", "/api/resources/a%2Fb", "/api/resources/a b",
+				"/api/resources/año\u0000", "/lessons/demo-año", "/stages/demo-año", "/courses/demo-año");
+		Set<String> hrefs = new java.util.HashSet<>(bad);
+		hrefs.add(unicode);
+		List<String> removed = new ArrayList<>();
+
+		String clean = ContentSanitizer.sanitize("<p><a href=\"" + unicode + "\">presupuesto año 2026.txt</a></p>", IDS,
+				hrefs, removed);
+
+		assertThat(removed).isEmpty();
+		assertThat(clean).contains("<a href=\"/api/resources/java-12.16-r-presupuesto-a").contains("presupuesto año 2026.txt</a>");
+		for (String href : bad) {
+			List<String> dropped = new ArrayList<>();
+			ContentSanitizer.sanitize("<p><a href=\"" + href + "\">x</a></p>", IDS, hrefs, dropped);
+			assertThat(dropped).as(href).isNotEmpty();
+		}
+	}
+
+	@Test
+	void unicodeResourceLinksRejectLookalikeSeparatorsInvisiblesAndAnythingOutsideTheSet() {
+		String p = "/api/resources/";
+		for (String href : List.of(p + "a／b", p + "a∕b", p + "a⁄b", p + "a‮b", p + "a​b", p + "a﻿b",
+				p + "̃", p + "ñ", p + "a?b", p + "a#b", p + "a\\b", p + "a:b", p + "a\u0085", p + "a b", p)) {
+			List<String> removed = new ArrayList<>();
+			ContentSanitizer.sanitize("<p><a href=\"" + href + "\">x</a></p>", IDS, Set.of(href), removed);
+			assertThat(removed).as(href).isNotEmpty();
+		}
+		String real = p + "java-12.16-r-presupuesto-año-2026txt-0979a0bb";
+		List<String> removed = new ArrayList<>();
+		String clean = ContentSanitizer.sanitize("<p><a href=\"" + real + "\">ok</a> <a href=\"" + p + "ajeno-ñ\">no</a></p>", IDS,
+				Set.of(real), removed);
+		assertThat(clean).isEqualTo("<p><a href=\"" + real + "\">ok</a> no</p>");
+		assertThat(removed).containsExactly("<a>", "attribute [href] on <a>");
+	}
+
+	@Test
 	void sourceTargetAndRelAreDiscardedAndReplacedByThePolicy() {
 		List<String> removed = new ArrayList<>();
 
@@ -151,6 +189,13 @@ class ContentSanitizerTest {
 			"[dato](data:text/html,hola)",
 			"[archivo](file:///etc/passwd)",
 			"[vb](VBScript:msgbox(1))",
+			// A dropped formatting element is inert only as written without attributes: a handler, an id or a style
+			// it carried still fails, even though the element and the attribute both leave the output.
+			"<span onclick=\"alert(1)\">x</span>",
+			"Texto <span onmouseover=\"x()\">x</span> fin.",
+			"<section onclick=\"x()\">x</section>",
+			"<div id=\"evil\">x</div>",
+			"<div style=\"background:url(https://e.invalid/x.png)\">x</div>",
 	})
 	void theLoaderRejectsALessonTheSanitizerWouldAlter(String malicious) {
 		ContentFixture fixture = ContentFixture.copyInto(tempDir);
@@ -158,14 +203,57 @@ class ContentSanitizerTest {
 
 		ContentValidationException ex = fixture.rejected("demo-01.01");
 
-		assertThat(ex.getMessage()).containsAnyOf("sanitizer removed", "disallowed link");
+		assertThat(ex.getMessage()).containsAnyOf("sanitizer removed", "disallowed link", "disallowed image");
 	}
 
 	@Test
 	void theLoaderNamesTheExercisePartWhereTheSanitizerRemovedSomething() {
 		ContentFixture fixture = ContentFixture.copyInto(tempDir);
-		fixture.replace(ContentFixture.INTRO, "Solución uno,", "<span onclick=\"x()\">Solución</span> uno,");
+		// The event handler is what keeps failing the load, and the message still names the exercise part.
+		fixture.replace(ContentFixture.INTRO, "Solución uno,", "Solución uno con <p onclick=\"x()\">nota</p>,");
 
-		fixture.rejected("demo-01.01 demo-01.01-e01 solution: sanitizer removed <span>");
+		fixture.rejected("demo-01.01 demo-01.01-e01 solution: sanitizer removed attribute [onclick] on <p>");
+	}
+
+	@Test
+	void inertFormattingRemovalsAreToleratedAndTheRenderedHtmlStaysSanitized() {
+		ContentFixture fixture = ContentFixture.copyInto(tempDir);
+		fixture.replace(ContentFixture.INTRO, "Solución uno,", "<span>Solución</span> <u>uno</u>,");
+
+		ExerciseContent exercise = fixture.load().lessons().get("demo-01.01").exercises().get(0);
+
+		assertThat(exercise.solutionHtml()).contains("Solución uno").doesNotContain("<span", "<u>");
+	}
+
+	@Test
+	void anAttributeOnADroppedFormattingElementIsReportedWhileTheOutputStaysTheSame() {
+		List<String> bare = new ArrayList<>();
+		List<String> written = new ArrayList<>();
+
+		String expected = sanitize("<p>a <span>x</span> <div>y</div></p>", bare);
+		String clean = sanitize("<p>a <span onclick=\"alert(1)\">x</span> <div id=\"evil\" style=\"color:red\">y</div></p>",
+				written);
+
+		assertThat(clean).isEqualTo(expected);
+		assertThat(bare).allSatisfy(removed -> assertThat(ContentSanitizer.inert(removed)).as(removed).isTrue());
+		assertThat(written).contains("attribute [onclick] on <span>", "attribute [id, style] on <div>")
+			.anySatisfy(removed -> assertThat(ContentSanitizer.inert(removed)).as(removed).isFalse());
+	}
+
+	@Test
+	void onlyInertFormattingTagsAreTolerated() {
+		assertThat(ContentSanitizer.inert("<span>")).isTrue();
+		assertThat(ContentSanitizer.inert("<u>")).isTrue();
+		assertThat(ContentSanitizer.inert("<div>")).isTrue();
+		// A removed anchor is inert formatting: the element and its href are gone, its text stays, and no link
+		// capability reaches the reader. Anything else an anchor loses, an event handler above all, keeps failing.
+		assertThat(ContentSanitizer.inert("<a>")).isTrue();
+		assertThat(ContentSanitizer.inert("attribute [href] on <a>")).isTrue();
+		for (String removed : List.of("<script>", "<iframe>", "<frame>", "<img>", "<object>", "<style>",
+				"<form>", "attribute [onclick] on <p>", "attribute [id] on <h2>", "attribute [style] on <p>", "<svg>",
+				"attribute [href, onclick] on <a>", "attribute [onclick] on <a>", "attribute [name] on <a>",
+				"attribute [target] on <a>", "attribute [id] on <a>", "<button>")) {
+			assertThat(ContentSanitizer.inert(removed)).as(removed).isFalse();
+		}
 	}
 }

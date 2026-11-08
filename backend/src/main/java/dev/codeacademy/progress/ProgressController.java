@@ -21,6 +21,8 @@ import dev.codeacademy.progress.ProgressViews.ExerciseStateResult;
 import dev.codeacademy.progress.ProgressViews.LessonStateResult;
 import dev.codeacademy.progress.ProgressViews.MyCourses;
 import dev.codeacademy.progress.ProgressViews.Progress;
+import dev.codeacademy.progress.ProgressViews.StageProgress;
+import dev.codeacademy.progress.ProgressViews.StageStateResult;
 
 /** Personal progress routes: the owner is always the session's account, never a path or body value. */
 @RestController
@@ -71,6 +73,23 @@ class ProgressController {
 	Enrollment continuation(@AuthenticationPrincipal AccountPrincipal principal, @PathVariable String courseId,
 			@RequestBody(required = false) JsonNode body) {
 		return progress.continueAt(principal.id(), courseId, StrictJson.strings(body, "lessonId").getFirst());
+	}
+
+	@GetMapping("/courses/{courseId}/stage-progress")
+	StageProgress stageProgress(@AuthenticationPrincipal AccountPrincipal principal, @PathVariable String courseId) {
+		return progress.stageProgress(principal.id(), courseId);
+	}
+
+	@PutMapping("/stages/{stageId}/state")
+	StageStateResult stageState(@AuthenticationPrincipal AccountPrincipal principal, @PathVariable String stageId,
+			@RequestBody(required = false) JsonNode body) {
+		return progress.markStage(principal.id(), stageId, state(body, LESSON_STATES));
+	}
+
+	@PutMapping("/courses/{courseId}/stage-continuation")
+	StageProgress stageContinuation(@AuthenticationPrincipal AccountPrincipal principal, @PathVariable String courseId,
+			@RequestBody(required = false) JsonNode body) {
+		return progress.continueStageAt(principal.id(), courseId, StrictJson.strings(body, "stageId").getFirst());
 	}
 
 	/** Schema errors are INVALID_REQUEST; a string that is not a state of this kind, INVALID_STATE. */

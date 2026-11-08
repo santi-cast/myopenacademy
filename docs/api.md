@@ -1,6 +1,6 @@
 # API — contrato de H2 cerrado
 
-Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md).
+Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md). H5 añade cinco rutas de etapas, implementadas en el backend y verificadas con contenido sintético; la interfaz de etapas ya tiene índice, contenido, estado manual y continuación independiente; la copia activa ya importa 199 lecciones y 14 etapas disponibles desde el commit fijado del origen. Los recursos ZIP y de etapas disponibles usan la ruta de recursos existente. Las imágenes Markdown seguras y el tachado amplían también la carga v1, sin rutas nuevas.
 
 ## Acceso, propiedad y efectos
 
@@ -40,7 +40,7 @@ Sin cuerpo de entrada salvo el indicado; arrays vacíos válidos. El cliente usa
 | GET /api/courses | — | 200, `{ "courses": Course[] }`. |
 | GET /api/courses/{courseId} | — | 200, `{ "course": Course, "phases": Phase[], "lessons": LessonEntry[] }`, temario completo ordenado: fases por `position` y lecciones por `position`; las lecciones de cada fase son consecutivas y siguen el orden de las fases. |
 | GET /api/lessons/{lessonId} | — | 200, `{ "lesson": LessonEntry, "bodyHtml": string, "exercises": Exercise[], "resources": Resource[], "previousLessonId": ID o null, "nextLessonId": ID o null }`; vecinos disponibles del mismo curso. |
-| GET /api/resources/{resourceId} | — | 200, bytes con tipo seguro del recurso, no JSON; HTML solo descarga/texto escapado y SVG con sandbox según política de contenido. Solo recursos del manifiesto cuya lección está disponible; el resto, 404. El encabezado `Accept` no la bloquea. |
+| GET /api/resources/{resourceId} | — | 200, bytes con tipo seguro del recurso, no JSON; HTML solo descarga/texto escapado y SVG con sandbox según política de contenido. Solo recursos del manifiesto cuyo único propietario (lección o etapa) está disponible; el resto, 404. El encabezado `Accept` no la bloquea. |
 | GET /api/me/courses | — | 200, `{ "courses": [{ "course": Course, "enrollment": Enrollment }] }`; solo los cursos añadidos, ordenados por ID de curso; lista vacía si no hay ninguno. |
 | PUT /api/me/courses/{courseId} | Sin cuerpo; cualquier cuerpo, incluso `{}`, es 400 `INVALID_REQUEST` | 200, Enrollment con `added: true`; repetición no reinicia continuación ni estados. |
 | GET /api/me/courses/{courseId}/progress | — | 200, Progress incluso sin inscripción; 404 si el curso no existe. |
@@ -102,18 +102,19 @@ Ejemplo ilustrativo de un curso existente no añadido, con dos entradas y una di
 
 ## Contenido, ejercicios y recursos
 
-Política de extracción y entrega implementada en H4 para la lección importada; no es una medición del origen. El importador completo es de H5.
+Política de extracción y entrega implementada en H4 para la lección importada; no es una medición del origen. H5 añade el importador offline completo; véase el [manifiesto](manifiesto.md#comparar-antes-de-aplicar-límite-del-importador).
 
 La importación extrae los ejercicios de la sección exacta «Ejercicios prácticos resueltos» de cada lección: el enunciado pasa a `Exercise.statementHtml` y la solución en `<details>` pasa a `Exercise.solutionHtml`, conservando el desplegable seguro. Ambos campos se sanean por separado. `bodyHtml` no incluye esa sección, para que los ejercicios no aparezcan dos veces. La asociación explícita del manifiesto conserva IDs permanentes de ejercicios; un ordinal transitorio no identifica el ejercicio. Cada ejercicio se asocia por su título exacto ([regla del manifiesto](manifiesto.md#identidad-extracción-y-rutas)), y `Exercise.title` es ese mismo texto plano, idéntico al guardado en el catálogo. Un ID de elemento repetido en cualquier campo HTML de la lección rechaza la importación.
 
-- Convertir Markdown a HTML con lista permitida de elementos, atributos y protocolos antes de representarlo. Conservar `<details>`/`<summary>` seguros; excluir scripts, manejadores de eventos y enlaces ejecutables. H4 usa commonmark 0.31.0 y OWASP Java HTML Sanitizer 20261011.1.
+- Convertir Markdown a HTML con lista permitida de elementos, atributos y protocolos antes de representarlo. Conservar `<details>`/`<summary>` seguros; excluir scripts, manejadores de eventos y enlaces ejecutables. Se usa commonmark 0.31.0 (tablas y extensión GFM de tachado de la misma versión) y OWASP Java HTML Sanitizer 20261011.1. `~~texto~~` produce `<del>` también en enunciados y soluciones; dentro de código sigue siendo texto literal.
 - Reescribir enlaces relativos hacia rutas de lecciones por ID permanente y `/api/resources/{resourceId}`. La reescritura, el saneamiento y la validación final de enlaces, recursos y fragmentos se aplican a `bodyHtml`, `statementHtml` y `solutionHtml`, también a enlaces entre esos campos. No exponer rutas del origen.
+- Las imágenes Markdown se resuelven desde el documento fuente mediante `sourceToId`, exclusivamente a recursos registrados de tipo `image/png`, `image/jpeg` o `image/svg+xml`. Solo sobreviven `img` con `src` generado `/api/resources/{resourceId}` y `alt` textual escapado. Se rechazan imágenes externas, `data:`, rutas absolutas, consultas, fragmentos, recursos no gráficos y referencias sin resolver. Una URL `/api/resources/...` escrita directamente no sustituye la resolución registrada. El HTML crudo no puede introducir imágenes, ni siquiera reutilizando la URL de una imagen Markdown válida del mismo campo. Títulos y otros atributos de imagen no están permitidos. Estas comprobaciones también rigen en enunciados y soluciones.
 - Generar IDs de encabezados compatibles con GitHub, incluidos duplicados, acentos y puntuación; permitir IDs solo para esos destinos, no arbitrarios. Conservar/mapear fragmentos y validar que sus destinos finales existan tras separar, limpiar y reescribir el contenido. Un enlace a lección pendiente lleva a «todavía no disponible»; una referencia no resuelta se señala en la validación, sin reasignarla silenciosamente ni fingir un fragmento validado sin cuerpo.
 - Un fragmento que apunta al encabezado de un ejercicio extraído se reescribe al ID del ejercicio (por ejemplo, `#java-02.01-e08`, o `/lessons/{lessonId}#java-02.01-e08` desde otra lección). El frontend representa cada ejercicio en un contenedor cuyo `id` es el ID del ejercicio.
 - Bloques Mermaid con clases de lenguaje controladas. Frontend en modo `strict`, sin HTML arbitrario ni interacciones. Ante fallo, mostrar código fuente original escapado, nunca como HTML; el resto de la lección sigue funcionando. El SVG generado no elude controles de seguridad. Un diagrama con directivas (`%%{…}%%`), frontmatter, interacciones (`click`, `link`, `links`, `callback`, `href`) o imágenes e iconos (`@{ img/icon }`) no se dibuja: se muestra como código fuente escapado. El SVG dibujado se revisa en un documento aparte antes de insertarlo (sin enlaces, `foreignObject`, imágenes, scripts, manejadores de eventos ni `url()` externas); si no pasa, también se muestra el código fuente.
 - Servir recursos autenticados exclusivamente por `resourceId` registrado en manifiesto. Resolver rutas locales con comprobación canónica de contención, incluidos symlinks; rechazar IDs desconocidos y escapes. No aceptar rutas del cliente ni leer el origen al servir.
 - SVG educativos con tipo correcto, `X-Content-Type-Options: nosniff` y CSP `sandbox` sin permisos adicionales. HTML educativo solo como descarga o texto escapado, nunca ejecutado en el mismo origen.
-- Cada recurso se entrega con el `mediaType` del manifiesto (`text/plain; charset=utf-8` para `.java`), `Content-Disposition: attachment; filename="Hello.java"; filename*=UTF-8''Hello.java` con el nombre original, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox` y `Cache-Control: private, no-store`. El archivo se relee desde la ruta validada, comprobando de nuevo la contención canónica y la ausencia de symlinks.
+- Cada recurso se entrega con el `mediaType` del manifiesto (`text/plain; charset=utf-8` para `.java`) y el nombre original codificado de forma segura. PNG/JPEG se entregan con `Content-Disposition: inline`; los demás conservan `attachment`, por ejemplo `attachment; filename="Hello.java"; filename*=UTF-8''Hello.java`. Todos mantienen `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox` y `Cache-Control: private, no-store`. El archivo se relee desde la ruta validada, comprobando de nuevo la contención canónica y la ausencia de symlinks.
 - Los enlaces absolutos `http`/`https` del HTML de lección llevan `target="_blank"` junto con `rel="noopener noreferrer"`, fijados por la política de saneamiento. Los enlaces internos, de fragmento y a `/api/resources` no llevan `target`.
 
 ## Errores estables
@@ -125,9 +126,9 @@ Los errores incluyen `code` y `message`; la UI decide por `code`, no interpreta 
 | 400 | `INVALID_REQUEST` (JSON/campos/tipos), `INVALID_USERNAME` y `INVALID_PASSWORD` en registro, `INVALID_STATE`, `COURSE_MISMATCH`. Login inválido usa 401 genérico, salvo errores de esquema/tipo. |
 | 401 | `AUTHENTICATION_FAILED` (login), `AUTHENTICATION_REQUIRED` (sesión ausente, caducada o versión de credenciales inválida). |
 | 403 | `CSRF_REJECTED`, incluidas operaciones públicas inseguras. `ACCESS_DENIED`: solicitud autenticada a una ruta o acción denegada, distinta de un fallo de CSRF. |
-| 404 | `NOT_FOUND`: curso/lección/ejercicio/recurso inexistente, recurso no autorizado o dato personal ajeno; sin revelar existencia ni rutas. |
+| 404 | `NOT_FOUND`: curso/lección/etapa/ejercicio/recurso inexistente, recurso no autorizado o dato personal ajeno; sin revelar existencia ni rutas. |
 | 406 | `NOT_ACCEPTABLE`: el encabezado `Accept` no admite JSON. Se rechaza antes de ejecutar la operación: sin escrituras ni sesión. Sin `Accept`, `*/*` o `application/json` son válidos. Se evalúan los tipos de medio, no los valores de calidad: `application/json;q=0` se trata como aceptable. |
-| 409 | `USERNAME_TAKEN`, `LESSON_UNAVAILABLE`, `COURSE_NOT_ADDED`. |
+| 409 | `USERNAME_TAKEN`, `LESSON_UNAVAILABLE`, `STAGE_UNAVAILABLE`, `COURSE_NOT_ADDED`. |
 | 500 | `INTERNAL_ERROR`: fallo inesperado sin detalles internos ni secretos; escrituras transaccionales sin efectos parciales. |
 
 Formato único de error:
@@ -138,3 +139,70 @@ Formato único de error:
   "message": "Lesson is not available."
 }
 ```
+
+## H5: contrato aditivo de etapas pendiente de implementar
+
+Las cinco rutas y su persistencia ya están implementadas en el backend: 57 pruebas aisladas verifican catálogo, estados, rechazos sin cambios, migración poblada V5→V6, reinicio y concurrencia. El encabezado conserva el ancla existente; la interfaz consume esas rutas y la copia activa ya trae las 14 etapas reales disponibles. La migración V6 es aditiva: crea catálogo y estados de etapas y añade una continuación nullable a la inscripción existente. Las pruebas usan PostgreSQL desechable, no la base del propietario.
+
+Proyecto evolutivo tiene una sección propia dentro de Java, con un inventario aprobado de 14 etapas escritas en `c8e29163d59f41830eff2d449bf8b02a19905f61`. Las 14 están importadas y disponibles en la copia activa; la UI sigue mostrando la disponibilidad efectiva que devuelve la API, no la deduce del inventario. No es una fase ni amplía las 199 lecciones previstas. Las 14 rutas H4, sus respuestas y los enums de lecciones/ejercicios conservan su significado; las etapas se consultan por rutas nuevas. No se añade progreso de etapas a `Counts` ni se cambia el denominador de lecciones.
+
+### Formas y rutas nuevas
+
+| Forma | Campos JSON y significado |
+|---|---|
+| StageEntry | `id`, `courseId`, `title`, `position`, `available`; ID permanente, posición desde 1 dentro del proyecto. |
+| StageState | `stageId`, `state`, `updatedAt`; estado JSON `not_completed`/`completed`, igual que lecciones. Equivalentes conceptuales `NOT_COMPLETED`/`COMPLETED`; conservar la representación persistida de lecciones (`not_completed`/`completed`) y no aceptar mayúsculas en JSON. |
+| StageContinuation | `lastOpenedStageId`: ID o null, independiente de `Continuation.lastOpenedLessonId`. |
+| StageCounts | `completedStages`, `availableStages`, `plannedStages`, `percentage`; solo etapas disponibles en numerador/denominador del porcentaje, null si no hay disponibles. |
+| StageProgress | `courseId`, `added`, `stageStates` (StageState[] por posición), `continuation` (StageContinuation), `progress` (StageCounts). |
+| StageStateResult | `courseId`, `stageId`, `state`, `updatedAt`, `courseAutoAdded`, `continuation` (StageContinuation), `progress` (StageCounts). |
+
+| Ruta nueva | Entrada JSON | HTTP y salida |
+|---|---|---|
+| GET /api/courses/{courseId}/stages | — | 200, `{ "courseId": ID, "stages": StageEntry[] }`, ordenadas por posición, incluidas pendientes; array vacío válido para curso sin proyecto. |
+| GET /api/stages/{stageId} | — | 200, `{ "stage": StageEntry, "bodyHtml": string, "resources": Resource[], "previousStageId": ID o null, "nextStageId": ID o null }`; vecinos disponibles del mismo curso. Sin ejercicios evaluados ni estados implícitos. |
+| GET /api/me/courses/{courseId}/stage-progress | — | 200, StageProgress, también sin inscripción; 404 si no existe el curso. |
+| PUT /api/me/stages/{stageId}/state | `{ "state": "completed" }` | 200, StageStateResult; admite también `not_completed`. |
+| PUT /api/me/courses/{courseId}/stage-continuation | `{ "stageId": "java-stage-initial" }` | 200, StageProgress confirmada; no crea inscripción. |
+
+La interfaz ofrece la sección desde el índice de Java en `/courses/{courseId}/project` y navega a `/stages/{stageId}`, separada de `/lessons/{lessonId}`. Tras cargar correctamente una etapa, solo si `added: true`, llama al PUT de continuación de etapas; no al de lecciones ni durante precarga/exploración. «Retomar proyecto» usa la última etapa; la continuación H4 sigue retomando la última lección. Pendientes visibles, sin apertura.
+
+### Inscripción, estados y aislamiento
+
+- Reutilizar la inscripción usuario–curso existente y la identidad de sesión. No crear otra inscripción de proyecto ni aceptar propietario por cuerpo/ruta/query. Estado único por inscripción y etapa, con pertenencia al mismo curso; continuación de etapa opcional en esa inscripción, con restricción compuesta al curso como en lecciones. Sin cascadas que borren progreso.
+- Sin inscripción: `added: false`, `stageStates: []`, `continuation: { "lastOpenedStageId": null }`, completadas 0. Estado ausente significa no completada, sin insertar filas. Añadir explícitamente el curso conserva el comportamiento H4 y deja también vacía la continuación de etapas.
+- Marcar una etapa disponible crea inscripción si falta, guarda estado e inicializa última etapa en una sola transacción; deja última lección vacía. Reutilizar/ampliar la operación de inscripción existente (`ProgressService.enroll`), con su unicidad y manejo de concurrencia, no duplicar su SQL por otra vía. Una inscripción creada por lección/ejercicio deja última etapa vacía. Si ya existe, marcar no cambia ninguna continuación.
+- Abrir contenido, consultar recursos o soluciones nunca completa etapas. Los dos estados son siempre manuales, sin corrección automática, dependencias de lecciones ni orden obligatorio. Repetir el estado conserva `updatedAt` del último cambio real; repetir una adición no reinicia estados ni continuaciones.
+- PUT de continuación valida curso, etapa y disponibilidad antes de escribir. Sin inscripción: 409 `COURSE_NOT_ADDED`. Una etapa de otro curso: 400 `COURSE_MISMATCH`. Abrir, marcar o continuar una pendiente: 409 `STAGE_UNAVAILABLE`, mensaje estable `Stage is not available.`; su entrada de índice sí se devuelve. IDs inexistentes o personales ajenos: 404 `NOT_FOUND`, sin revelar datos.
+- Las rutas nuevas heredan autenticación, CSRF en cada PUT, JSON estricto, 400 `INVALID_REQUEST` por forma y 400 `INVALID_STATE` por enum desconocido (`pending`, `solved`, `COMPLETED` o `Completed` incluidos). Heredan negociación JSON, errores y caché privada de H4. Todo rechazo deja intactos inscripción, estados, fechas, ambas continuaciones y contadores de ambos recorridos.
+
+Ejemplo ilustrativo de StageProgress sin inscripción y con una etapa disponible de dos previstas; no es el inventario real:
+
+```json
+{
+  "courseId": "java",
+  "added": false,
+  "stageStates": [],
+  "continuation": { "lastOpenedStageId": null },
+  "progress": {
+    "completedStages": 0,
+    "availableStages": 1,
+    "plannedStages": 2,
+    "percentage": 0
+  }
+}
+```
+
+## H5: extensión de recursos pendiente de implementar
+
+La entrega de ZIP y recursos de etapas de esta sección ya está implementada; se conserva el ancla documental para enlaces existentes. Las rutas nuevas de etapas están implementadas en el backend y consumidas por la interfaz; el contenido real (199 lecciones y 14 etapas, con sus recursos y ZIP) ya está importado.
+
+Estado de T2: imágenes Markdown y tachado implementados sobre v1/v2; ZIP v2 y recursos de etapas disponibles implementados con pruebas aisladas de carga y HTTP para dos sesiones sin inscripción. La carga rechaza ZIP no canónicos aunque su hash declarado coincida, sin descomprimirlos ni consultar el origen. La verificación independiente comprobó en Chromium la carga de PNG/JPEG y SVG desde el backend real con PostgreSQL desechable, para dos usuarios autenticados, sin interceptar ni relajar encabezados. Las solicitudes anónimas devolvieron 401 y las imágenes no cargaron. Esto verifica la entrega de recursos, no el recorrido completo de lección en React ni otros navegadores.
+
+Se reutiliza `GET /api/resources/{resourceId}`, no se acepta una ruta de archivo ni una URL del cliente. `Resource` conserva sus cuatro campos; ZIP añade un recurso de `mediaType: "application/zip"` con nombre original de carpeta más `.zip`. En v2, el propietario registrado puede ser lección o etapa disponible; 404 para propietario pendiente, recurso desconocido o archivo que falla contención. No se exige inscripción para explorar, sí sesión para cada descarga o imagen.
+
+La resolución parte del documento fuente y de `sourceToId`, como en H4; imágenes y ZIP amplían ese resolutor, no incorporan uno paralelo. El [manifiesto v2](manifiesto.md#copia-verificable-imágenes-y-carpetas-zip) fija miembros explícitos, procedencia y reescritura de carpetas. Se validan enlaces/fragmentos e imágenes en todos los campos HTML antes de ofrecer el contenido. Se conserva la política de saneamiento y Mermaid; el tachado GFM ya genera el elemento permitido `<del>`.
+
+PNG/JPEG registrados para imagen admiten `Content-Disposition: inline` con nombres seguros y tipo validado; los demás recursos mantienen `attachment`, incluidos ZIP y SVG con CSP `sandbox`. Las imágenes SVG solo se usan en contexto `img`, nunca como HTML/SVG insertado en el DOM ni `object`/`iframe`; su visualización autenticada se comprobó en Chromium sin relajar el sandbox. Sin imágenes externas, `data:`, scripts ni manejadores. Todos conservan `nosniff`, `Cache-Control: private, no-store`, comprobación canónica de archivo sin symlinks al servir y acceso por ID. Los ZIP se entregan como `application/zip`, `attachment`, con el nombre original de carpeta más `.zip` codificado por el mismo helper seguro de los otros archivos. Se entregan ya generados y validados desde la copia controlada, nunca desde el origen ni por recorrido dinámico de directorios.
+
+Importar/actualizar no es una operación HTTP ni de estudio: véase el [límite offline de comparación y aplicación](manifiesto.md#comparar-antes-de-aplicar-límite-del-importador). La verificación de T6 cubre, con el contenido real, dos usuarios, continuidad independiente, 199 lecciones previstas y rechazo sin cambios de datos: véase la [evidencia de T6](actualizacion-contenido.md#importación-de-h5-aplicada).

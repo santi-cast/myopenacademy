@@ -85,3 +85,33 @@ type StateResultBase = {
 export type LessonStateResult = StateResultBase & { lessonId: string; state: LessonState['state'] }
 
 export type ExerciseStateResult = StateResultBase & { exerciseId: string; state: ExerciseState['state'] }
+
+export type StageEntry = Omit<LessonEntry, 'phaseId'>
+export type StageState = { stageId: string; state: 'not_completed' | 'completed'; updatedAt: string | null }
+export type StageCounts = {
+  completedStages: number
+  availableStages: number
+  plannedStages: number
+  percentage: number | null
+}
+export type StageProgress = {
+  courseId: string
+  added: boolean
+  stageStates: StageState[]
+  continuation: { lastOpenedStageId: string | null }
+  progress: StageCounts
+}
+export type StageIndex = { courseId: string; stages: StageEntry[] }
+export type StageView = {
+  stage: StageEntry
+  bodyHtml: string
+  resources: Resource[]
+  previousStageId: string | null
+  nextStageId: string | null
+}
+export type StageStateResult = Omit<StageProgress, 'added' | 'stageStates'> & {
+  stageId: string
+  state: StageState['state']
+  updatedAt: string
+  courseAutoAdded: boolean
+}

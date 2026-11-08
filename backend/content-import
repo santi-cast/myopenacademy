@@ -1,0 +1,16 @@
+#!/bin/sh
+# Offline only: do not route through the normal Spring Boot application main.
+set -eu
+if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
+    printf '%s\n' 'Usage: content-import generate --active DIR --source GIT --commit SHA --output DIR --report FILE' \
+        'Generate a new candidate copy offline; never applies it and never writes a database.'
+    exit 0
+fi
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+jar="$script_dir/target/backend-0.0.1-SNAPSHOT.jar"
+if [ ! -f "$jar" ]; then
+    printf '%s\n' 'content-import: packaged backend jar missing; build first: cd backend && ./mvnw -DskipTests package' >&2
+    exit 2
+fi
+exec java -Dloader.main=dev.codeacademy.content.ContentImportCli -cp "$jar" \
+    org.springframework.boot.loader.launch.PropertiesLauncher "$@"

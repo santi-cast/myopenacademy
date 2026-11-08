@@ -33,7 +33,8 @@ class ProgressApiTest extends ProgressTestSupport {
 			assertContinuation(body.path("continuation"), null);
 		}
 		assertThat(java.path("courseId").asString()).isEqualTo("java");
-		assertCounts(java.path("progress"), 0, 1, 199, 0.0);
+		// Since H5 every one of the 199 planned java lessons is available.
+		assertCounts(java.path("progress"), 0, 199, 199, 0.0);
 		assertThat(demo.path("courseId").asString()).isEqualTo("demo");
 		assertCounts(demo.path("progress"), 0, 2, 3, 0.0);
 		assertThat(snapshot()).isEqualTo(before);
@@ -76,7 +77,7 @@ class ProgressApiTest extends ProgressTestSupport {
 		assertThat(java.path("course").path("id").asString()).isEqualTo("java");
 		assertThat(java.path("course").path("title").asString()).isEqualTo("Java");
 		assertEnrollment(java.path("enrollment"), "java", JAVA_LESSON);
-		assertCounts(java.path("enrollment").path("progress"), 1, 1, 199, 100.0);
+		assertCounts(java.path("enrollment").path("progress"), 1, 199, 199, 100.0 / 199);
 		assertThat(snapshot()).as("GET writes nothing").isEqualTo(added);
 	}
 
@@ -365,9 +366,14 @@ class ProgressApiTest extends ProgressTestSupport {
 		var before = snapshot();
 
 		assertError(continuation(browser, "demo", PENDING), 409, "LESSON_UNAVAILABLE");
-		assertError(continuation(browser, "java", JAVA_PENDING), 409, "LESSON_UNAVAILABLE");
 
 		assertThat(snapshot()).isEqualTo(before);
+		// The real java course has no pending lesson since H5: the stored catalog is changed as a later import could.
+		withAvailability(JAVA_PENDING, false, () -> {
+			var unavailable = snapshot();
+			assertError(continuation(browser, "java", JAVA_PENDING), 409, "LESSON_UNAVAILABLE");
+			assertThat(snapshot()).isEqualTo(unavailable);
+		});
 	}
 
 	@Test
@@ -387,13 +393,19 @@ class ProgressApiTest extends ProgressTestSupport {
 		var browser = learner();
 		var before = snapshot();
 
-		for (String lesson : List.of(PENDING, JAVA_PENDING)) {
-			for (String state : List.of("completed", "not_completed")) {
-				assertError(lessonState(browser, lesson, state), 409, "LESSON_UNAVAILABLE");
-			}
+		for (String state : List.of("completed", "not_completed")) {
+			assertError(lessonState(browser, PENDING, state), 409, "LESSON_UNAVAILABLE");
 		}
 
 		assertThat(snapshot()).isEqualTo(before);
+		// The real java course has no pending lesson since H5: the stored catalog is changed as a later import could.
+		withAvailability(JAVA_PENDING, false, () -> {
+			var unavailable = snapshot();
+			for (String state : List.of("completed", "not_completed")) {
+				assertError(lessonState(browser, JAVA_PENDING, state), 409, "LESSON_UNAVAILABLE");
+			}
+			assertThat(snapshot()).isEqualTo(unavailable);
+		});
 	}
 
 	@Test

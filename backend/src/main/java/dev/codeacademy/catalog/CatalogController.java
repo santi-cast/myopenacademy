@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import dev.codeacademy.api.ApiException;
 import dev.codeacademy.catalog.Catalog.LessonRef;
 import dev.codeacademy.catalog.Catalog.ResourceRef;
+import dev.codeacademy.catalog.Catalog.StageRef;
 import dev.codeacademy.content.CourseContent;
 import dev.codeacademy.content.ExerciseContent;
 import dev.codeacademy.content.LessonContent;
@@ -70,6 +71,20 @@ class CatalogController {
 			String previousLessonId, String nextLessonId) {
 	}
 
+	record StageEntry(String id, String courseId, String title, int position, boolean available) {
+		static StageEntry of(StageRef ref) {
+			var stage = ref.stage();
+			return new StageEntry(stage.id(), ref.course().manifest().course().id(), stage.title(), stage.position(), stage.available());
+		}
+	}
+
+	record StagesView(String courseId, List<StageEntry> stages) {
+	}
+
+	record StageView(StageEntry stage, String bodyHtml, List<ResourceView> resources,
+			String previousStageId, String nextStageId) {
+	}
+
 	private static final Logger log = LoggerFactory.getLogger(CatalogController.class);
 
 	private final Catalog catalog;
@@ -103,7 +118,7 @@ class CatalogController {
 		List<Lesson> available = Catalog.syllabus(ref.course()).stream().filter(Lesson::available).toList();
 		int index = available.indexOf(ref.lesson());
 		List<ResourceView> resources = ref.course().manifest().resources().stream()
-				.filter(resource -> resource.lessonId().equals(lessonId))
+				.filter(resource -> lessonId.equals(resource.lessonId()))
 				.map(resource -> new ResourceView(resource.resourceId(), "/api/resources/" + resource.resourceId(),
 						resource.mediaType(), ref.course().resources().get(resource.resourceId()).originalFileName()))
 				.toList();
@@ -113,23 +128,46 @@ class CatalogController {
 				index < available.size() - 1 ? available.get(index + 1).id() : null);
 	}
 
+	@GetMapping(path = "/api/courses/{courseId}/stages", produces = MediaType.APPLICATION_JSON_VALUE)
+	StagesView stages(@PathVariable String courseId) {
+		CourseContent course = catalog.course(courseId).orElseThrow(CatalogController::notFound);
+		return new StagesView(courseId, Catalog.project(course).stream()
+			.map(stage -> StageEntry.of(new StageRef(course, stage))).toList());
+	}
+
+	@GetMapping(path = "/api/stages/{stageId}", produces = MediaType.APPLICATION_JSON_VALUE)
+	StageView stage(@PathVariable String stageId) {
+		StageRef ref = catalog.stage(stageId).orElseThrow(CatalogController::notFound);
+		if (!ref.stage().available()) {
+			throw new ApiException(HttpStatus.CONFLICT, "STAGE_UNAVAILABLE", "Stage is not available.");
+		}
+		var available = Catalog.project(ref.course()).stream().filter(Manifest.Stage::available).toList();
+		int index = available.indexOf(ref.stage());
+		var resources = ref.course().manifest().resources().stream()
+			.filter(resource -> stageId.equals(resource.stageId()))
+			.map(resource -> new ResourceView(resource.resourceId(), "/api/resources/" + resource.resourceId(),
+				resource.mediaType(), ref.course().resources().get(resource.resourceId()).originalFileName())).toList();
+		return new StageView(StageEntry.of(ref), ref.course().stages().get(stageId).bodyHtml(), resources,
+			index > 0 ? available.get(index - 1).id() : null,
+			index < available.size() - 1 ? available.get(index + 1).id() : null);
+	}
+
 	/**
-	 * The bytes of a registered resource of an available lesson, as a download under its original name. Not JSON and
+	 * The bytes of a registered resource of an available lesson or stage, under its original name (PNG/JPEG inline). Not JSON and
 	 * not negotiated: a browser's Accept header never blocks it. Unknown, unauthorized or unreadable IDs are 404.
 	 */
 	@GetMapping("/api/resources/{resourceId}")
 	void resource(@PathVariable String resourceId, HttpServletResponse response) throws IOException {
 		ResourceRef ref = catalog.resource(resourceId).orElseThrow(CatalogController::notFound);
-		boolean lessonAvailable = catalog.lesson(ref.resource().lessonId()).map(lesson -> lesson.lesson().available())
-				.orElse(false);
-		if (!lessonAvailable) throw notFound();
+		if (!Catalog.ownerAvailable(ref)) throw notFound();
 		byte[] bytes = catalog.read(ref).orElseThrow(() -> {
 			log.warn("Registered resource {} failed its serve-time file check", resourceId);
 			return notFound();
 		});
 		response.setStatus(HttpServletResponse.SC_OK);
 		response.setContentType(ref.resource().mediaType());
-		response.setHeader("Content-Disposition", attachment(ref.file().originalFileName()));
+		boolean raster = ref.resource().mediaType().equals("image/png") || ref.resource().mediaType().equals("image/jpeg");
+		response.setHeader("Content-Disposition", disposition(raster ? "inline" : "attachment", ref.file().originalFileName()));
 		response.setHeader("X-Content-Type-Options", "nosniff");
 		response.setHeader("Content-Security-Policy", "sandbox");
 		response.setHeader("Cache-Control", "private, no-store");
@@ -139,6 +177,10 @@ class CatalogController {
 
 	/** RFC 6266: an ASCII-safe quoted name for old clients and the exact UTF-8 name in filename*. */
 	static String attachment(String fileName) {
+		return disposition("attachment", fileName);
+	}
+
+	private static String disposition(String type, String fileName) {
 		String fallback = fileName.replaceAll("[^A-Za-z0-9._-]", "_");
 		StringBuilder encoded = new StringBuilder();
 		for (byte b : fileName.getBytes(StandardCharsets.UTF_8)) {
@@ -150,7 +192,7 @@ class CatalogController {
 				encoded.append('%').append(String.format("%02X", b & 0xff));
 			}
 		}
-		return "attachment; filename=\"" + fallback + "\"; filename*=UTF-8''" + encoded;
+		return type + "; filename=\"" + fallback + "\"; filename*=UTF-8''" + encoded;
 	}
 
 	private static ApiException notFound() {

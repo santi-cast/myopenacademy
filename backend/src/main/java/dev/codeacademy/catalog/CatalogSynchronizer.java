@@ -2,6 +2,8 @@ package dev.codeacademy.catalog;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,7 +40,7 @@ public class CatalogSynchronizer {
 	public void synchronize(List<Manifest> manifests) {
 		// Concurrent starts would otherwise interleave their checks and writes.
 		jdbc.execute("lock table code_academy.courses, code_academy.phases, code_academy.lessons, "
-				+ "code_academy.exercises in share row exclusive mode");
+				+ "code_academy.exercises, code_academy.project_stages in share row exclusive mode");
 		List<String> problems = conflicts(manifests);
 		if (!problems.isEmpty()) throw new CatalogConflictException(problems);
 
@@ -50,8 +52,14 @@ public class CatalogSynchronizer {
 		List<Object[]> phases = new ArrayList<>();
 		List<Object[]> lessons = new ArrayList<>();
 		List<Object[]> exercises = new ArrayList<>();
+		List<Object[]> stages = new ArrayList<>();
 		for (Manifest manifest : manifests) {
 			String courseId = manifest.course().id();
+			if (manifest.projectStages() != null) {
+				for (var stage : manifest.projectStages()) {
+					stages.add(new Object[] {stage.id(), courseId, stage.title(), stage.position(), stage.available(), stage.sourceAvailable()});
+				}
+			}
 			for (Phase phase : manifest.phases()) {
 				phases.add(new Object[] { phase.id(), courseId, phase.title(), phase.position() });
 			}
@@ -85,6 +93,14 @@ public class CatalogSynchronizer {
 				on conflict (id) do update set title = excluded.title, position = excluded.position
 				where (exercises.title, exercises.position) is distinct from (excluded.title, excluded.position)
 				""", exercises);
+		jdbc.batchUpdate("""
+				insert into code_academy.project_stages (id, course_id, title, position, available, source_available)
+				values (?, ?, ?, ?, ?, ?)
+				on conflict (id) do update set position = excluded.position, available = excluded.available,
+				    source_available = excluded.source_available
+				where (project_stages.position, project_stages.available, project_stages.source_available)
+				    is distinct from (excluded.position, excluded.available, excluded.source_available)
+				""", stages);
 		// lessons.phase_id is nullable only so V5 could run on databases that already had lessons (see V5__phases.sql).
 		List<String> withoutPhase = jdbc.queryForList(
 				"select id from code_academy.lessons where phase_id is null order by id", String.class);
@@ -94,13 +110,43 @@ public class CatalogSynchronizer {
 	}
 
 	private List<String> conflicts(List<Manifest> manifests) {
+		List<String> problems = new ArrayList<>();
+		Set<String> nonStageIds = new HashSet<>();
+		for (Manifest manifest : manifests) {
+			nonStageIds.add(manifest.course().id());
+			manifest.phases().forEach(p -> nonStageIds.add(p.id()));
+			manifest.lessons().forEach(l -> {
+				nonStageIds.add(l.id());
+				l.exercises().forEach(e -> nonStageIds.add(e.id()));
+			});
+			manifest.resources().forEach(r -> nonStageIds.add(r.resourceId()));
+		}
 		Map<String, String> phaseCourses = new HashMap<>();
 		Map<String, String> lessonCourses = new HashMap<>();
 		Map<String, Owner> exerciseOwners = new HashMap<>();
 		Map<String, String> exerciseTitles = new HashMap<>();
+		Map<String, String> stageCourses = new HashMap<>();
+		Map<String, String> stageTitles = new HashMap<>();
 		List<String> courseIds = new ArrayList<>();
 		for (Manifest manifest : manifests) {
 			courseIds.add(manifest.course().id());
+			if (manifest.projectStages() != null) {
+				Set<Integer> positions = new HashSet<>();
+				int size = manifest.projectStages().size();
+				manifest.projectStages().forEach(stage -> {
+					if (stage.id() == null || stage.id().isBlank() || nonStageIds.contains(stage.id())
+							|| stageCourses.putIfAbsent(stage.id(), manifest.course().id()) != null) {
+						problems.add("invalid or duplicate stage id " + stage.id());
+					}
+					if (stage.position() == null || stage.position() < 1 || stage.position() > size
+							|| !positions.add(stage.position())) problems.add("invalid stage position for " + stage.id());
+					if (stage.available() == null || stage.sourceAvailable() == null
+							|| (Boolean.TRUE.equals(stage.available()) && !Boolean.TRUE.equals(stage.sourceAvailable()))) {
+						problems.add("invalid stage availability for " + stage.id());
+					}
+					stageTitles.put(stage.id(), stage.title());
+				});
+			}
 			manifest.phases().forEach(phase -> phaseCourses.put(phase.id(), manifest.course().id()));
 			for (Lesson lesson : manifest.lessons()) {
 				lessonCourses.put(lesson.id(), manifest.course().id());
@@ -110,7 +156,18 @@ public class CatalogSynchronizer {
 				});
 			}
 		}
-		List<String> problems = new ArrayList<>();
+		jdbc.query("select id, course_id, title from code_academy.project_stages order by id", row -> {
+			String id = row.getString("id");
+			String stored = row.getString("course_id");
+			String current = stageCourses.get(id);
+			if (current == null) problems.add("stage " + id + " is no longer in the manifest");
+			else if (!stored.equals(current)) {
+				problems.add("stage " + id + " belongs to course " + stored + ", not " + current);
+			}
+			else if (!row.getString("title").equals(stageTitles.get(id))) {
+				problems.add("stage " + id + " is titled «" + row.getString("title") + "», not «" + stageTitles.get(id) + "»");
+			}
+		});
 		jdbc.query("select id from code_academy.courses order by id", row -> {
 			String id = row.getString("id");
 			if (!courseIds.contains(id)) problems.add("course " + id + " is no longer in the content");

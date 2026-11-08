@@ -1,0 +1,16 @@
+#!/bin/sh
+# Offline only: do not route through the normal Spring Boot application main.
+set -eu
+if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
+    printf '%s\n' 'Usage: content-update compare|apply --active DIR --candidate DIR --source GIT --report FILE' \
+        'Compare prepared copies offline; apply requires the server stopped. No database writes.'
+    exit 0
+fi
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+jar="$script_dir/target/backend-0.0.1-SNAPSHOT.jar"
+if [ ! -f "$jar" ]; then
+    printf '%s\n' 'content-update: packaged backend jar missing; build first: cd backend && ./mvnw -DskipTests package' >&2
+    exit 2
+fi
+exec java -Dloader.main=dev.codeacademy.content.ContentUpdateCli -cp "$jar" \
+    org.springframework.boot.loader.launch.PropertiesLauncher "$@"
