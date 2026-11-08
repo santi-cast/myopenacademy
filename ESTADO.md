@@ -14,19 +14,19 @@ Lo que ya existe en los otros proyectos:
 
 ## Siguiente paso
 
-**Paso 2 del plan común: la prueba de importación** (`../PLAN.md`, apartado 7).
+**Paso 2 del plan común: la prueba de importación** (`../PLAN.md`, apartado 7). **Pasos 1 a 4 hechos** (9 de noviembre de 2026); queda el 5.
 
 1. **Ponerse al día:** leer el plan común, `FORMATO.md` y lo que tiene esta academia (sobre todo `docs/manifiesto.md`, `docs/actualizacion-contenido.md`, `backend/content-import` y `backend/content-update`).
-2. **Preparar un entorno propio**, separado del original. **Hecho en parte (8 de noviembre de 2026):** el proyecto de Compose se llama ya `myopenacademy` (volumen `myopenacademy_postgres_data`; comprobado con `docker compose config`, sin arrancar nada). Falta crear un `.env` propio y decidir el puerto: sigue en `5433`, igual que el original (su contenedor `code-academy-db-1` está parado); `5433` también está escrito en `backend/src/main/resources/application.properties` y en dos pruebas. No arrancar nada antes del `.env` (ver `CLAUDE.md`).
+2. **Preparar un entorno propio**, separado del original. **Hecho en parte (8 de noviembre de 2026):** el proyecto de Compose se llama ya `myopenacademy` (volumen `myopenacademy_postgres_data`; comprobado con `docker compose config`, sin arrancar nada). `.env` propio creado (contraseña generada, sin mostrar). **El puerto se deja para el plan nuevo** (decisión del autor): sigue en `5433`, igual que el original, así que el original y esta academia no pueden arrancar a la vez (la segunda falla por el puerto ocupado; los datos no corren riesgo). `5433` está escrito también en `backend/src/main/resources/application.properties` y en dos pruebas.
 3. **Intentar importar la fase 1 del curso inicial** (`../Cursos/curso-inicial/`, desde un commit fijo, solo leyendo) con el importador actual. Se espera que falle: el importador inventa los identificadores, no lee `curso.json`, solo conoce un curso y no sabe de retos, preguntas de repaso, pistas ni enlaces entre cursos.
 4. **Escribir la lista concreta de cambios** que necesita el importador (y el resto de la academia) para instalar cursos según `FORMATO.md`, ordenada y estimada. Si algo del formato no encaja con la academia, avisar al autor para la sesión del kit.
 5. Con esa lista, **reescribir con el autor `PLAN.md`** para MyOpenAcademy: los hitos nuevos a partir de H6 hasta el pack base 1.0 (`../PLAN.md`, apartado 8.5).
 
-## Prueba de importación de la fase 1 (en curso, 8 y 9 de noviembre de 2026)
+## Prueba de importación de la fase 1 (hecha, 8 y 9 de noviembre de 2026)
 
-Plan aprobado por el autor: el manifiesto inicial lo genera un script desde `curso.json` (`tools/curso_a_manifiesto.py`, primer borrador del importador nuevo; sin commit todavía) y se mira en el navegador contra una **base desechable** (contenedor `myopenacademy-prueba-importacion`, en memoria, puerto 5440), no contra la base de `myopenacademy`: el backend no arranca si desaparece un identificador ya guardado, y los de esta prueba son provisionales. El `.env` propio ya existe (contraseña generada, sin mostrar). Trabajo en `backend/target/prueba-importacion/` (fuera de Git). Curso inicial fijado en `c2bfba83d056fb2fc37aef412a0728cfde6a860c`; la comprobación del kit sobre esa copia: 0 errores.
+Plan aprobado por el autor: el manifiesto inicial lo genera un script desde `curso.json` (`tools/curso_a_manifiesto.py`, primer borrador del importador nuevo) y se mira en el navegador contra una **base desechable** (contenedor `myopenacademy-prueba-importacion`, en memoria, puerto 5440), no contra la base de `myopenacademy`: el backend no arranca si desaparece un identificador ya guardado, y los de esta prueba son provisionales. El `.env` propio ya existe (contraseña generada, sin mostrar). Trabajo en `backend/target/prueba-importacion/` (fuera de Git). Curso inicial fijado en `c2bfba83d056fb2fc37aef412a0728cfde6a860c`; la comprobación del kit sobre esa copia: 0 errores.
 
-Hallazgos hasta ahora:
+Hallazgos:
 
 1. **`--source` no admite `..`** («path escapes are not allowed»), y el plan común pone los cursos en `../Cursos/<curso>/`. En la prueba se resuelve la ruta al ejecutar.
 2. **No puede dar de alta un curso.** Con un contenido vacío: «has no course». Con el de Java: intenta regenerar Java contra el repositorio del inicial (22.836 hallazgos). Solo regenera lo que ya está en el manifiesto aceptado.
@@ -38,7 +38,43 @@ Hallazgos hasta ahora:
 8. **Lo que funciona:** las 4 lecciones y los 35 ejercicios pasan el procesado (sección de ejercicios, saneado del HTML, enlaces entre módulos y al índice); las pistas quedan plegadas en el enunciado, antes de la solución; las preguntas de repaso salen plegadas en el cuerpo (sin modo test); la cabecera (versiones, conviene saber antes, tiempo, nivel) sale como una cita de texto, sin usarse como datos.
 9. **Sin probar con la fase 1:** enlaces al glosario y a otros cursos, carpetas de código y ZIP, imágenes, partes, proyecto de tipo «modulo», módulos pendientes visibles. Hará falta el curso de ejemplo pequeño (o fases posteriores).
 
-Falta: la revisión del autor en el navegador y, con todo, la lista de cambios ordenada y estimada (paso 4 del «Siguiente paso»).
+El autor revisó la fase 1 en el navegador (9 de noviembre de 2026): **la cabecera y las preguntas de repaso, plegadas al final, le valen como están**. **Los retos sí tienen que verse** (decisión del autor): en el índice, al final de cada fase, y con el «Siguiente» del último módulo llevando a ellos. Servicios y base desechable parados; no se creó el volumen de `myopenacademy`.
+
+### Identificadores con punto: comprobado que no dan problemas
+
+Pedido del autor: ver si `inicial.que-es-programar` daría algún problema real. Comprobado el 9 de noviembre de 2026:
+
+- **Base de datos:** los identificadores son columnas `text` sin ninguna restricción de forma (las únicas `CHECK` son de usuario, estados y posiciones).
+- **Spring:** `/api/lessons/inicial.que-es-programar` llega entero al controlador (404 en JSON, no 400 ni 406), y `/api/lessons/inicial-que-es-programar.json` da 404: Spring no corta el identificador en el punto ni lo toma como extensión.
+- **Frontend:** las direcciones se arman con `encodeURIComponent`, que no toca el punto, y Vite devuelve la aplicación para `/lessons/inicial.que-es-programar` (y hasta para `….md`).
+- **Ya pasa hoy:** los identificadores de Java llevan punto (`java-01.03`, `java-01.03-e01`) y funcionan desde H4.
+- **Lo único que lo impide** es la regla del validador del manifiesto (`ManifestValidator`, prefijo `<namespace>-`) y los identificadores que inventa el importador.
+- **A vigilar en H7:** el servidor que sirva la aplicación en internet no debe tomar `.algo` como extensión de fichero.
+
+**Propuesta:** el importador nuevo acepta los identificadores de `curso.json` **tal cual**, con punto, para no tener dos formas del mismo identificador. La academia empieza sin alumnos, así que no hay nada que trasladar.
+
+### Lista de cambios para instalar cursos según `FORMATO.md`
+
+Ordenada por dependencia. Estimación orientativa, con sus pruebas: **P** = medio día, **M** = un día, **G** = dos o tres días. Total: unos **10 días** de trabajo, sin contar las revisiones del autor. Lo más incierto es el 2.
+
+| # | Cambio | Por qué (hallazgo) | Tamaño |
+|---|---|---|---|
+| 1 | **Curso de ejemplo pequeño** en el repositorio, con todo lo que la fase 1 no tiene: glosario, enlace a otro curso, código con ZIP, imagen, retos, módulo pendiente, proyecto. Las pruebas dejan de usar el curso de Java real | 9; `../PLAN.md` 8.5 | M |
+| 2 | **Importador que lee `curso.json`** y da de alta cursos nuevos sin manifiesto previo. El manifiesto interno pasa a generarse desde `curso.json` (sale de `tools/curso_a_manifiesto.py`, más el cálculo de las anclas), deja de leer las filas `NN.NN` del índice y no inventa identificadores de lecciones ni de ejercicios. Los módulos con `"disponible": false` entran como pendientes desde `curso.json` | 2, 4, 6, 7 | G |
+| 3 | **Identificadores tal cual**, con punto: el validador exige el prefijo `<curso>.` y la forma de `FORMATO.md` 3.3 (minúsculas sin tildes, cifras, guiones y puntos) | 3 | P |
+| 4 | **`--source` con rutas relativas y `..`** (`../Cursos/curso-inicial`). Es de solo lectura (solo objetos Git del commit), así que basta con normalizar la ruta; se mantienen las comprobaciones de enlaces simbólicos, `.env` y solapamiento. `--active`, `--output` y `--report` siguen como están | 1 | P |
+| 5 | **Versión del curso:** instalar desde una etiqueta (`v0.1.0`), resolverla al commit y guardar las dos cosas, además de la `version` de `curso.json` | `FORMATO.md` 11 | P |
+| 6 | **Retos de fase** (decisión del autor, 9 de noviembre de 2026): `retos.md` se importa como documento de la fase. En el índice del curso, al final de cada fase, una línea «Retos de la fase» (opcionales, sin seguimiento), como hoy las etapas del proyecto. El «Siguiente» del último módulo de la fase lleva a los retos, igual que en GitHub, y los enlaces a `retos.md` se resuelven. No se muestran mientras `"retos_disponibles": false` | 5 | M |
+| 7 | **Glosario** como documento del curso sin seguimiento (lo mismo que el 6) | 9; `FORMATO.md` 9 | P |
+| 8 | **Varios cursos instalados:** catálogo con `descripcion` y recomendaciones (`conviene_saber_antes`), `content/` fuera de Git y un fichero con los cursos y la versión instalada | `../PLAN.md` 8.5 | M |
+| 9 | **Enlaces entre cursos:** la dirección de GitHub se convierte en enlace a la lección si ese curso está instalado; si no, se queda la de GitHub | 9; `FORMATO.md` 10.2 | M |
+| 10 | **Proyecto** desde `curso.json`: de tipo «modulo» (el inicial) o por etapas (Java) | 9; `FORMATO.md` 8 | P |
+| 11 | **Botón «Mejorar esta lección»** con `repositorio` y la ruta del fichero | `../PLAN.md` 8.5 | P |
+| 12 | **Partes** (`partes` de `curso.json`) y su avance. Las necesita Java, no el inicial: puede ir después del pack base | `FORMATO.md` 3.2 | M |
+
+**No hace falta tocar** (revisado por el autor): la cabecera del módulo, que se ve como cita; las pistas; las preguntas de repaso, plegadas al final; lo que no está en `curso.json` (`herramientas/`, `CLAUDE.md`, `PLAN-CURSO.md`, `ESTADO.md`) ya no se importa si solo se instala lo declarado. **Después del 1.0:** equivalencias (`FORMATO.md` 11.2); las preguntas de repaso como test; los datos de la cabecera (tiempo, nivel, «Conviene saber antes») como datos, por ejemplo la duración de cada curso en el catálogo (`../PLAN.md` 8.5).
+
+**Nada que cambiar en `FORMATO.md`:** todo lo que no encajó es de la academia. Avisado al autor para el kit y el curso inicial el 9 de noviembre de 2026.
 
 ## Pendientes heredados que no hay que olvidar
 
@@ -55,8 +91,8 @@ Falta: la revisión del autor en el navegador y, con todo, la lista de cambios o
 
 | Otros esperan de la academia | Qué | Para | Estado |
 |---|---|---|---|
-| Kit y curso inicial | La lista de lo que no encaje del formato | Ajustar `FORMATO.md` antes de publicar | Pendiente (sale de la prueba de importación) |
-| Curso inicial | Un importador que lea `curso.json` | Instalarse en la academia (pack base 1.0) | Pendiente |
+| Kit y curso inicial | La lista de lo que no encaje del formato | Ajustar `FORMATO.md` antes de publicar | **Hecho** (9 de noviembre de 2026): nada que cambiar; la academia aceptará los identificadores con punto tal cual |
+| Curso inicial | Un importador que lea `curso.json` | Instalarse en la academia (pack base 1.0) | Pendiente: cambios 2 a 8 y 10 de la lista de la prueba de importación |
 
 Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 
@@ -66,3 +102,4 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 |---|---|
 | 2026-11-08 | Repositorio creado clonando Code Academy con su historial, sin remoto; añadidos `CLAUDE.md` y `ESTADO.md`. |
 | 2026-11-08 | Proyecto de Compose renombrado de `code-academy` a `myopenacademy` (y su mención en `docs/desarrollo-local.md`), para no usar nunca los contenedores ni el volumen del original. |
+| 2026-11-09 | `.env` propio. Prueba de importación de la fase 1 del curso inicial (`tools/curso_a_manifiesto.py`, base desechable, revisión del autor en el navegador), comprobación de los identificadores con punto y lista de cambios para instalar cursos según `FORMATO.md`. |
