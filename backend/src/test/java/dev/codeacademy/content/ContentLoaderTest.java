@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -369,6 +371,21 @@ class ContentLoaderTest {
 	void rejectsAnUnmappedRelativeLink() {
 		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [otro](03-otra.md).");
 		fixture.rejected("demo-01.01: unresolved link 03-otra.md");
+	}
+
+	@Test
+	void keepsOnlyTheTextOfLinksToProtectedSourcePaths() {
+		fixture.replace(INTRO, "Texto de cuerpo.",
+			"Texto de cuerpo con [config](codigo/.env), [ejemplo](codigo/.env.example#x) y [repo](../.git/config).");
+		String html = fixture.load().lessons().get("demo-01.01").bodyHtml();
+		assertThat(html).contains("config", "ejemplo", "repo").doesNotContain(".env", ".git", "<a href=\"codigo");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "codigo/.envrc", "codigo/env", "../../.env" })
+	void stillRejectsUnresolvedLinksThatAreNotProtected(String destination) {
+		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [x](" + destination + ").");
+		fixture.rejected("demo-01.01: unresolved link " + destination);
 	}
 
 	@Test

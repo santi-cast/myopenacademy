@@ -501,12 +501,29 @@ final class LessonPipeline {
 		}
 		String href = resolve(lesson, link, destination, hrefs, usedResources);
 		if (href == null) {
-			problems.add(label + ": unresolved link " + destination);
+			// A .git, .env or .env.* target is excluded by policy and reported by the importer, so it keeps only its
+			// text; any other target that does not resolve is still a problem.
+			if (!protectedTarget(lesson, destination)) problems.add(label + ": unresolved link " + destination);
 			unwrap(link);
 		}
 		else if (!href.isEmpty()) {
 			link.setDestination(href);
 			hrefs.add(href);
+		}
+	}
+
+	/** Whether the relative destination names a source path the protection policy never copies. */
+	private static boolean protectedTarget(ParsedLesson lesson, String destination) {
+		int hash = destination.indexOf('#');
+		String path = decode(hash < 0 ? destination : destination.substring(0, hash));
+		String resolved = path == null || path.isEmpty() ? null : resolvePath(lesson.sourcePath, path);
+		if (resolved == null) return false;
+		try {
+			ContentUpdateComparison.safeNames(resolved);
+			return false;
+		}
+		catch (IllegalArgumentException ex) {
+			return true;
 		}
 	}
 

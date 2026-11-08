@@ -1045,6 +1045,30 @@ class ContentImportCliTest {
 		assertThat(ContentLoader.loadAll(output)).hasSize(1);
 	}
 
+	@Test void aDirectLinkToAProtectedFileIsReportedAndKeepsOnlyItsText() throws Exception {
+		// The linked file is excluded by the same policy as a folder member: reported, never read, and the run goes on.
+		files.put("fase-01/codigo/hola/.env", "SECRETO_DIDACTICO=uno\n".getBytes(StandardCharsets.UTF_8));
+		files.put("proyecto/01-inicial.md",
+			"# Etapa 1\n\nCopia [la configuración](../fase-01/codigo/hola/.env) antes.\n".getBytes(StandardCharsets.UTF_8));
+		String changed = commit(files, "protected direct link\n");
+		Map<String, String> activeBefore = snapshot(active.root);
+		Map<String, String> sourceBefore = snapshot(source);
+		assertThat(generate("--commit", changed)).isEqualTo(new Result(0,
+			"Candidate written; lessons: 3; stages: 2; resources: 4; reported: 1\n", ""));
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).containsExactly("protected source path excluded by policy: fase-01/codigo/hola/.env");
+		String html = ContentLoader.loadAll(output).getFirst().stages().get("demo-stage-01").bodyHtml();
+		assertThat(html).contains("la configuración").doesNotContain(".env", "<a");
+		try (var all = Files.walk(output)) {
+			for (Path path : all.filter(Files::isRegularFile).toList()) {
+				assertThat(new String(Files.readAllBytes(path), StandardCharsets.ISO_8859_1))
+					.as(path.toString()).doesNotContain("SECRETO_DIDACTICO");
+			}
+		}
+		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
+		assertThat(snapshot(source)).isEqualTo(sourceBefore);
+	}
+
 	@Test void protectedSourcePathsAreExcludedAndReportedWithoutSerializingTheirBytes() throws Exception {
 		// Policy: a protected source path is never read nor serialized. The folder ships without that example file and
 		// the omission is reported with its source path; nothing is substituted for it and the run is not aborted.
