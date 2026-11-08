@@ -32,7 +32,7 @@ class ProgressIsolationTest extends ProgressTestSupport {
 		JsonNode anaJava = ok(progress(ana, "java"));
 		assertThat(anaJava.path("added").asBoolean()).isFalse();
 		assertThat(anaJava.path("lessonStates").size()).isZero();
-		assertCounts(anaJava.path("progress"), 0, 1, 199, 0.0);
+		assertCounts(anaJava.path("progress"), 0, 199, 199, 0.0);
 		JsonNode anaCourses = ok(ana.get("/api/me/courses")).path("courses");
 		assertThat(anaCourses.size()).isEqualTo(1);
 		assertThat(anaCourses.get(0).path("course").path("id").asString()).isEqualTo("demo");
@@ -47,7 +47,7 @@ class ProgressIsolationTest extends ProgressTestSupport {
 		assertCounts(brunoDemo.path("progress"), 0, 2, 3, 0.0);
 		JsonNode brunoJava = ok(progress(bruno, "java"));
 		assertThat(brunoJava.path("added").asBoolean()).isTrue();
-		assertCounts(brunoJava.path("progress"), 1, 1, 199, 100.0);
+		assertCounts(brunoJava.path("progress"), 1, 199, 199, 100.0 / 199);
 		assertThat(ok(bruno.get("/api/me/courses")).path("courses").size()).isEqualTo(2);
 	}
 

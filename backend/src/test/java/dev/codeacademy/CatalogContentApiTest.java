@@ -181,6 +181,18 @@ class CatalogContentApiTest {
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}
 
+	/** Moved from CatalogApiTest: since H5 the real course has no pending lesson, the fixture's demo-02.01 still does. */
+	@Test
+	void pendingLessonIs409WithoutChangingAnything() throws Exception {
+		var before = TestDatabase.snapshot(jdbc);
+
+		for (ApiClient browser : List.of(first, second)) {
+			assertError(browser.get("/api/lessons/demo-02.01"), 409, "LESSON_UNAVAILABLE");
+		}
+
+		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
+	}
+
 	@Test
 	void stageOwnedZipAndMembersRequireSessionButNotEnrollment() throws Exception {
 		var before = TestDatabase.snapshot(jdbc);

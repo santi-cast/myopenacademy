@@ -2,7 +2,7 @@
 
 Academia web para estudiar programación, empezando por Java. El objetivo es usarla personalmente cuando esté funcionando y presentarla como proyecto de portfolio, con apoyo de agentes de IA para desarrollarla.
 
-**Estado:** H1–H4 cerrados; H4 integrado en `main` mediante `a3d3976` (base actual `9920abe`). H5 autorizado y en curso en `feat/h5-content-import`: contratos documentales primero; importación y funciones nuevas todavía pendientes. Solo trabajo local; merge y publicación requieren autorización aparte.
+**Estado:** H1–H4 cerrados; H4 integrado en `main` mediante `a3d3976` (base actual `9920abe`). H5 autorizado y en curso en `feat/h5-content-import`: contenido real importado desde `c8e29163d59f41830eff2d449bf8b02a19905f61` (199 lecciones y 14 etapas), con etapas, recursos y actualización comparada implementados; quedan la verificación T6 con dos usuarios sobre el contenido real, la conciliación final T7 y el merge. Solo trabajo local; merge y publicación requieren autorización aparte.
 Este archivo es el plan principal versionado; Engram complementa su continuidad, no lo reemplaza.
 
 ## 1. Decisiones confirmadas
@@ -35,7 +35,7 @@ El curso Java ya tiene su temario completo definido en el índice, pero no todas
 - Actualizaciones manuales con comparación previa y conflictos explícitos, sin sobrescribir adaptaciones automáticamente. Separar contenido importado y complementos de la academia.
 - IDs de lecciones y ejercicios permanentes, globales e independientes de rutas, títulos, números y posiciones del origen. Se asignan al importar y se conservan al reorganizar; el ordinal no identifica un ejercicio.
 
-El [manifiesto](docs/manifiesto.md) conserva el contrato v1 de H4 y propone v2 para H5, con etapas independientes y comparación antes de aplicar. H5 fija el origen en `f95ae6fba5de2cacf5a4a00387a81b6c7166a632`, sin cambios sin commit: inventario observado de 199 lecciones en 21 fases, 169 disponibles en origen y 14 etapas del Proyecto evolutivo (12 escritas, 2 pendientes), pendiente de contraste durante la importación. No son cifras ya importadas. Adaptaciones, retítulos, retiradas e identidad ambigua rechazan la actualización sin tocar datos; no hay migración automática de progreso.
+El [manifiesto](docs/manifiesto.md) conserva el contrato v1 de H4 y define v2 para H5, con etapas independientes y comparación antes de aplicar. H5 fija el origen en `c8e29163d59f41830eff2d449bf8b02a19905f61`, sin cambios sin commit, en lugar de las bases aprobadas antes (`f95ae6f…` y `7e71300…`, solo historial). La copia activa, en esquema v2, ya importa 199/199 lecciones en 21 fases y 14/14 etapas del Proyecto evolutivo, con 22642 recursos (16647 archivos copiados y 5995 ZIP canónicos); la lección 02.01 de H4 conserva IDs y cuerpo idéntico. Se generó y aplicó sin conexión y sin la base del propietario, con 0 conflictos en la comparación; los hallazgos no bloqueantes están en la [importación aplicada](docs/actualizacion-contenido.md#importación-de-h5-aplicada). Adaptaciones, retítulos, retiradas e identidad ambigua rechazan la actualización sin tocar datos; no hay migración automática de progreso.
 
 ## 3. Primera versión local
 
@@ -58,7 +58,7 @@ Implementado en H4 y probado de principio a fin con dos usuarios.
 |---|---|---|
 | Lección | no completada / completada | El alumno, manualmente |
 | Ejercicio | pendiente / en curso / resuelto | El alumno, manualmente |
-| Etapa del Proyecto evolutivo (H5, pendiente) | no completada / completada | El alumno, manualmente |
+| Etapa del Proyecto evolutivo (H5) | no completada / completada | El alumno, manualmente |
 
 - No existe «leída». «No completada» permite haber estudiado parte sin terminarla. Se pueden corregir estados sin secuencia obligatoria.
 - Completar lección no exige resolver ejercicios. El progreso representa declaraciones del alumno, no evaluación automática.
@@ -66,7 +66,7 @@ Implementado en H4 y probado de principio a fin con dos usuarios.
 - Avance: lecciones completadas entre disponibles, con cifras absolutas, porcentaje y total previsto. Ejemplo ilustrativo, no recuento real: «12 de 129 lecciones disponibles completadas · 9,3 % · 199 previstas».
 - Nuevas lecciones disponibles pueden reducir el porcentaje sin borrar trabajo. Si no hay disponibles, mostrar «sin lecciones disponibles» y no dividir por cero. Las fechas corresponden a cambios guardados de estado, no visitas.
 - Sin registro personal, lección y etapa no completadas, ejercicio pendiente; no precargar estados al añadir un curso.
-- H5 incorpora Proyecto evolutivo como sección propia de Java, no como fase ni lecciones adicionales: mantiene las 199 lecciones previstas. Estados y última etapa abierta se guardarán separados de lecciones y ejercicios, con la misma inscripción y propietario; véase el [contrato aditivo de etapas](docs/api.md#h5-contrato-aditivo-de-etapas-pendiente-de-implementar).
+- H5 incorpora Proyecto evolutivo como sección propia de Java, no como fase ni lecciones adicionales: mantiene las 199 lecciones previstas. Estados y última etapa abierta se guardan separados de lecciones y ejercicios, con la misma inscripción y propietario; véase el [contrato aditivo de etapas](docs/api.md#h5-contrato-aditivo-de-etapas-pendiente-de-implementar).
 
 H1 quedó cerrado con estas reglas, H2 definió su seguridad, H3 validó la base técnica y H4 las implementa.
 
@@ -83,7 +83,7 @@ H1 quedó cerrado con estas reglas, H2 definió su seguridad, H3 validó la base
 | Base de datos | PostgreSQL con imagen postgres:18.6 en Docker Compose, entorno y datos propios. |
 | Persistencia | Spring Data JPA y migraciones versionadas Flyway con soporte PostgreSQL. |
 | Seguridad | Spring Security con denegación por defecto, CSRF SPA y Argon2id con Bouncy Castle. Cuentas (registro, login, logout, versión de credenciales en cada solicitud, `ACCESS_DENIED` distinto de `CSRF_REJECTED`) y recuperación por consola implementadas en H4. |
-| Contenido | Copia controlada en `content/java/` desde el commit fijado `0c2df357c6628784df6b537df8950da540096a8c`: temario de 199 módulos (133 escritos en origen) en 21 fases; solo la lección 02.01 disponible. Markdown procesado en el backend al arrancar con commonmark 0.31.0 (+ tablas GFM 0.31.0) y OWASP Java HTML Sanitizer 20261011.1. |
+| Contenido | Copia controlada en `content/java/` (manifiesto v2) desde el commit fijado `c8e29163d59f41830eff2d449bf8b02a19905f61`: 199 lecciones disponibles en 21 fases y 14 etapas del Proyecto evolutivo, con recursos y ZIP de carpetas. La copia de H4 (`0c2df357c6628784df6b537df8950da540096a8c`, solo la lección 02.01) quedó retenida en `content.previous`. Markdown procesado en el backend al arrancar con commonmark 0.31.0 (+ tablas GFM 0.31.0) y OWASP Java HTML Sanitizer 20261011.1. |
 | Estudio y progreso | Inscripción, estados de lección y ejercicio, continuación y avance por usuario (migraciones V2–V5). |
 | Pruebas | Vitest y React Testing Library; JUnit y Testcontainers con PostgreSQL real; Playwright para recorridos completos. |
 
@@ -185,7 +185,7 @@ Secuencia de trabajo con estado explícito; los hitos futuros se detallarán en 
 | H2. Diseño | Cerrado | Pantallas, modelo, API, arquitectura y manifiesto mínimo | Recorrido, separación de datos y contratos aprobados en diseño |
 | H3. Base técnica | Cerrado | Frontend, backend, entorno local y pruebas iniciales | Arranque reproducible documentado y comprobaciones técnicas e independientes completadas |
 | H4. Primer recorrido | Cerrado e integrado en main (`a3d3976`) | Una lección real importada (02.01), cuentas y avance persistente | Cumplido: dos usuarios conservan avances distintos tras reiniciar el backend, sin acceso cruzado (recorrido E2E aislado, `npm run test:e2e:journey`) |
-| H5. Contenido disponible | Autorizado; en curso, no completado | 169 lecciones disponibles del origen fijado, Proyecto evolutivo separado, imágenes/tachado/ZIP y actualización comparada | Inventario contrastado, recursos seguros y actualización incremental con conservación del progreso de dos usuarios en pruebas aisladas |
+| H5. Contenido disponible | Autorizado; en curso, no completado | 199 lecciones y 14 etapas disponibles del origen fijado (importadas), Proyecto evolutivo separado, imágenes/tachado/ZIP y actualización comparada | Inventario contrastado, recursos seguros y actualización incremental con conservación del progreso de dos usuarios en pruebas aisladas |
 | H6. Validación de estudio | No completado; pendiente | Uso real por el propietario | Recorrido probado y problemas registrados/priorizados |
 | H7. Publicación | No completado; pendiente | Alojamiento, seguridad, respaldos y despliegue | Preparación revisada y autorización explícita antes de publicar |
 
@@ -225,9 +225,9 @@ Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y apl
 
 ## 8. Próximo paso
 
-**H4 integrado; H5 autorizado en su rama de trabajo.** El [archivo de tareas de H4](odd/tasks/h4-first-journey.md) conserva su evidencia; el [alcance aprobado y tareas de H5](odd/tasks/h5-content-import.md) rige la implementación pendiente. El agente no lee ni modifica `.env` o `.env.example`, no usa la base del propietario para verificar ni borra volúmenes.
+**H4 integrado; H5 autorizado en su rama de trabajo.** El [archivo de tareas de H4](odd/tasks/h4-first-journey.md) conserva su evidencia; el [alcance aprobado y tareas de H5](odd/tasks/h5-content-import.md) rige lo que queda por cerrar. El agente no lee ni modifica `.env` o `.env.example`, no usa la base del propietario para verificar ni borra volúmenes.
 
-**Próximo paso:** implementar y verificar por unidades los [contratos H5 del manifiesto](docs/manifiesto.md#h5-propuesta-v2-pendiente-de-implementar) y la [API de etapas](docs/api.md#h5-contrato-aditivo-de-etapas-pendiente-de-implementar). Búsqueda, personalización y publicación quedan fuera. La implementación autorizada no equivale a funcionalidad terminada ni a autorización de merge.
+**Próximo paso:** con los [contratos H5 del manifiesto](docs/manifiesto.md#h5-propuesta-v2-pendiente-de-implementar), la [API de etapas](docs/api.md#h5-contrato-aditivo-de-etapas-pendiente-de-implementar) y el contenido real ya importado, falta T6 (actualización aislada con conservación del progreso de dos usuarios sobre el contenido real) y la conciliación final T7. Búsqueda, personalización y publicación quedan fuera. El merge requiere una aprobación aparte del propietario.
 
 El antiguo «Pendiente de seguridad para H4» quedó resuelto: los 403 que no son de CSRF responden `ACCESS_DENIED`.
 

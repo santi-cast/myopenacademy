@@ -1,6 +1,6 @@
 # API — contrato de H2 cerrado
 
-Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md). H5 añade cinco rutas de etapas, implementadas en el backend y verificadas con contenido sintético; la interfaz de etapas ya tiene índice, contenido, estado manual y continuación independiente; la importación completa sigue pendiente. Los recursos ZIP y de etapas disponibles usan la ruta de recursos existente. Las imágenes Markdown seguras y el tachado amplían también la carga v1, sin rutas nuevas.
+Contrato aprobado en H2 e implementado en H4, que añadió fases, `fileName` de recursos, `ACCESS_DENIED` y 406. Mantiene las 14 rutas base y desarrolla el [plan principal](../PLAN.md). La procedencia y las asociaciones de contenido se definen en el [manifiesto](manifiesto.md). H5 añade cinco rutas de etapas, implementadas en el backend y verificadas con contenido sintético; la interfaz de etapas ya tiene índice, contenido, estado manual y continuación independiente; la copia activa ya importa 199 lecciones y 14 etapas disponibles desde el commit fijado del origen. Los recursos ZIP y de etapas disponibles usan la ruta de recursos existente. Las imágenes Markdown seguras y el tachado amplían también la carga v1, sin rutas nuevas.
 
 ## Acceso, propiedad y efectos
 
@@ -102,7 +102,7 @@ Ejemplo ilustrativo de un curso existente no añadido, con dos entradas y una di
 
 ## Contenido, ejercicios y recursos
 
-Política de extracción y entrega implementada en H4 para la lección importada; no es una medición del origen. El importador completo es de H5.
+Política de extracción y entrega implementada en H4 para la lección importada; no es una medición del origen. H5 añade el importador offline completo; véase el [manifiesto](manifiesto.md#comparar-antes-de-aplicar-límite-del-importador).
 
 La importación extrae los ejercicios de la sección exacta «Ejercicios prácticos resueltos» de cada lección: el enunciado pasa a `Exercise.statementHtml` y la solución en `<details>` pasa a `Exercise.solutionHtml`, conservando el desplegable seguro. Ambos campos se sanean por separado. `bodyHtml` no incluye esa sección, para que los ejercicios no aparezcan dos veces. La asociación explícita del manifiesto conserva IDs permanentes de ejercicios; un ordinal transitorio no identifica el ejercicio. Cada ejercicio se asocia por su título exacto ([regla del manifiesto](manifiesto.md#identidad-extracción-y-rutas)), y `Exercise.title` es ese mismo texto plano, idéntico al guardado en el catálogo. Un ID de elemento repetido en cualquier campo HTML de la lección rechaza la importación.
 
@@ -142,9 +142,9 @@ Formato único de error:
 
 ## H5: contrato aditivo de etapas pendiente de implementar
 
-Las cinco rutas y su persistencia ya están implementadas en el backend: 57 pruebas aisladas verifican catálogo, estados, rechazos sin cambios, migración poblada V5→V6, reinicio y concurrencia. El encabezado conserva el ancla existente; la interfaz consume esas rutas y el contenido real todavía está pendiente de la importación completa. La migración V6 es aditiva: crea catálogo y estados de etapas y añade una continuación nullable a la inscripción existente. Las pruebas usan PostgreSQL desechable, no la base del propietario.
+Las cinco rutas y su persistencia ya están implementadas en el backend: 57 pruebas aisladas verifican catálogo, estados, rechazos sin cambios, migración poblada V5→V6, reinicio y concurrencia. El encabezado conserva el ancla existente; la interfaz consume esas rutas y la copia activa ya trae las 14 etapas reales disponibles. La migración V6 es aditiva: crea catálogo y estados de etapas y añade una continuación nullable a la inscripción existente. Las pruebas usan PostgreSQL desechable, no la base del propietario.
 
-Proyecto evolutivo tiene una sección propia dentro de Java, con un inventario aprobado de 14 etapas escritas en `c8e29163d59f41830eff2d449bf8b02a19905f61`. La importación completa sigue pendiente: la UI muestra la disponibilidad efectiva que devuelve la API, no la deduce del inventario. No es una fase ni amplía las 199 lecciones previstas. Las 14 rutas H4, sus respuestas y los enums de lecciones/ejercicios conservan su significado; las etapas se consultan por rutas nuevas. No se añade progreso de etapas a `Counts` ni se cambia el denominador de lecciones.
+Proyecto evolutivo tiene una sección propia dentro de Java, con un inventario aprobado de 14 etapas escritas en `c8e29163d59f41830eff2d449bf8b02a19905f61`. Las 14 están importadas y disponibles en la copia activa; la UI sigue mostrando la disponibilidad efectiva que devuelve la API, no la deduce del inventario. No es una fase ni amplía las 199 lecciones previstas. Las 14 rutas H4, sus respuestas y los enums de lecciones/ejercicios conservan su significado; las etapas se consultan por rutas nuevas. No se añade progreso de etapas a `Counts` ni se cambia el denominador de lecciones.
 
 ### Formas y rutas nuevas
 
@@ -195,7 +195,7 @@ Ejemplo ilustrativo de StageProgress sin inscripción y con una etapa disponible
 
 ## H5: extensión de recursos pendiente de implementar
 
-La entrega de ZIP y recursos de etapas de esta sección ya está implementada; se conserva el ancla documental para enlaces existentes. Las rutas nuevas de etapas están implementadas en el backend y consumidas por la interfaz; la importación completa sigue pendiente.
+La entrega de ZIP y recursos de etapas de esta sección ya está implementada; se conserva el ancla documental para enlaces existentes. Las rutas nuevas de etapas están implementadas en el backend y consumidas por la interfaz; el contenido real (199 lecciones y 14 etapas, con sus recursos y ZIP) ya está importado.
 
 Estado de T2: imágenes Markdown y tachado implementados sobre v1/v2; ZIP v2 y recursos de etapas disponibles implementados con pruebas aisladas de carga y HTTP para dos sesiones sin inscripción. La carga rechaza ZIP no canónicos aunque su hash declarado coincida, sin descomprimirlos ni consultar el origen. La verificación independiente comprobó en Chromium la carga de PNG/JPEG y SVG desde el backend real con PostgreSQL desechable, para dos usuarios autenticados, sin interceptar ni relajar encabezados. Las solicitudes anónimas devolvieron 401 y las imágenes no cargaron. Esto verifica la entrega de recursos, no el recorrido completo de lección en React ni otros navegadores.
 
@@ -205,4 +205,4 @@ La resolución parte del documento fuente y de `sourceToId`, como en H4; imágen
 
 PNG/JPEG registrados para imagen admiten `Content-Disposition: inline` con nombres seguros y tipo validado; los demás recursos mantienen `attachment`, incluidos ZIP y SVG con CSP `sandbox`. Las imágenes SVG solo se usan en contexto `img`, nunca como HTML/SVG insertado en el DOM ni `object`/`iframe`; su visualización autenticada se comprobó en Chromium sin relajar el sandbox. Sin imágenes externas, `data:`, scripts ni manejadores. Todos conservan `nosniff`, `Cache-Control: private, no-store`, comprobación canónica de archivo sin symlinks al servir y acceso por ID. Los ZIP se entregan como `application/zip`, `attachment`, con el nombre original de carpeta más `.zip` codificado por el mismo helper seguro de los otros archivos. Se entregan ya generados y validados desde la copia controlada, nunca desde el origen ni por recorrido dinámico de directorios.
 
-Importar/actualizar no es una operación HTTP ni de estudio: véase el [límite offline de comparación y aplicación](manifiesto.md#comparar-antes-de-aplicar-límite-del-importador). La verificación posterior debe cubrir dos usuarios, continuidad independiente, 199 lecciones previstas y rechazo sin cambios de datos; esta unidad documental no afirma que esas pruebas o funciones H5 ya existan.
+Importar/actualizar no es una operación HTTP ni de estudio: véase el [límite offline de comparación y aplicación](manifiesto.md#comparar-antes-de-aplicar-límite-del-importador). La verificación pendiente de T6 debe cubrir, con el contenido real, dos usuarios, continuidad independiente, 199 lecciones previstas y rechazo sin cambios de datos; este documento no afirma que ya se haya hecho.

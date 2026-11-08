@@ -100,7 +100,7 @@ class CatalogApiTest {
 	}
 
 	@Test
-	void courseReturnsTheFullSyllabusInOrderWithOneAvailableLesson() throws Exception {
+	void courseReturnsTheFullSyllabusInOrderWithEveryLessonAvailable() throws Exception {
 		var response = browser.get("/api/courses/java");
 
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
@@ -121,6 +121,7 @@ class CatalogApiTest {
 		assertThat(phases.get(20).path("title").asString()).isEqualTo("Desarrollo profesional");
 		JsonNode lessons = body.path("lessons");
 		assertThat(lessons.size()).isEqualTo(199);
+		List<String> ids = new ArrayList<>();
 		List<String> available = new ArrayList<>();
 		for (int i = 0; i < lessons.size(); i++) {
 			JsonNode lesson = lessons.get(i);
@@ -129,9 +130,12 @@ class CatalogApiTest {
 			assertThat(lesson.path("position").asInt()).isEqualTo(i + 1);
 			assertThat(phaseIds).contains(lesson.path("phaseId").asString());
 			assertThat(lesson.path("courseId").asString()).isEqualTo("java");
+			assertThat(lesson.path("available").isBoolean()).isTrue();
+			ids.add(lesson.path("id").asString());
 			if (lesson.path("available").asBoolean()) available.add(lesson.path("id").asString());
 		}
-		assertThat(available).containsExactly(LESSON);
+		// The H5 import made all 199 lessons available; the syllabus still lists them in order.
+		assertThat(available).hasSize(199).isEqualTo(ids).contains(LESSON);
 		assertThat(lessons.get(0).path("id").asString()).isEqualTo("java-00.01");
 		assertThat(lessons.get(0).path("title").asString()).isEqualTo("Qué es programar");
 		assertThat(lessons.get(12).path("id").asString()).isEqualTo(LESSON);
@@ -141,7 +145,7 @@ class CatalogApiTest {
 	}
 
 	@Test
-	void availableLessonHasBodyExercisesResourcesAndNoNeighboursYet() throws Exception {
+	void availableLessonHasBodyExercisesResourcesAndItsAvailableNeighbours() throws Exception {
 		var response = browser.get("/api/lessons/" + LESSON);
 
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
@@ -154,8 +158,15 @@ class CatalogApiTest {
 		assertThat(body.path("lesson").path("phaseId").asString()).isEqualTo("java-phase-02");
 		assertThat(body.path("lesson").path("available").asBoolean()).isTrue();
 		assertThat(body.path("lesson").path("position").asInt()).isEqualTo(13);
-		assertThat(body.path("previousLessonId").isNull()).isTrue();
-		assertThat(body.path("nextLessonId").isNull()).isTrue();
+		assertThat(body.path("previousLessonId").asString()).isEqualTo("java-01.09");
+		assertThat(body.path("nextLessonId").asString()).isEqualTo("java-02.02");
+		// The ends of the syllabus have no neighbour on their outer side.
+		JsonNode first = json(browser.get("/api/lessons/java-00.01"));
+		assertThat(first.path("previousLessonId").isNull()).isTrue();
+		assertThat(first.path("nextLessonId").asString()).isEqualTo("java-00.02");
+		JsonNode last = json(browser.get("/api/lessons/java-20.06"));
+		assertThat(last.path("previousLessonId").asString()).isEqualTo("java-20.05");
+		assertThat(last.path("nextLessonId").isNull()).isTrue();
 
 		String bodyHtml = body.path("bodyHtml").asString();
 		assertThat(bodyHtml).contains("<a href=\"#java-02.01-e08\">ejercicio 8</a>")
@@ -176,30 +187,34 @@ class CatalogApiTest {
 				"java-02.01-e05", "java-02.01-e06", "java-02.01-e07", "java-02.01-e08", "java-02.01-e09");
 		assertThat(exercises.get(7).path("title").asString()).isEqualTo("¿Qué main se ejecuta?");
 
+		// The 22 H4 files keep their identities; H5 adds one ZIP per linked folder.
 		JsonNode resources = body.path("resources");
-		assertThat(resources.size()).isEqualTo(22);
+		assertThat(resources.size()).isEqualTo(41);
+		int files = 0;
+		int zips = 0;
 		for (JsonNode resource : resources) {
 			assertThat(resource.propertyNames()).containsExactlyInAnyOrder("resourceId", "url", "mediaType", "fileName");
 			String id = resource.path("resourceId").asString();
 			assertThat(resource.path("url").asString()).isEqualTo("/api/resources/" + id);
-			assertThat(resource.path("mediaType").asString()).isEqualTo("text/plain; charset=utf-8");
-			assertThat(resource.path("fileName").asString()).endsWith(".java").doesNotContain("java-02.01-r-", "/");
+			if (id.startsWith("java-02.01-r-")) {
+				files++;
+				assertThat(resource.path("mediaType").asString()).isEqualTo("text/plain; charset=utf-8");
+				assertThat(resource.path("fileName").asString()).endsWith(".java").doesNotContain("java-02.01-r-", "/");
+			}
+			else {
+				zips++;
+				assertThat(id).startsWith("java-02.01-zip-");
+				assertThat(resource.path("mediaType").asString()).isEqualTo("application/zip");
+				assertThat(resource.path("fileName").asString()).endsWith(".zip").doesNotContain("java-02.01-zip-", "/");
+			}
 		}
+		assertThat(files).isEqualTo(22);
+		assertThat(zips).isEqualTo(19);
 		JsonNode hello = find(resources, HELLO);
 		assertThat(hello.path("fileName").asString()).isEqualTo("Hello.java");
 		assertThat(find(resources, "java-02.01-r-ej08-programa-b-report").path("fileName").asString())
 				.isEqualTo("Report.java");
 		assertThat(response.body()).doesNotContain("localPath", "sourcePath", "href=\\\"codigo/", "fase-02");
-	}
-
-	@Test
-	void pendingLessonIs409WithoutChangingAnything() throws Exception {
-		var before = TestDatabase.snapshot(jdbc);
-
-		assertError(browser.get("/api/lessons/java-00.01"), 409, "LESSON_UNAVAILABLE");
-		assertError(browser.get("/api/lessons/java-02.02"), 409, "LESSON_UNAVAILABLE");
-
-		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}
 
 	@Test
@@ -262,10 +277,10 @@ class CatalogApiTest {
 				.containsExactly(java.util.Map.of("id", "java", "title", "Java"));
 		assertThat(jdbc.queryForObject("select count(*) from code_academy.lessons where course_id = 'java'",
 				Integer.class)).isEqualTo(199);
-		assertThat(jdbc.queryForList("select id from code_academy.lessons where available", String.class))
-				.containsExactly(LESSON);
+		assertThat(jdbc.queryForObject("select count(*) from code_academy.lessons where available",
+				Integer.class)).isEqualTo(199);
 		assertThat(jdbc.queryForObject("select count(*) from code_academy.lessons where source_available",
-				Integer.class)).isEqualTo(133);
+				Integer.class)).isEqualTo(199);
 		assertThat(jdbc.queryForList(
 				"select id from code_academy.exercises where lesson_id = ? and course_id = 'java' order by position",
 				String.class, LESSON)).hasSize(9).startsWith("java-02.01-e01").endsWith("java-02.01-e09");
