@@ -1,5 +1,6 @@
 package dev.codeacademy.content;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -258,10 +259,14 @@ final class ManifestValidator {
 				continue;
 			}
 			register(resource.resourceId());
-			// Resource links admit letters and digits but never combining marks, so a decomposed ID could not be linked.
+			// Resource links admit letters and digits but never combining marks, so a decomposed ID could not be linked;
+			// an ID is also kept in NFC so one name has one spelling.
 			if (COMBINING_MARK.matcher(resource.resourceId()).find()) {
 				problems.add("resource id " + resource.resourceId()
 					+ " contains combining marks; use composed (NFC) characters");
+			}
+			else if (!Normalizer.isNormalized(resource.resourceId(), Normalizer.Form.NFC)) {
+				problems.add("resource id " + resource.resourceId() + " is not in composed (NFC) form");
 			}
 			resources.put(resource.resourceId(), resource);
 			if (Objects.equals(manifest.schemaVersion(), 2)) {

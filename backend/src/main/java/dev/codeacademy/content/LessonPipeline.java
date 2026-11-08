@@ -514,17 +514,12 @@ final class LessonPipeline {
 
 	/** Whether the relative destination names a source path the protection policy never copies. */
 	private static boolean protectedTarget(ParsedLesson lesson, String destination) {
+		// A query is never a source path: resolve() and the importer refuse it, so it stays a problem here too.
+		if (destination.contains("?")) return false;
 		int hash = destination.indexOf('#');
 		String path = decode(hash < 0 ? destination : destination.substring(0, hash));
 		String resolved = path == null || path.isEmpty() ? null : resolvePath(lesson.sourcePath, path);
-		if (resolved == null) return false;
-		try {
-			ContentUpdateComparison.safeNames(resolved);
-			return false;
-		}
-		catch (IllegalArgumentException ex) {
-			return true;
-		}
+		return resolved != null && ContentUpdateComparison.protectedName(resolved);
 	}
 
 	/** The new href, "" when the link was replaced by folder file links, or null when it does not resolve. */
