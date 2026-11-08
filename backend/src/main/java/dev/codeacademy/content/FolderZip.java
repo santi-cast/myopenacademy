@@ -42,8 +42,8 @@ public final class FolderZip {
 	 * Every registered archive of one generation: the whole manifest is validated once here instead of once per
 	 * archive, and every archive still gets exactly the bytes {@link #write} produces. An invalid manifest is refused
 	 * before any target is opened, so validation never leaves an archive behind; an I/O failure while writing keeps the
-	 * archives already written, and the caller discards them with the rest of its output (the importer writes into a
-	 * directory that must not exist beforehand). The per-member work stays proportional to the archives written, never
+	 * archives already written: the importer writes into a directory that must not exist beforehand, so the
+	 * incomplete output is never mistaken for a candidate and is left for the maintainer to remove. The per-member work stays proportional to the archives written, never
 	 * to the size of the manifest times the number of its folders.
 	 */
 	static void writeAll(Manifest manifest, Path root, List<String> resourceIds, Target target) throws IOException {

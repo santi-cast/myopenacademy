@@ -392,7 +392,8 @@ class ContentLoaderTest {
 
 	@ParameterizedTest
 	@ValueSource(strings = { "codigo/.envrc", "codigo/env", "../../.env", "codigo/.ENV", "codigo/.GIT/config",
-		"codigo/.env_x", "codigo/.gitignore", "%2E%2E/%2E%2E/.env", "codigo/.git/../missing.md", "codigo/.env?x" })
+		"codigo/.env_x", "codigo/.gitignore", "%2E%2E/%2E%2E/.env", "codigo/.git/../missing.md", "codigo/.env?x",
+		"codigo/.environment", "codigo/x.env", "codigo/.git.bak/x" })
 	void stillRejectsUnresolvedLinksThatAreNotProtected(String destination) {
 		fixture.replace(INTRO, "Texto de cuerpo.", "Texto de cuerpo con [x](" + destination + ").");
 		fixture.rejected("demo-01.01: unresolved link " + destination);
@@ -409,6 +410,13 @@ class ContentLoaderTest {
 	void rejectsAResourceIdWithCombiningMarks() {
 		renameSolo("demo-01.01-r-año");
 		fixture.rejected("resource id demo-01.01-r-año contains combining marks; use composed (NFC) characters");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "demo-01.01-r-x\uFE0F", "demo-01.01-r-\u0301" })
+	void rejectsAnyCombiningMarkInAResourceId(String id) {
+		renameSolo(id);
+		fixture.rejected("resource id " + id + " contains combining marks; use composed (NFC) characters");
 	}
 
 	@Test

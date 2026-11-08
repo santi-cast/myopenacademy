@@ -238,6 +238,15 @@ class ZipContentTest {
 			"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
 	}
 
+	@Test void reportsAnArchiveWithoutMembersInsteadOfFailing() throws Exception {
+		fixture.editManifest(m -> ContentFixture.resource(m, ZipFixture.ZIP).remove("memberResourceIds"));
+		Map<String, String> before = snapshot();
+		assertThat(assertThrows(ContentValidationException.class, fixture::load).problems()).containsExactly(
+			"invalid ZIP metadata for demo-folder-zip",
+			"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
+		assertThat(snapshot()).isEqualTo(before);
+	}
+
 	@ParameterizedTest @ValueSource(strings = { "invalidFolder", "omittedMember", "unknownArchive" })
 	void reportsTheSameProblemsForBrokenFoldersAndArchives(String rule) throws Exception {
 		fixture.editManifest(m -> {
