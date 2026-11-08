@@ -53,7 +53,9 @@ Pedido del autor: ver si `inicial.que-es-programar` daría algún problema real.
 
 **Propuesta:** el importador nuevo acepta los identificadores de `curso.json` **tal cual**, con punto, para no tener dos formas del mismo identificador. La academia empieza sin alumnos, así que no hay nada que trasladar.
 
-### Lista de cambios para instalar cursos según `FORMATO.md`
+### Lista de cambios hasta el pack base 1.0
+
+#### A. Contenido: instalar cursos según `FORMATO.md`
 
 Ordenada por dependencia. Estimación orientativa, con sus pruebas: **P** = medio día, **M** = un día, **G** = dos o tres días. Total: unos **10 días** de trabajo, sin contar las revisiones del autor. Lo más incierto es el 2.
 
@@ -66,13 +68,33 @@ Ordenada por dependencia. Estimación orientativa, con sus pruebas: **P** = medi
 | 5 | **Versión del curso:** instalar desde una etiqueta (`v0.1.0`), resolverla al commit y guardar las dos cosas, además de la `version` de `curso.json` | `FORMATO.md` 11 | P |
 | 6 | **Retos de fase** (decisión del autor, 9 de noviembre de 2026): `retos.md` se importa como documento de la fase. En el índice del curso, al final de cada fase, una línea «Retos de la fase» (opcionales, sin seguimiento), como hoy las etapas del proyecto. El «Siguiente» del último módulo de la fase lleva a los retos, igual que en GitHub, y los enlaces a `retos.md` se resuelven. No se muestran mientras `"retos_disponibles": false` | 5 | M |
 | 7 | **Glosario** como documento del curso sin seguimiento (lo mismo que el 6) | 9; `FORMATO.md` 9 | P |
-| 8 | **Varios cursos instalados:** catálogo con `descripcion` y recomendaciones (`conviene_saber_antes`), `content/` fuera de Git y un fichero con los cursos y la versión instalada | `../PLAN.md` 8.5 | M |
+| 8 | **Varios cursos instalados:** catálogo con `descripcion` y recomendaciones (`conviene_saber_antes`) y `content/` fuera de Git (el curso de Java sale del repositorio) | `../PLAN.md` 8.5 | M |
 | 9 | **Enlaces entre cursos:** la dirección de GitHub se convierte en enlace a la lección si ese curso está instalado; si no, se queda la de GitHub | 9; `FORMATO.md` 10.2 | M |
 | 10 | **Proyecto** desde `curso.json`: de tipo «modulo» (el inicial) o por etapas (Java) | 9; `FORMATO.md` 8 | P |
 | 11 | **Botón «Mejorar esta lección»** con `repositorio` y la ruta del fichero | `../PLAN.md` 8.5 | P |
 | 12 | **Partes** (`partes` de `curso.json`) y su avance. Las necesita Java, no el inicial: puede ir después del pack base | `FORMATO.md` 3.2 | M |
 
 **No hace falta tocar** (revisado por el autor): la cabecera del módulo, que se ve como cita; las pistas; las preguntas de repaso, plegadas al final; lo que no está en `curso.json` (`herramientas/`, `CLAUDE.md`, `PLAN-CURSO.md`, `ESTADO.md`) ya no se importa si solo se instala lo declarado. **Después del 1.0:** equivalencias (`FORMATO.md` 11.2); las preguntas de repaso como test; los datos de la cabecera (tiempo, nivel, «Conviene saber antes») como datos, por ejemplo la duración de cada curso en el catálogo (`../PLAN.md` 8.5).
+
+#### B. Plataforma: lo que falta del plan común (`../PLAN.md` 8.5 y 8.6)
+
+Añadido a petición del autor el 9 de noviembre de 2026. Punto de partida comprobado ese día: todo escucha en `127.0.0.1` y está escrito en `application.properties` (`server.address`, `server.port`, base en `127.0.0.1:5433`) y en `vite.config.ts`; no hay compilación del frontend para servirlo (solo Vite en desarrollo); la consola ya tiene `--reset-password`; «Code Academy» está en `index.html`, `Layouts.tsx` y una prueba.
+
+| # | Cambio | Tamaño |
+|---|---|---|
+| 13 | **Lista de cursos instalados** en el repositorio (curso, versión y commit), con un comando que reinstala exactamente esa lista | P |
+| 14 | **Roles de administrador y usuario** (migración, seguridad por rol) y **administrador creado por consola** al instalar (como `--reset-password`; nunca usuario y contraseña por defecto) | M |
+| 15 | **Panel de administración:** registro abierto o cerrado (por invitación, después del 1.0); usuarios (listar, desactivar, restablecer contraseña); cursos instalados y su versión (solo verlos: se instalan por consola); nombre de la instancia | G |
+| 16 | **Perfil del usuario:** cambiar la contraseña (el tema claro u oscuro ya existe) | P |
+| 17 | **Todo en variables de entorno:** dirección y puerto de escucha, puerto y nombre de la base (también el `5433`), dirección pública, carpeta de contenido; documentadas en `.env.example`. Nada de `localhost` escrito en el código | M |
+| 18 | **Arrancar con un solo comando:** el backend sirve el frontend compilado (un solo origen y un solo puerto, sin Vite) y Compose levanta la base y la aplicación. Ojo con los identificadores con punto: el servidor no debe tomar `.algo` como extensión | G |
+| 19 | **Red local:** escuchar en la red y no solo en `127.0.0.1` (con una variable), documentar la IP fija o el nombre `.local` y avisar de que sin HTTPS las contraseñas viajan sin cifrar | P |
+| 20 | **Nombre y logo en un solo sitio** (MyOpenAcademy), con el nombre de la instancia del panel por encima | P |
+| 21 | **README del portfolio:** el juego y los DLC, «todo gratis y de código abierto» desde la primera línea, capturas, diagrama de la arquitectura, instalación con un comando y hoja de ruta. Antes, el autor decide el idioma (`../PLAN.md` 10, decisión 11) | M |
+| 22 | **Revisión antes de publicar** (`../PLAN.md` 8.6): `gitleaks` sobre todo el historial, rutas absolutas de `PLAN.md` y `odd/tasks/`, licencias de las dependencias, `LICENSE` (MIT), `CONTRIBUTING.md`, `CHANGELOG.md`, documentación sin voseo, versión etiquetada y *release* | M |
+| 23 | **Uso real (H6):** el autor estudia con la academia y anota lo que encuentra; tiene prioridad sobre las funciones nuevas. Es tiempo del autor, no se estima; arreglar lo que salga, según lo que salga | — |
+
+Total de la parte B: unos **11 días**. Con la parte A, unos **20 días de trabajo** (sin las partes, el 12, que van con Java) para el pack base 1.0, más las revisiones del autor, lo que salga del uso real y lo que tarde el curso inicial en estar completo.
 
 **Nada que cambiar en `FORMATO.md`:** todo lo que no encajó es de la academia. Avisado al autor para el kit y el curso inicial el 9 de noviembre de 2026.
 
