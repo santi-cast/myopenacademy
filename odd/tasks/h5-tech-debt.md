@@ -16,7 +16,7 @@ S6. «IDs de recursos con acentos descompuestos.»
 ## Tasks
 
 T1. S2, S1 (R1-002, R3-001): ZIP metadata check must report, not throw, on null memberResourceIds; message matches the subset rule. Inline, test-first. Commit: see L3.
-T2. S1 (R3-004, R3-005, R3-006, R1-001, R3-002, R3-003, R3-007): re-assess each advisory; fix real defects test-first, record the rest. Inline. Commit: pending.
+T2. S1 (R3-004, R3-005, R3-006, R1-001, R3-002, R3-003, R3-007): re-assess each advisory; fix real defects test-first, record the rest. Inline. Commit: ab33f44 (L4).
 T3. S3: a direct link to a protected file is reported and rendered as plain text instead of blocking generation; protected blobs are still never read. Inline, test-first. Risk item 2 → independent verifier. Commit: see L7.
 T4. S4: one shared Git process builder for ContentImportSource and ContentUpdateComparison, byte-identical environment. Inline. Risk item 2 → independent verifier (with T3). Commit: 93fec7c.
 T5. S5: CatalogSynchronizationTest loads the real course once. Inline. Commit: c44735c.
