@@ -39,7 +39,7 @@ docker compose up -d --wait db
 
 Cuando el comando termina correctamente y vuelve a aparecer el prompt, PostgreSQL queda funcionando en segundo plano (`-d`). No necesitás mantener esta terminal abierta: podés usarla para el paso 2 o abrir otra.
 
-Compose usa el proyecto `code-academy` y su volumen persistente `code-academy_postgres_data`, separado de las prácticas del curso. PostgreSQL queda en `127.0.0.1:5433` (puerto interno 5432).
+Compose usa el proyecto `myopenacademy` y su volumen persistente `myopenacademy_postgres_data`, separado de las prácticas del curso y del Code Academy original (proyecto `code-academy`), que no se usa nunca. PostgreSQL queda en `127.0.0.1:5433` (puerto interno 5432).
 
 **2. Backend — desde `backend/`**
 
