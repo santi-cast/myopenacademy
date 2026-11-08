@@ -1,45 +1,119 @@
-# Code Academy — Plan del proyecto
+# MyOpenAcademy — Plan de la academia
 
-> **⚠️ Plan heredado de Code Academy.** Desde el 8 de noviembre de 2026 este repositorio es la academia de **MyOpenAcademy** (ver `CLAUDE.md`, `ESTADO.md` y `../PLAN.md`, apartado 8.5). Este plan describe lo hecho hasta H5 y se reescribirá con el autor tras la prueba de importación.
+> Plan de la plataforma de **MyOpenAcademy**, reescrito con el autor el 9 de noviembre de 2026 tras la prueba de importación de la fase 1 del curso inicial. Se suma al plan común (`../PLAN.md`, sobre todo los apartados 7, 8.5 y 8.6) y al contrato de los cursos (`../Cursos/kit-cursos/FORMATO.md`). Dónde estamos: [`ESTADO.md`](ESTADO.md).
 
-Academia web para estudiar programación, empezando por Java. El objetivo es usarla personalmente cuando esté funcionando y presentarla como proyecto de portfolio, con apoyo de agentes de IA para desarrollarla.
+**Estado:** H1 a H5 cerrados (de Code Academy). **Siguiente: H7, cursos como DLC.** H6 (uso real) va en paralelo, de forma continua. Sin remotos hasta publicar.
 
-**Estado:** H1–H5 cerrados. H4 se integró en `main` mediante `a3d3976` y H5 mediante `1333ed8`: contenido real importado desde `c8e29163d59f41830eff2d449bf8b02a19905f61` (199 lecciones y 14 etapas), con etapas, recursos y actualización comparada implementados, y la conservación del progreso de dos usuarios verificada. Solo trabajo local; la publicación requiere autorización aparte (H7).
-Este archivo es el plan principal versionado; Engram complementa su continuidad, no lo reemplaza.
+## 1. Qué es
 
-## 1. Decisiones confirmadas
+La plataforma de una academia de programación **libre, gratuita y de código abierto** que funciona como **un juego con DLC**: la academia es el juego y cada curso es una expansión que se instala con su versión, se actualiza sin perder el progreso y que cualquiera puede crear. El **pack base 1.0** es la academia más el DLC del curso inicial («Fundamentos para programar»), publicado en `santi-cast/myopenacademy`.
 
-- Una sola plataforma, con estructura de cursos reutilizable para otros lenguajes. No se duplicará la aplicación por curso.
-- Java será el primer curso y el propietario será el primer alumno.
-- El contenido Java se utilizará desde una copia controlada dentro de Code Academy; el proyecto original permanecerá intacto y en solo lectura.
-- La academia deberá servir a otras personas con distintos niveles de conocimientos, con múltiples usuarios desde la primera versión local.
-- Avance persistente e independiente por persona y curso.
-- Frontend separado y backend en Java con Spring Boot, para aprender construyendo un producto real.
-- Desarrollo y ejecución inicial en local; publicación en internet como hito posterior explícito.
-- GitHub y despliegue son decisiones independientes. Publicar código no publica la aplicación en funcionamiento.
-- Planificar requisitos, experiencia y arquitectura antes de programar.
+Viene de **Code Academy**, clonado con su historial el 8 de noviembre de 2026. El original (`../../Code Academy/`) no se toca y sigue funcionando: **el autor estudia en él el curso de Java** mientras se construye esta academia (no se arrancan los dos a la vez, porque comparten el puerto `5433` hasta H10).
 
-## 2. Fuente de contenido y límites
+## 2. Decisiones confirmadas
 
-| Proyecto | Uso permitido |
-|---|---|
-| `Code Academy` | Código, planificación, documentación, contenido importado, complementos y memoria Engram de la academia |
-| `/home/santiago/Proyectos 2/Curso Java Completo` | Solo lectura como fuente del curso Java; no modificar archivos ni su memoria Engram |
+**Heredadas de Code Academy, que siguen valiendo:**
 
-El curso Java ya tiene su temario completo definido en el índice, pero no todas las lecciones están escritas. Su crecimiento consiste en completar los módulos previstos. Se lee solo desde un commit fijado (`git show`, `git ls-tree`, `git cat-file`, `git rev-parse`), nunca desde los archivos tal como están ni con comandos que modifiquen el repositorio.
+- Una sola plataforma para todos los cursos; varios usuarios con cuentas y avance propio desde la primera versión.
+- Frontend con React, Vite y TypeScript; backend con Java 25 y Spring Boot 4.1.2; PostgreSQL 18.6 en Compose. Detalle en el apartado 8.
+- Los estados de lección, ejercicio y etapa los marca el alumno a mano; nada se bloquea por orden (apartado 7).
+- El contenido se instala desde un commit fijo, sin conexión y sin leer nunca el curso en directo; comparar antes de aplicar.
+- Todo el aspecto sale de `frontend/src/styles/tokens.css`, y el test que lo comprueba no se desactiva.
 
-**Terminología:** una lección de la academia equivale a un módulo del curso Java de origen; son dos nombres para la misma unidad de contenido. El mapa completo del curso se distingue del contenido realmente disponible: no se presentará un módulo pendiente como una lección terminada.
+**De MyOpenAcademy** (`../PLAN.md` y `CLAUDE.md`):
 
-### Copia controlada y procedencia
+- **Ningún curso escrito en el código:** catálogo, recomendaciones y roadmaps salen del contenido instalado.
+- **La identidad la guarda el curso** (`curso.json`): el importador lee sus identificadores **tal cual, con punto** (`inicial.que-es-programar`), sin traducirlos ni inventarlos. Comprobado el 9 de noviembre de 2026 que el punto no da problemas en la base, en Spring ni en el frontend (`ESTADO.md`).
+- **Manda la academia, pero el contrato vive en el kit:** si la academia necesita cambiar `FORMATO.md`, se propone al autor y lo aplica la sesión del kit.
+- **Diseñada como si fuera a desplegarse en internet:** todo lo que cambia entre niveles, en variables de entorno.
+- **Registro abierto o cerrado en el 1.0;** por invitación, después.
+- **El idioma del README** se decide antes de H11 (`../PLAN.md` 10, decisión 11).
 
-- Copiar únicamente material educativo necesario: lecciones, ejemplos, ejercicios, imágenes y recursos del alumno; excluir historial Git, temporales y herramientas internas.
-- Registrar procedencia y versión. `versionRef` será el hash completo del commit de Curso Java Completo desde el que se importa, no una referencia inventada ni abreviada.
-- Actualizaciones manuales con comparación previa y conflictos explícitos, sin sobrescribir adaptaciones automáticamente. Separar contenido importado y complementos de la academia.
-- IDs de lecciones y ejercicios permanentes, globales e independientes de rutas, títulos, números y posiciones del origen. Se asignan al importar y se conservan al reorganizar; el ordinal no identifica un ejercicio.
+## 3. Hitos
 
-El [manifiesto](docs/manifiesto.md) conserva el contrato v1 de H4 y define v2 para H5, con etapas independientes y comparación antes de aplicar. H5 fija el origen en `c8e29163d59f41830eff2d449bf8b02a19905f61`, sin cambios sin commit, en lugar de las bases aprobadas antes (`f95ae6f…` y `7e71300…`, solo historial). La copia activa, en esquema v2, ya importa 199/199 lecciones en 21 fases y 14/14 etapas del Proyecto evolutivo, con 22642 recursos (16647 archivos copiados y 5995 ZIP canónicos); la lección 02.01 de H4 conserva IDs y cuerpo idéntico. Se generó y aplicó sin conexión y sin la base del propietario, con 0 conflictos en la comparación; los hallazgos no bloqueantes están en la [importación aplicada](docs/actualizacion-contenido.md#importación-de-h5-aplicada). Adaptaciones, retítulos, retiradas e identidad ambigua rechazan la actualización sin tocar datos; no hay migración automática de progreso.
+Los números de la columna «Cambios» son los de la lista de `ESTADO.md` («Lista de cambios hasta el pack base 1.0»). Estimación orientativa, con pruebas y sin las revisiones del autor: **unos 20 días** hasta el pack base 1.0.
 
-## 3. Primera versión local
+| Hito | Estado | Qué | Cambios | Estimación | Se cierra cuando… |
+|---|---|---|---|---|---|
+| H1. Definición | Cerrado | Alcance, progreso y exclusiones | — | — | (Code Academy) |
+| H2. Diseño | Cerrado | Pantallas, modelo, API, arquitectura y manifiesto | — | — | (Code Academy) |
+| H3. Base técnica | Cerrado | Frontend, backend, entorno local y pruebas | — | — | (Code Academy) |
+| H4. Primer recorrido | Cerrado (`a3d3976`) | Cuentas, una lección y avance persistente | — | — | (Code Academy) |
+| H5. Contenido disponible | Cerrado (`1333ed8`) | Curso de Java entero, etapas, recursos y actualización comparada | — | — | (Code Academy) |
+| **H6. Uso real** | Continuo | El autor estudia y anota lo que encuentra; se revisa al empezar cada hito y tiene prioridad sobre lo nuevo | 23 | Tiempo del autor | No queda ningún problema que bloquee el 1.0 |
+| **H7. Cursos como DLC** | Siguiente | Importador nuevo que lee `curso.json` | 1, 2, 3, 4, 5, 8, 13 | ~7 días | La fase 1 del inicial y el curso de ejemplo se instalan desde `../Cursos/…` con su etiqueta; `content/java/` sale del repositorio; las pruebas pasan |
+| **H8. Contenido según el formato** | Pendiente | Lo que el formato pide mostrar | 6, 7, 9, 10, 11 | ~3,5 días | Retos, glosario, enlaces entre cursos, proyecto y «Mejorar esta lección» se ven en el navegador y el autor da el visto bueno |
+| **H9. Cuentas y administración** | Pendiente | Roles, panel de administración y perfil | 14, 15, 16 | ~4 días | Un administrador creado por consola gestiona el registro, los usuarios y el nombre de la instancia; un usuario cambia su contraseña |
+| **H10. Instalación** | Pendiente | Variables de entorno, un comando, red local y marca | 17, 18, 19, 20 | ~4,5 días | Con un comando arranca en la máquina del autor y se usa desde otro dispositivo de casa; nada de la máquina escrito en el código |
+| **H11. Pack base 1.0** | Pendiente | Publicación en GitHub | 21, 22 y el curso inicial completo con su etiqueta | ~2 días | `santi-cast/myopenacademy` publicado con su versión y *release* |
+
+**Por qué este orden:** H7 va primero porque el curso inicial lo necesita para probarse fase a fase mientras se escribe. H9 y H10 no dependen del contenido: si el curso va por detrás, se adelantan. H11 espera al curso inicial completo, lo único del calendario que no depende de esta academia.
+
+## 4. Qué lleva cada hito
+
+### H6. Uso real
+
+- El autor estudia con la academia (el curso inicial según se vaya instalando; Java, en el Code Academy original) y anota lo que encuentra.
+- Al empezar cada hito se revisan las notas: lo que bloquee el 1.0 entra en el hito; lo demás, a la lista de después del 1.0.
+
+### H7. Cursos como DLC
+
+- **Curso de ejemplo pequeño** en el repositorio, con lo que la fase 1 del inicial no tiene (glosario, enlace a otro curso, código con ZIP, imagen, retos, módulo pendiente, proyecto). Las pruebas dejan de usar el curso de Java real.
+- **Importador que lee `curso.json`** y da de alta cursos nuevos. El manifiesto interno se genera desde `curso.json` (punto de partida: `tools/curso_a_manifiesto.py`, más el cálculo de las anclas); no lee las filas del índice ni inventa identificadores. Los módulos con `"disponible": false` entran como pendientes.
+- **Identificadores tal cual**, con el prefijo `<curso>.` y la forma de `FORMATO.md` 3.3.
+- **`--source` con rutas relativas y `..`** (`../Cursos/curso-inicial`), conservando las comprobaciones de enlaces simbólicos, `.env` y solapamiento.
+- **Versión:** instalar desde una etiqueta, resolverla al commit y guardar las dos.
+- **Varios cursos instalados**, catálogo con descripción y recomendaciones, y **`content/` fuera de Git**: `content/java/` sale del repositorio, sin mantener la lectura del manifiesto antiguo.
+- **Lista de cursos instalados** en el repositorio (curso, versión y commit) y un comando que la reinstala.
+
+### H8. Contenido según el formato
+
+- **Retos de fase:** en el índice, al final de cada fase, «Retos de la fase» (opcionales, sin seguimiento), como hoy las etapas; el «Siguiente» del último módulo lleva a ellos; ocultos mientras `"retos_disponibles": false`.
+- **Glosario** como documento del curso sin seguimiento.
+- **Enlaces entre cursos:** la dirección de GitHub se convierte en enlace a la lección si ese curso está instalado; si no, se queda.
+- **Proyecto** desde `curso.json`, de tipo «modulo» o por etapas.
+- **Botón «Mejorar esta lección»** con el `repositorio` del curso y la ruta del fichero.
+
+### H9. Cuentas y administración
+
+- **Roles** de administrador y usuario; el administrador se crea **por consola** al instalar, nunca con usuario y contraseña por defecto.
+- **Panel:** registro abierto o cerrado; usuarios (listar, desactivar, restablecer contraseña); cursos instalados y su versión (solo verlos); nombre de la instancia.
+- **Perfil:** cambiar la contraseña.
+
+### H10. Instalación
+
+- **Todo en variables de entorno:** dirección y puerto de escucha, puerto y nombre de la base (deja de chocar el `5433` con el original), dirección pública y carpeta de contenido, documentadas en `.env.example`.
+- **Un solo comando:** el backend sirve el frontend compilado (un origen y un puerto) y Compose levanta la base y la aplicación. El servidor no toma `.algo` como extensión, por los identificadores con punto.
+- **Red local:** escuchar en la red con una variable, documentar la IP fija o el nombre `.local` y avisar de que sin HTTPS las contraseñas viajan sin cifrar.
+- **Nombre y logo en un solo sitio**, con el nombre de la instancia del panel por encima.
+
+### H11. Pack base 1.0
+
+- **README del portfolio** (`../PLAN.md` 8.5), en el idioma que decida el autor.
+- **Revisión antes de publicar** (`../PLAN.md` 8.6): `gitleaks` sobre todo el historial, rutas absolutas en `odd/tasks/`, licencias de las dependencias (elkjs, dompurify), `LICENSE` (MIT), `CONTRIBUTING.md`, `CHANGELOG.md`, documentación sin voseo, `npm audit`.
+- **El curso inicial completo**, instalado desde su etiqueta.
+- Versión etiquetada, primer `push` y *release*, con la autorización del autor.
+
+## 5. Después del 1.0
+
+Sin orden fijo (`../PLAN.md` 8.5): partes de los cursos y su avance (las necesita el curso de Java, primer DLC aparte) · equivalencias entre versiones · preguntas de repaso como test · datos de la cabecera (tiempo, nivel, «Conviene saber antes») como datos y duración de cada curso · registro por invitación · roadmaps · instalar cursos desde GitHub y desde el panel · guía «Crea tu propio curso» · búsqueda, notas, tamaño de letra, atajos, retomar en la sección exacta · corrección automática · **publicación en internet** (dominio, HTTPS, copias de seguridad, límite de intentos, CSP y lo del apartado 9).
+
+**Fuera:** certificados, pagos, mentorías, ejecutar el código del alumno en el servidor y aplicaciones móviles nativas.
+
+## 6. Forma de trabajar
+
+Se mantiene la de Code Academy, salvo que el autor diga otra cosa:
+
+- **Una rama por hito** (`feat/h7-…`), con commits pequeños y revisables; **el autor revisa antes de integrar** en `main` con `--no-ff`. Los cambios sueltos de documentación o mantenimiento pueden ir directos a `main`.
+- **Tareas y evidencias** de cada hito en `odd/tasks/`; las pruebas acompañan al comportamiento.
+- **Pruebas:** `./mvnw -B verify` (Testcontainers, base aislada), `npm run test -- --run`, `npm run lint`, `npm run build` y el recorrido `npm run test:e2e:journey`. Las pruebas de importación y de navegador con contenido provisional, siempre contra una **base desechable**, nunca contra la de `myopenacademy`: el backend no arranca si desaparece un identificador ya guardado.
+- **Nunca** se usan el `.env`, los contenedores ni el volumen del Code Academy original. No se borran volúmenes (`down -v`).
+- **Coordinación** con las sesiones del kit y del curso inicial a través del autor, como dice `CLAUDE.md`.
+- **Sin remotos ni `push`** hasta H11.
+
+## 7. Base heredada: recorrido y progreso (H1 a H5)
+
+> De Code Academy. Sigue valiendo; donde dice «Java», léase «el curso». Lo que cambia con los hitos nuevos se dice en cada uno.
 
 ### Requisitos y recorrido confirmados
 
@@ -72,7 +146,7 @@ Implementado en H4 y probado de principio a fin con dos usuarios.
 
 H1 quedó cerrado con estas reglas, H2 definió su seguridad, H3 validó la base técnica y H4 las implementa.
 
-## 4. Arquitectura y tecnologías
+## 8. Base heredada: arquitectura, datos y seguridad (H2 a H5)
 
 **Diseño confirmado por el propietario; base técnica validada en H3 y funciones de negocio implementadas en H4.** Las versiones se fijan exactas tras aprobación del propietario; cualquier sustitución futura requiere justificación y revisión.
 
@@ -85,7 +159,7 @@ H1 quedó cerrado con estas reglas, H2 definió su seguridad, H3 validó la base
 | Base de datos | PostgreSQL con imagen postgres:18.6 en Docker Compose, entorno y datos propios. |
 | Persistencia | Spring Data JPA y migraciones versionadas Flyway con soporte PostgreSQL. |
 | Seguridad | Spring Security con denegación por defecto, CSRF SPA y Argon2id con Bouncy Castle. Cuentas (registro, login, logout, versión de credenciales en cada solicitud, `ACCESS_DENIED` distinto de `CSRF_REJECTED`) y recuperación por consola implementadas en H4. |
-| Contenido | Copia controlada en `content/java/` (manifiesto v2) desde el commit fijado `c8e29163d59f41830eff2d449bf8b02a19905f61`: 199 lecciones disponibles en 21 fases y 14 etapas del Proyecto evolutivo, con recursos y ZIP de carpetas. La copia de H4 (`0c2df357c6628784df6b537df8950da540096a8c`, solo la lección 02.01) quedó retenida en `content.previous`. Markdown procesado en el backend al arrancar con commonmark 0.31.0 (+ tablas GFM 0.31.0) y OWASP Java HTML Sanitizer 20261011.1. |
+| Contenido | **Hasta H7:** copia controlada en `content/java/` (manifiesto v2) desde el commit fijado `c8e29163d59f41830eff2d449bf8b02a19905f61`: 199 lecciones disponibles en 21 fases y 14 etapas del Proyecto evolutivo, con recursos y ZIP de carpetas. La copia de H4 (`0c2df357c6628784df6b537df8950da540096a8c`, solo la lección 02.01) quedó retenida en `content.previous`. Markdown procesado en el backend al arrancar con commonmark 0.31.0 (+ tablas GFM 0.31.0) y OWASP Java HTML Sanitizer 20261011.1. |
 | Estudio y progreso | Inscripción, estados de lección y ejercicio, continuación y avance por usuario (migraciones V2–V5). |
 | Pruebas | Vitest y React Testing Library; JUnit y Testcontainers con PostgreSQL real; Playwright para recorridos completos. |
 
@@ -103,7 +177,7 @@ Monorepo con `frontend/`, `backend/`, `content/` (copia controlada y manifiesto)
 **Docker compartido, datos separados**
 
 - Reutilizar motor e imagen postgres:18.6 si está disponible, sin compartir datos. Etiqueta fija no sustituye política de actualizaciones ni digest inmutable.
-- Compose propio con proyecto `code-academy`; contenedor, red, credenciales y volumen exclusivos. No leer ni reutilizar configuración o datos de las prácticas.
+- Compose propio con proyecto `myopenacademy` (renombrado el 8 de noviembre de 2026; el `code-academy` es el del original y no se usa nunca); contenedor, red, credenciales y volumen exclusivos. No leer ni reutilizar configuración o datos de las prácticas.
 - Volumen persistente con clave lógica y nombre físico prefijado por proyecto: no anónimo, externo ni `name` global fijo; evitar `container_name`. Pruebas e instancias adicionales con aislamiento propio.
 - Host `127.0.0.1:5433` hacia `5432` del contenedor, comprobado en H3. No ocupar por defecto 5432 de prácticas ni exponer base a red local. Todos los servicios ligados a loopback.
 - Healthcheck con `pg_isready`. Arranque validado: base en Compose, backend con Wrapper y perfil `local`, frontend Vite con proxy `/api`; no Tomcat independiente ni MySQL, MongoDB o Redis. Los servicios quedaron detenidos normalmente y el volumen se conserva.
@@ -169,81 +243,21 @@ Requisitos de negocio implementados en H4 sobre los mecanismos técnicos validad
 - Registro y consola: 15–128 puntos de código Unicode, admitiendo espacios/frases, sin composición obligatoria ni recorte, normalización o truncamiento. Login no aplica mínimo de política, ni exige no vacío por longitud: solo rechaza por longitud más de 128 puntos de código antes del hash, siempre con 401 genérico `AUTHENTICATION_FAILED`, nunca 400 `INVALID_PASSWORD`. Errores de esquema/tipo pueden ser 400. Evita bloquear usuarios existentes si cambia el mínimo.
 - El máximo 128 protege operativamente el uso de Argon2, no es límite inherente del algoritmo. Argon2id con Argon2PasswordEncoder, Bouncy Castle y sal por contraseña; suelo inicial OWASP de 19 MiB, 2 iteraciones y paralelismo 1. H3 comprobó el mecanismo y midió su coste local sin bajar ese suelo; H4 lo usa en las cuentas.
 - No bcrypt: límite de 72 bytes, no caracteres; tampoco 64 Unicode garantizan caber. Sin truncamiento ni prehash improvisado. Validar límites explícitamente.
-- Revisar en H7 intentos de acceso/recuperación y enumeración de registro (`USERNAME_TAKEN`), antes si cambia el entorno de uso fuera de local.
+- Revisar antes de publicar en internet los intentos de acceso/recuperación y enumeración de registro (`USERNAME_TAKEN`), antes si cambia el entorno de uso fuera de local.
 
 ### Cierre de H2, H3 y H4
 
 **H2 cerrado por el propietario:** recorrido, modelo, arquitectura, contrato JSON (incluido username) y manifiesto mínimo aprobados con los ajustes finales de login, extracción, continuación y procedencia.
 
-H3 completó las comprobaciones técnicas de versiones, CSRF y Argon2id, junto con el arranque y la integración local ([tareas de H3](odd/tasks/h3-base.md)). H4 implementó cuentas, contenido, progreso y pantallas en cuatro partes, con verificaciones independientes; la evidencia está en [las tareas de H4](odd/tasks/h4-first-journey.md). El importador completo corresponde a H5 y el despliegue a H7.
+H3 completó las comprobaciones técnicas de versiones, CSRF y Argon2id, junto con el arranque y la integración local ([tareas de H3](odd/tasks/h3-base.md)). H4 implementó cuentas, contenido, progreso y pantallas en cuatro partes, con verificaciones independientes; la evidencia está en [las tareas de H4](odd/tasks/h4-first-journey.md). El importador completo correspondió a H5; el importador por `curso.json`, a H7; la publicación en internet, a después del 1.0.
 
-## 5. Hitos
+## 9. Pendiente para publicar en internet
 
-Secuencia de trabajo con estado explícito; los hitos futuros se detallarán en tareas al acordar su alcance.
-
-| Hito | Estado | Entregable | Criterio de cierre |
-|---|---|---|---|
-| H1. Definición | Cerrado | Alcance, progreso y exclusiones | Requisitos y decisiones del primer recorrido resueltos |
-| H2. Diseño | Cerrado | Pantallas, modelo, API, arquitectura y manifiesto mínimo | Recorrido, separación de datos y contratos aprobados en diseño |
-| H3. Base técnica | Cerrado | Frontend, backend, entorno local y pruebas iniciales | Arranque reproducible documentado y comprobaciones técnicas e independientes completadas |
-| H4. Primer recorrido | Cerrado e integrado en main (`a3d3976`) | Una lección real importada (02.01), cuentas y avance persistente | Cumplido: dos usuarios conservan avances distintos tras reiniciar el backend, sin acceso cruzado (recorrido E2E aislado, `npm run test:e2e:journey`) |
-| H5. Contenido disponible | Cerrado e integrado en main (`1333ed8`) | 199 lecciones y 14 etapas disponibles del origen fijado (importadas), Proyecto evolutivo separado, imágenes/tachado/ZIP y actualización comparada | Cumplido: inventario contrastado, recursos seguros y actualización incremental con conservación del progreso de dos usuarios en pruebas aisladas |
-| H6. Validación de estudio | No completado; pendiente | Uso real por el propietario | Recorrido probado y problemas registrados/priorizados |
-| H7. Publicación | No completado; pendiente | Alojamiento, seguridad, respaldos y despliegue | Preparación revisada y autorización explícita antes de publicar |
-
-## 6. Ampliaciones posibles, no comprometidas para la primera versión
-
-Se evaluarán por su beneficio para aprender, no por imitar otras academias.
-
-- Evaluación inicial opcional y recomendaciones de ruta.
-- Evaluaciones cortas, ejercicios adicionales y pistas progresivas.
-- Proyectos complementarios y recursos visuales o interactivos.
-- Búsqueda y herramientas de consulta.
-- Cursos de otros lenguajes, reutilizando plataforma y adaptando pedagogía.
-
-Propuestas surgidas de la investigación de H4 (referencias visuales: mdBook y Starlight):
-
-- Atajos de teclado (H6).
-- Búsqueda de lecciones (sin hito comprometido; excluida de H5).
-- Retomar en la sección exacta donde se dejó la lección (H6).
-- Notas personales por lección.
-- Preferencia de tamaño de letra e interlineado (H6).
-
-A evitar en la primera versión: bloquear lecciones por orden, modo oscuro en negro puro y repetición espaciada.
-
-Pagos, certificados, comunidad, tutor con IA, ejecución remota de código y aplicaciones móviles nativas quedan fuera de la primera versión.
-
-## 7. Git, GitHub y portfolio
-
-- Git inicializado en rama `main`; el primer commit `29399a1` ya registra `PLAN.md` y `.gitignore` mínimo.
-- Sin remotos configurados ni contenido publicado en GitHub. No se crean remotos en este cierre.
-- El segundo commit documental `a6f5206` ya cerró H2 y separó los contratos en `docs/api.md` y `docs/manifiesto.md`, con el mensaje `docs: close H2 design and split API and manifest contracts`.
-- Trabajo de H3 en `feat/h3-base`, con commits locales pequeños y coherentes como unidades de revisión; sin cadenas de ramas ni PR. El propietario autorizó integrarlo en `main` tras superar las pruebas, con `--no-ff` y el mensaje `Merge H3: technical foundation`. No se autoriza publicar ni crear remotos. Pruebas/documentación acompañan al comportamiento; no versionar secretos, datos personales ni temporales.
-- H4 se trabajó en `feat/h4-first-journey` (desde `main` `b5847fa`) y se integró con `a3d3976`. H5 partió de `main` `9920abe` como cadena local de ramas (`feat/h5-content-import` y `feat/h5/02` a `07`), con unidades revisables y commits solo locales; el propietario aprobó aparte el merge `1333ed8` y después se borraron las ramas integradas. Sin remotos ni push.
-- Antes de publicar, decidir visibilidad, licencias y material del curso distribuible. Portfolio distinguirá autoría educativa y contribuciones de plataforma.
-- Desarrollo con agentes de IA, sin exigir dominar previamente React, TypeScript o Spring ni convertir cada implementación en una clase. Aprendizaje gradual sin bloquear entregas.
-- Otro modelo podrá actuar como asesor; sus recomendaciones se evaluarán, sin otorgarle escritura ni autoridad para cambiar alcance por sí solo.
-- Priorizar aplicación útil, mantenible y verificable, con decisiones que el propietario pueda explicar.
-
-## 8. Próximo paso
-
-**H4 y H5 integrados.** Los archivos de tareas de [H4](odd/tasks/h4-first-journey.md) y [H5](odd/tasks/h5-content-import.md) conservan su evidencia. El agente no lee ni modifica `.env` o `.env.example`, no usa la base del propietario para verificar ni borra volúmenes.
-
-**Próximo paso:** H6, validación de estudio: el propietario usa la aplicación con el curso completo y se registran y priorizan los problemas encontrados. La deuda técnica que dejó H5 está anotada en el [registro de H5](odd/tasks/h5-content-import.md) (L65). Búsqueda, personalización y publicación siguen fuera.
-
-El antiguo «Pendiente de seguridad para H4» quedó resuelto: los 403 que no son de CSRF responden `ACCESS_DENIED`.
-
-### Pendiente para H7 (publicación)
-
-Solo anotado; no son compromisos nuevos.
-
-`npm audit` del frontend se comprobó al cierre de H4 (0 vulnerabilidades); repetirlo antes de publicar.
+Anotado desde Code Academy; no entra en el 1.0, que se usa en local y en la red de casa.
 
 - El cebado del token CSRF depende de `GET /actuator/health` ([API](docs/api.md#sesión-csrf-y-entorno)).
-- Licencias copyleft en dependencias transitivas de ejecución: elkjs (EPL-2.0) y dompurify (MPL-2.0 OR Apache-2.0).
 - Tomcat registra el mensaje completo de una excepción que escapa a un filtro del framework.
 - La cookie que borra logout no lleva `Secure` y fija el nombre `JSESSIONID`.
-- Limitación de intentos y enumeración de usuarios (sección 4).
+- Limitación de intentos y enumeración de usuarios (apartado 8).
 - CSP para la aplicación.
-
-Este documento se actualizará cuando se acuerden cambios. Una propuesta opcional no pasa a ser requisito confirmado por aparecer aquí.
+- Publicar el código en GitHub (H11) no publica la aplicación en funcionamiento: desplegarla requiere autorización aparte.
