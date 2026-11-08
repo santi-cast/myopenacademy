@@ -267,11 +267,13 @@ final class ManifestValidator {
 							|| !name.equals(resource.fileName()) || resource.memberResourceIds() == null) {
 						problems.add("invalid ZIP metadata for " + resource.resourceId());
 					}
-					// A shared folder keeps one archive: its members are the ordered subset of the listed files.
-					boolean mapped = decorations.getOrDefault(resource.resourceId(), List.of()).stream()
-						.anyMatch(link -> folder.equals(link.sourcePath())
-							&& link.resourceIds() != null && link.resourceIds().containsAll(resource.memberResourceIds()));
-					if (!mapped) problems.add("ZIP must decorate its exact ordered folder: " + resource.resourceId());
+					// A shared folder keeps one archive: its members are a subset of the files the folder lists.
+					// Null members were already reported as invalid metadata above.
+					boolean mapped = resource.memberResourceIds() == null
+						|| decorations.getOrDefault(resource.resourceId(), List.of()).stream()
+							.anyMatch(link -> folder.equals(link.sourcePath())
+								&& link.resourceIds() != null && link.resourceIds().containsAll(resource.memberResourceIds()));
+					if (!mapped) problems.add("ZIP must decorate the folder that lists its members: " + resource.resourceId());
 				}
 				else if (!"file".equals(resource.kind())) {
 					problems.add("resource " + resource.resourceId() + ": unsupported kind " + resource.kind());

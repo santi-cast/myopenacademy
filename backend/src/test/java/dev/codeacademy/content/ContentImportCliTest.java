@@ -793,7 +793,7 @@ class ContentImportCliTest {
 		listed.remove(listed.size() - 1);
 		assertRefusedBeforeWriting(JSON.treeToValue(omitted, Manifest.class), archives,
 			// The omitted file breaks the folder entry and, with it, the archive that decorates that folder.
-			"ZIP must decorate its exact ordered folder: demo-stage-01-zip-hola-d34d1a2a",
+			"ZIP must decorate the folder that lists its members: demo-stage-01-zip-hola-d34d1a2a",
 			"folder fase-01/codigo/hola/ does not list exactly its resources",
 			"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
 		// A folder that lists a file nobody claims beneath it is refused by the same single validation.
