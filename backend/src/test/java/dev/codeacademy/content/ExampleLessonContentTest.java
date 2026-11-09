@@ -171,7 +171,7 @@ class ExampleLessonContentTest {
 			assertThat(matcher.group(2)).isEqualTo(resource.originalFileName()).doesNotContain("-r-");
 			links++;
 		}
-		assertThat(links).isEqualTo(8);
+		assertThat(links).isEqualTo(9);
 		Pattern zipLink = Pattern.compile("<a href=\"/api/resources/([^\"]+)\"><code>([^<]*)</code></a>");
 		Matcher zips = zipLink.matcher(all);
 		int zipLinks = 0;
@@ -184,10 +184,10 @@ class ExampleLessonContentTest {
 		}
 		assertThat(zipLinks).isEqualTo(4);
 		assertThat(all).doesNotContain("href=\"codigo/", "href=\"../", ".md\"");
-		// Eight code files, one image and four folder ZIPs; the lesson owns exactly its manifest resources.
+		// Nine code files, one image and four folder ZIPs; the lesson owns exactly its manifest resources.
 		List<String> owned = content.manifest().resources().stream().filter(r -> LESSON.equals(r.lessonId()))
 			.map(Manifest.Resource::resourceId).toList();
-		assertThat(owned).hasSize(13);
+		assertThat(owned).hasSize(14);
 		assertThat(owned.stream().filter(id -> id.startsWith(LESSON + "-zip-"))).hasSize(4);
 		assertThat(new LinkedHashSet<>(lesson.resourceIds())).isEqualTo(new LinkedHashSet<>(owned));
 		assertThat(content.resources().keySet()).containsAll(owned);
@@ -205,26 +205,36 @@ class ExampleLessonContentTest {
 	}
 
 	/**
-	 * A file whose name has non-ASCII letters (año-pequeño.csv, in NFC): its ID keeps them, its link names it
-	 * as is, and its folder ZIP stores it under the same name, in UTF-8 and NFC.
+	 * Files whose names have non-ASCII letters and spaces (año-pequeño.csv, canción del año.txt, in NFC): their IDs
+	 * keep the letters and turn spaces into hyphens, their links name them as they are, and their folder ZIP stores
+	 * them under the same names, in UTF-8 and NFC.
 	 */
 	@Test
-	void aFileWithNonAsciiLettersKeepsItsNameInTheIdTheLinkAndTheZip() throws IOException {
+	void filesWithNonAsciiLettersAndSpacesKeepTheirNamesInTheLinkAndTheZip() throws IOException {
 		String id = "ejemplo.ficheros-json-r-año-pequeñocsv-8ab61787";
 		ResourceFile file = content.resources().get(id);
 		assertThat(file.originalFileName()).isEqualTo("a\u00f1o-peque\u00f1o.csv");
+		String withSpaces = "ejemplo.ficheros-json-r-canción-del-añotxt-e0a88b36";
+		assertThat(content.resources().get(withSpaces).originalFileName()).isEqualTo("canci\u00f3n del a\u00f1o.txt");
+		// Spaces never reach an ID: the generator turns them into hyphens, so no address has one to encode.
+		assertThat(content.resources().keySet()).noneMatch(resource -> resource.contains(" "));
 		assertThat(lesson.bodyHtml()).contains("(<a href=\"/api/resources/" + id + "\">año-pequeño.csv</a>, "
+				+ "<a href=\"/api/resources/" + withSpaces + "\">canción del año.txt</a>, "
 				+ "<a href=\"/api/resources/ejemplo.ficheros-json-r-clientejson-a65f1ea7\">cliente.json</a>)");
 		ResourceFile zip = content.resources().get("ejemplo.ficheros-json-zip-21-un-cliente-1a94325a");
 		try (var archive = new java.util.zip.ZipFile(zip.localPath().toFile(), StandardCharsets.UTF_8)) {
 			assertThat(archive.stream().map(java.util.zip.ZipEntry::getName))
-				.containsExactlyInAnyOrder("a\u00f1o-peque\u00f1o.csv", "cliente.json");
+				.containsExactlyInAnyOrder("a\u00f1o-peque\u00f1o.csv", "canci\u00f3n del a\u00f1o.txt", "cliente.json");
 			assertThat(archive.getInputStream(archive.getEntry("a\u00f1o-peque\u00f1o.csv")).readAllBytes())
 				.isEqualTo(Files.readAllBytes(file.localPath()));
+			assertThat(archive.getInputStream(archive.getEntry("canci\u00f3n del a\u00f1o.txt")).readAllBytes())
+				.isEqualTo(Files.readAllBytes(content.resources().get(withSpaces).localPath()));
 		}
 		// The stored name is UTF-8 in NFC (ñ = c3 b1), never the decomposed n + U+0303.
 		String raw = new String(Files.readAllBytes(zip.localPath()), StandardCharsets.ISO_8859_1);
 		assertThat(raw).contains(new String("a\u00f1o-peque\u00f1o.csv".getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1))
+			.contains(new String("canci\u00f3n del a\u00f1o.txt".getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1))
+			.doesNotContain(new String("o\u0301".getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1))
 			.doesNotContain(new String("n\u0303".getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1));
 	}
 
@@ -295,7 +305,7 @@ class ExampleLessonContentTest {
 				checked++;
 			}
 		}
-		assertThat(checked).isEqualTo(21);
+		assertThat(checked).isEqualTo(22);
 		assertThat(external).isEqualTo(2);
 		// The navigation line: the index and, until H8 gives the challenges their page, the index for them too.
 		assertThat(lesson.bodyHtml()).contains("<a href=\"/courses/ejemplo\">Índice</a>")
