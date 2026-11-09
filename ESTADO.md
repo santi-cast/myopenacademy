@@ -18,11 +18,11 @@ Lo que ya existe en los otros proyectos:
 
 **9 de noviembre de 2026:** prueba de importación hecha y **`PLAN.md` reescrito con el autor** para MyOpenAcademy, con los hitos H6 a H11 hasta el pack base 1.0 (unos 20 días de trabajo). **Siguiente: H7, cursos como DLC** (`PLAN.md`, apartado 4): rama `feat/h7-…`, tareas en `odd/tasks/` y, como primer paso, el curso de ejemplo pequeño. H6 (uso real) va en paralelo.
 
-**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 hecha salvo la etiqueta (A5): el generador lee `curso.json` y genera el curso de ejemplo, `ejemplo-destino` y el curso inicial completo. **T4b hecha:** la comparación verifica cada curso contra su origen, los de otros repositorios tienen que llegar idénticos byte a byte, y los retítulos son un cambio, no un conflicto. Cursos de ejemplo del kit (`bueno` y `ejemplo-destino`) traídos de `94d93c8`. Detalle en `odd/tasks/h7-cursos-dlc.md` (L1 a L6).
+**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 hecha salvo la etiqueta (A5): el generador lee `curso.json` y genera el curso de ejemplo, `ejemplo-destino` y el curso inicial completo. **T4b hecha:** la comparación verifica cada curso contra su origen, los de otros repositorios tienen que llegar idénticos byte a byte, y los retítulos son un cambio, no un conflicto. Cursos de ejemplo del kit (`bueno` y `ejemplo-destino`) traídos de `4a79c20`. Detalle en `odd/tasks/h7-cursos-dlc.md` (L1 a L6).
 
 **Siguiente, en este orden:**
 
-1. **Traer el commit nuevo de los cursos de ejemplo del kit, `4a79c20`** (antes `94d93c8`; solo añade `.gitattributes` con `* text=auto eol=lf` en los dos cursos, que la academia puede ignorar al instalar, como `.gitignore`), con `sh tools/traer_curso_ejemplo.sh 4a79c20`, en un commit aparte del de T4b. Cambia los dos cursos de ejemplo: sirve de prueba real de la comparación por curso.
+1. ~~Traer el commit nuevo de los cursos de ejemplo del kit~~ **Hecho** (`4a79c20`, 9 de noviembre de 2026), con la prueba real de la comparación por curso: sin conflictos y aplicada (`odd/tasks/h7-cursos-dlc.md`, L8).
 2. **T3:** pruebas sin el curso de Java real y `content/java/` fuera de Git.
 3. **T2:** solo identificadores `<curso>.`.
 4. Lo demás de H7: la etiqueta (A5), T5 a T8 y la revisión del autor.
