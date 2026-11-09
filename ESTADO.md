@@ -18,7 +18,7 @@ Lo que ya existe en los otros proyectos:
 
 **9 de noviembre de 2026:** prueba de importación hecha y **`PLAN.md` reescrito con el autor** para MyOpenAcademy, con los hitos H6 a H11 hasta el pack base 1.0 (unos 20 días de trabajo). **Siguiente: H7, cursos como DLC** (`PLAN.md`, apartado 4): rama `feat/h7-…`, tareas en `odd/tasks/` y, como primer paso, el curso de ejemplo pequeño. H6 (uso real) va en paralelo.
 
-**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 en curso: el generador ya lee `curso.json` e instala el curso de ejemplo y el curso inicial completo; faltan sus pruebas, la comparación por curso y la etiqueta.
+**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 en curso: el generador ya lee `curso.json`, genera el curso de ejemplo y el curso inicial completo, y las 537 pruebas de contenido pasan; faltan la comparación y aplicación por curso (T4b) y la etiqueta. Cursos de ejemplo del kit (`bueno` y `ejemplo-destino`) traídos de `94d93c8`.
 
 Decisiones del autor del 9 de noviembre de 2026, recogidas en `PLAN.md`:
 
@@ -116,7 +116,7 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 |---|---|---|---|
 | Curso inicial | Fase 1 escrita, con `curso.json` | La prueba de importación | **Hecho** (aprobada por el autor el 8 de noviembre de 2026) |
 | Kit | `FORMATO.md` estable | Saber qué tiene que importar | Versión 1, con ajustes dentro de la versión mientras no haya nada publicado |
-| Kit | Ampliar su curso «bueno» para que sirva también a la academia: un segundo curso pequeño de destino, **con su propio `id` y su propio `repositorio`** (no los del curso inicial real, para que no puedan chocar; decisión del autor, 9 de noviembre de 2026), con `glosario.md`, un módulo y el proyecto de tipo «modulo»; desde «bueno», un enlace a un módulo de ese curso con ancla y otro a un término del glosario; y que el «Siguiente» del último módulo disponible lleve a `retos.md`. Y ajustar `FORMATO.md` 14: el curso de ejemplo vive en el kit y la academia guarda una copia desde un commit fijo | Curso de ejemplo de H7 (cambio 1) y pruebas de H8 | **Pedido** el 9 de noviembre de 2026; no bloquea el arranque de H7 (se empieza con «bueno» tal cual) |
+| Kit | Ampliar su curso «bueno» para que sirva también a la academia: un segundo curso pequeño de destino, **con su propio `id` y su propio `repositorio`** (no los del curso inicial real, para que no puedan chocar; decisión del autor, 9 de noviembre de 2026), con `glosario.md`, un módulo y el proyecto de tipo «modulo»; desde «bueno», un enlace a un módulo de ese curso con ancla y otro a un término del glosario; y que el «Siguiente» del último módulo disponible lleve a `retos.md`. Y ajustar `FORMATO.md` 14: el curso de ejemplo vive en el kit y la academia guarda una copia desde un commit fijo | Curso de ejemplo de H7 (cambio 1) y pruebas de H8 | **Hecho** por el kit en `94d93c8` (9 de noviembre de 2026): `bueno` y `ejemplo-destino` (id y repositorio propios), `FORMATO.md` 9 (cualquier curso puede tener glosario) y 14 (los cursos de ejemplo viven en el kit). Copiados a `cursos-ejemplo/` |
 
 | Otros esperan de la academia | Qué | Para | Estado |
 |---|---|---|---|

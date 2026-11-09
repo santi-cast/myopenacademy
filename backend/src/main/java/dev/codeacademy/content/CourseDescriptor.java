@@ -82,7 +82,8 @@ record CourseDescriptor(int format, String id, String title, String description,
 				List<Exercise> exercises = new ArrayList<>();
 				for (JsonNode exercise : module.path("ejercicios")) {
 					String exerciseId = ids.add(text(exercise, "id"), "ejercicio");
-					if (moduleId != null && exerciseId != null && !exerciseId.startsWith(moduleId + ".")) {
+					if (moduleId != null && exerciseId != null && !exerciseId.startsWith(moduleId + ".")
+							&& !exerciseId.startsWith(moduleId + "-")) {
 						found.add(PATH + ": ejercicio " + exerciseId + " does not belong to " + moduleId);
 					}
 					exercises.add(new Exercise(exerciseId, required(exercise, "titulo", found)));

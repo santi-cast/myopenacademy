@@ -1,7 +1,7 @@
 # 01.01 Ficheros JSON
 
 > **Versiones:** ninguna en especial (JSON es un estándar, RFC 8259)
-> **Conviene saber antes:** [Markdown](https://github.com/myopenacademy/curso-inicial/blob/main/README.md) · [el índice](../00-indice.md)
+> **Conviene saber antes:** [Mi primer repositorio, 1.1](https://github.com/myopenacademy/ejemplo-destino/blob/main/fase-01-tu-primer-proyecto/01-mi-primer-repositorio.md#11-qué-es-un-repositorio) · [el índice](../00-indice.md)
 > **Tiempo estimado:** 2 horas
 > **Nivel:** Básico · Núcleo
 
@@ -14,7 +14,7 @@
 
 ### 1.1. Qué es JSON
 
-JSON guarda datos como texto. Lo verás también en [Ficheros YAML](02-ficheros-yaml.md), cuando esté.
+JSON guarda datos como texto, por ejemplo los de un [repositorio](https://github.com/myopenacademy/ejemplo-destino/blob/main/glosario.md#repositorio). Lo verás también en [Ficheros YAML](02-ficheros-yaml.md), cuando esté.
 
 ![Estructura de un objeto JSON](img/estructura.svg)
 
@@ -166,4 +166,4 @@ Tampoco tiene caso real.
    </details>
 
 ---
-⬅️ [Índice](../00-indice.md) · 📚 [Índice](../00-indice.md) · ➡️ [Siguiente: 01.02 Ficheros YAML](02-ficheros-yaml.md)
+⬅️ [Índice](../00-indice.md) · 📚 [Índice](../00-indice.md) · ➡️ [Siguiente: Retos de la fase](retos.md)

@@ -306,6 +306,7 @@ final class ContentImportGenerator {
 			}
 			List<Lesson> lessons = lessons();
 			List<Stage> stages = stages();
+			installedResources();
 			try {
 				references();
 			}
@@ -387,6 +388,28 @@ final class ContentImportGenerator {
 			documentPaths.put(id, sourcePath);
 			documents.put(sourcePath, id);
 			anchors.put(sourcePath, ContentImportDocuments.anchors(text));
+		}
+
+		/**
+		 * Resource IDs are the academy's own (curso.json does not name them): the installed copy of this course keeps
+		 * every resource ID, local path and owner, and its bytes must still be the committed ones. A resource of a
+		 * module or stage the course no longer declares is left to the comparison, which reports its removal.
+		 */
+		private void installedResources() throws IOException {
+			if (previous == null) return;
+			for (Resource resource : previous.resources()) {
+				if ("zip".equals(resource.kind())) continue;
+				String owner = resource.lessonId() != null ? resource.lessonId() : resource.stageId();
+				if (!documents.containsValue(owner) || !allowed(resource.sourcePath())) continue;
+				byte[] bytes = source.read(resource.sourcePath());
+				if (bytes == null) {
+					findings.add("source resource unavailable " + resource.sourcePath());
+					continue;
+				}
+				checkAccepted(resource.sourcePath(), resource.localPath(), bytes);
+				register(new Claim(resource.sourcePath(), owner), new ResourcePlan(resource.resourceId(),
+					resource.localPath(), resource.mediaType(), owner, resource.stageId() != null));
+			}
 		}
 
 		private void references() {

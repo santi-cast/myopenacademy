@@ -65,9 +65,33 @@ class ContentImportCliTest {
 		| ◆ 2 | [Etapa siguiente](proyecto/02-siguiente.md) | fase 02 | ✅ Disponible |
 		""";
 
-	/** Recorded on the unbatched generator: the same pinned tree must keep these exact bytes. */
+	/**
+	 * The course's own curso.json, committed with every tree: the identity the importer reads. It keeps the legacy
+	 * demo-… IDs of the accepted fixture while H7 still accepts them (task T2 moves them to demo.…).
+	 */
+	static final String CURSO = """
+		{
+		  "formato": 1, "tipo": "curso", "id": "demo", "titulo": "Demo", "version": "1.0.0",
+		  "fases": [
+		    { "id": "demo-phase-01", "carpeta": "fase-01", "titulo": "Primera fase", "modulos": [
+		      { "id": "demo-01.01", "fichero": "fase-01/01-intro.md", "titulo": "Introducción", "ejercicios": [
+		        { "id": "demo-01.01-e01", "titulo": "Primer ejercicio" },
+		        { "id": "demo-01.01-e02", "titulo": "Segundo ejercicio" } ] },
+		      { "id": "demo-01.02", "fichero": "fase-01/02-siguiente.md", "titulo": "Siguiente", "ejercicios": [] } ] },
+		    { "id": "demo-phase-02", "carpeta": "fase-02", "titulo": "Segunda fase", "modulos": [
+		      { "id": "demo-02.01", "fichero": "fase-02/01-pendiente.md", "titulo": "Pendiente", "disponible": false } ] } ],
+		  "proyecto": { "tipo": "etapas", "titulo": "Proyecto", "etapas": [
+		    { "id": "demo-stage-01", "fichero": "proyecto/01-inicial.md", "titulo": "Etapa inicial" },
+		    { "id": "demo-stage-02", "fichero": "proyecto/02-siguiente.md", "titulo": "Etapa siguiente" } ] }
+		}
+		""";
+
+	/**
+	 * Recorded on the unbatched generator: the same pinned tree must keep these exact bytes. The manifest was recorded
+	 * again in H7, when its identity started to come from curso.json (source.name is now the course's own title).
+	 */
 	static final String SHARED_MANIFEST_SHA =
-		"90c011e9a1454f6b01ba7aad621749a342769667f1465819832c7427762160f1";
+		"1967b4224acabb3fe1924df04516d96d5c0058053850977b84df897d6b1b65f2";
 	static final List<String> SHARED_ARCHIVE_SHA = List.of(
 		"a253f8f587fd349a355352d11015051ae223261e97e9b37734d837711b068eac",
 		"5a38b4b35047d1d7604d2e0dccf3d45f0b3372b465573e1098ee7b19af6cb2e5",
@@ -82,9 +106,11 @@ class ContentImportCliTest {
 	String base;
 	String commit;
 	Map<String, byte[]> files;
+	ObjectNode curso;
 
 	@BeforeEach void prepare() throws Exception {
 		active = ContentFixture.copyInto(temp.resolve("active"));
+		curso = (ObjectNode) JSON.readTree(CURSO);
 		source = Files.createDirectory(temp.resolve("source.git"));
 		git(null, "init", "--bare", "--quiet", source.toString());
 		// The accepted base commit holds exactly the copies of the accepted H4 copy, as the pinned H4 ref does.
@@ -197,30 +223,32 @@ class ContentImportCliTest {
 		assertThat(result.report()).contains("addition demo-stage-01", "fase-01/codigo/hola/.gitignore");
 	}
 
-	@Test void inventoryDiscrepanciesAreReportedWithoutWriting() throws Exception {
-		files.put("00-indice.md", INDEX.replace("| 01.02 | [Siguiente](fase-01/02-siguiente.md) | Básico · Núcleo | 2 h | ✅ Disponible |\n", "")
-			.getBytes(StandardCharsets.UTF_8));
-		String changed = commit(files, "no row\n");
+	@Test void aDeclaredModuleWithoutItsFileIsReportedWithoutWriting() throws Exception {
+		// curso.json, not the index, says which modules exist: one that is declared available needs its file.
+		files.remove("fase-01/02-siguiente.md");
+		String changed = commit(files, "missing module\n");
 		Map<String, String> activeBefore = snapshot(active.root);
 		Map<String, String> sourceBefore = snapshot(source);
-		assertThat(generate("--commit", changed)).isEqualTo(new Result(3, "Candidate not written; findings: 3\n", ""));
-		assertThat(findings()).containsExactly(
-			"demo-01.01: unresolved link 02-siguiente.md#sección-b",
-			"lesson demo-01.02 has no source index row: fase-01/02-siguiente.md",
-			"unsupported destination fase-01/01-intro.md:7: 02-siguiente.md#sección-b (source document without identity)");
+		assertThat(generate("--commit", changed).code()).isEqualTo(3);
+		assertThat(findings()).contains("source body unavailable fase-01/02-siguiente.md");
 		assertThat(Files.exists(output)).isFalse();
 		assertThat(JSON.readTree(Files.readString(report)).path("written").asBoolean()).isFalse();
 		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
 	}
 
-	@Test void retitledInventoryRowsAreConflicts() throws Exception {
-		files.put("00-indice.md", INDEX.replace("[Siguiente](fase-01/02-siguiente.md)",
-			"[Otro título](fase-01/02-siguiente.md)").getBytes(StandardCharsets.UTF_8));
+	@Test void aRetitleInCursoJsonKeepsTheIdAndIsLeftToTheComparison() throws Exception {
+		// The title comes from curso.json and the ID does not change with it (FORMATO.md 3.3).
+		module("demo-01.02").put("titulo", "Otro título");
 		String changed = commit(files, "retitle\n");
-		assertThat(generate("--commit", changed)).isEqualTo(new Result(3, "Candidate not written; findings: 1\n", ""));
-		assertThat(findings()).containsExactly("lesson demo-01.02 would be retitled: «Otro título»");
-		assertThat(Files.exists(output)).isFalse();
+		assertThat(generate("--commit", changed).code()).isZero();
+		JsonNode lesson = manifest().path("lessons").get(1);
+		assertThat(lesson.path("id").asString()).isEqualTo("demo-01.02");
+		assertThat(lesson.path("title").asString()).isEqualTo("Otro título");
+		// The comparison still refuses retitles, as since H5; FORMATO.md 11.2 allows them, so H7 has to revisit it.
+		var result = ContentUpdateComparison.compare(
+			new ContentUpdateCli.Paths(active.root, output, source, temp.resolve("comparison.json")));
+		assertThat(result.conflicts()).contains("retitle demo-01.02");
 	}
 
 	@Test void fragmentsFollowTheSharedHeadingRule() throws Exception {
@@ -269,8 +297,7 @@ class ContentImportCliTest {
 			""".getBytes(StandardCharsets.UTF_8));
 		// A lesson that becomes available in the pinned tree may point at a stage fragment too: the same mapping
 		// answers both directions, and the accepted copy holds no body for it, so nothing is an adaptation.
-		files.put("00-indice.md", INDEX.replace("| 2 h | ⏳ Pendiente |", "| 2 h | ✅ Disponible |")
-			.getBytes(StandardCharsets.UTF_8));
+		module("demo-02.01").put("disponible", true);
 		files.put("fase-02/01-pendiente.md", """
 			# 02.01 Pendiente
 
@@ -345,11 +372,11 @@ class ContentImportCliTest {
 		files.put("fase-01/02-siguiente.md",
 			acceptedBody.replace("Ejercicio 1 · Título exacto", "Ejercicio 1 · Título cambiado").getBytes(StandardCharsets.UTF_8));
 		String changed = commit(files, "retitled exercise\n");
-		// A retitled heading is a new exercise heading, so the accepted exercise is no longer associated: the identity
-		// is reported instead of silently retitled, and the local body keeps its own adaptation report.
+		// A retitled heading is an exercise curso.json does not declare: it is reported, never given a new identity,
+		// and the local body keeps its own adaptation report.
 		assertThat(generate("--commit", changed)).isEqualTo(new Result(3, "Candidate not written; findings: 2\n", ""));
 		assertThat(findings()).containsExactly(
-			"demo-01.02: exercise demo-01.02-e01 «Título exacto» has no heading with that title in the lesson",
+			"demo-01.02: exercise heading «Título cambiado» has no exercise with that title in the manifest",
 			"local adaptation would be replaced demo/lessons/demo-01.02.md");
 		assertThat(Files.exists(output)).isFalse();
 	}
@@ -922,11 +949,10 @@ class ContentImportCliTest {
 		assertThat(result.report()).contains("addition demo-stage-01");
 	}
 
-	@Test void newExerciseHeadingsGetDeterministicIdsAndExistingOnesStayUntouched() throws Exception {
-		// The pending lesson becomes available in the pinned tree only, with two new headings: the accepted copy
-		// holds no body for it, so nothing is an adaptation and every new ID is generated here.
-		files.put("00-indice.md", INDEX.replace("| 2 h | ⏳ Pendiente |", "| 2 h | ✅ Disponible |")
-			.getBytes(StandardCharsets.UTF_8));
+	@Test void exerciseIdsComeOnlyFromCursoJsonAndAreNeverInvented() throws Exception {
+		// The pending lesson becomes available in the pinned tree only, with two exercise headings: the accepted copy
+		// holds no body for it, so nothing is an adaptation. Their IDs can only come from curso.json.
+		module("demo-02.01").put("disponible", true);
 		files.put("fase-02/01-pendiente.md", """
 			# 02.01 Pendiente
 
@@ -961,6 +987,18 @@ class ContentImportCliTest {
 		// The accepted intro already points at the new lesson, so its fragment must now name a real heading.
 		active.replace("demo/lessons/demo-01.01.md", "#algo-que-no-existe", "#sección-nueva");
 		files.put("fase-01/01-intro.md", Files.readAllBytes(active.root.resolve("demo/lessons/demo-01.01.md")));
+		String undeclared = commit(files, "undeclared exercises\n");
+		assertThat(generate("--commit", undeclared)).isEqualTo(new Result(3, "Candidate not written; findings: 3\n", ""));
+		assertThat(findings()).containsExactly(
+			"demo-02.01: exercise heading «Entrega el informe» has no exercise with that title in the manifest",
+			"demo-02.01: exercise heading «Redacta el informe» has no exercise with that title in the manifest",
+			"demo-02.01: unresolved link #ejercicio-1--redacta-el-informe");
+		assertThat(Files.exists(output)).isFalse();
+		Files.delete(report);
+		// Once the course declares them, they keep exactly the declared IDs.
+		tools.jackson.databind.node.ArrayNode declared = module("demo-02.01").putArray("ejercicios");
+		declared.addObject().put("id", "demo-02.01-redacta").put("titulo", "Redacta el informe");
+		declared.addObject().put("id", "demo-02.01-entrega").put("titulo", "Entrega el informe");
 		String changed = commit(files, "new exercise\n");
 		Result result = generate("--commit", changed);
 		assertThat(findings()).as("findings of the real run").isEmpty();
@@ -969,7 +1007,7 @@ class ContentImportCliTest {
 		JsonNode generated = manifest.path("lessons").get(2).path("exercises");
 		assertThat(generated).hasSize(2);
 		assertThat(generated).extracting(node -> node.path("id").asString())
-			.containsExactly("demo-02.01-e01", "demo-02.01-e02");
+			.containsExactly("demo-02.01-redacta", "demo-02.01-entrega");
 		assertThat(generated).extracting(node -> node.path("lessonId").asString())
 			.containsOnly("demo-02.01");
 		assertThat(generated).extracting(node -> node.path("title").asString())
@@ -979,7 +1017,7 @@ class ContentImportCliTest {
 		assertThat(fragments(manifest, "fase-02/01-pendiente.md"))
 			.containsEntry("ejercicio-1--redacta-el-informe", "ejercicio-1--redacta-el-informe");
 		assertThat(ContentLoader.loadAll(output).getFirst().lessons().get("demo-02.01").bodyHtml())
-			.contains("<a href=\"#demo-02.01-e01\">el primer ejercicio</a>");
+			.contains("<a href=\"#demo-02.01-redacta\">el primer ejercicio</a>");
 		// Rerun stability: the same pinned tree and accepted copy produce the same candidate.
 		Path second = temp.resolve("candidate-rerun");
 		Path secondReport = temp.resolve("report-rerun.json");
@@ -1222,6 +1260,11 @@ class ContentImportCliTest {
 					.put("title", titles[i]);
 			}
 		});
+		// The course declares the same exercises in its curso.json: that is the identity the importer reads.
+		tools.jackson.databind.node.ArrayNode declared = module(lessonId).putArray("ejercicios");
+		for (int i = 0; i < titles.length; i++) {
+			declared.addObject().put("id", lessonId + "-e%02d".formatted(i + 1)).put("titulo", titles[i]);
+		}
 		files.put(sourcePath, body.getBytes(StandardCharsets.UTF_8));
 	}
 
@@ -1279,7 +1322,17 @@ class ContentImportCliTest {
 	}
 
 	String commit(Map<String, byte[]> content, String message) throws Exception {
-		return git(message.getBytes(StandardCharsets.UTF_8), "commit-tree", tree(content)).strip();
+		Map<String, byte[]> withCourse = new TreeMap<>(content);
+		withCourse.put("curso.json", JSON.writeValueAsBytes(curso));
+		return git(message.getBytes(StandardCharsets.UTF_8), "commit-tree", tree(withCourse)).strip();
+	}
+
+	/** The module of curso.json with this ID, to change what the course declares in one test. */
+	ObjectNode module(String id) {
+		for (JsonNode phase : curso.path("fases")) for (JsonNode module : phase.path("modulos")) {
+			if (id.equals(module.path("id").asString())) return (ObjectNode) module;
+		}
+		throw new IllegalArgumentException(id);
 	}
 
 	String tree(Map<String, byte[]> content) throws Exception {
