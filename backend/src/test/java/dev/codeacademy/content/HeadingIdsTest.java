@@ -14,11 +14,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Heading IDs must match GitHub, as frozen from ancla() of the source course (see the fixture header). */
+/** Heading IDs must match GitHub, as frozen from ancla() of the source course and of the kit (see the fixture header). */
 class HeadingIdsTest {
 
 	private static final Path FIXTURE = Path.of("src/test/resources/content/anchors-expected.tsv");
-	private static final Path REAL_LESSON = Path.of("../content/java/lessons/java-02.01.md");
+	/** The module of the kit's example course whose headings the fixture's «real» section freezes. */
+	private static final Path REAL_LESSON = ExampleContent.COURSES.resolve("bueno/fase-01-primeros-pasos/01-ficheros-json.md");
 
 	/** section → ordered (heading text, expected id) rows. */
 	static Map<String, List<String[]>> fixture() throws IOException {

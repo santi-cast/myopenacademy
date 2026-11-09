@@ -17,3 +17,7 @@ frontend/coverage/
 frontend/playwright-report/
 frontend/test-results/
 backend/target/
+
+# Installed courses (H7): only the README of content/ is in Git
+content/*
+!content/README.md

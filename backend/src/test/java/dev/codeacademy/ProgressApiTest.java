@@ -18,10 +18,10 @@ class ProgressApiTest extends ProgressTestSupport {
 		var browser = learner();
 		var before = snapshot();
 
-		JsonNode java = ok(progress(browser, "java"));
+		JsonNode ejemplo = ok(progress(browser, EJEMPLO));
 		JsonNode demo = ok(progress(browser, "demo"));
 
-		for (JsonNode body : List.of(java, demo)) {
+		for (JsonNode body : List.of(ejemplo, demo)) {
 			assertThat(body.propertyNames()).containsExactlyInAnyOrder("courseId", "added", "lessonStates",
 					"exerciseStates", "continuation", "progress");
 			assertThat(body.path("added").isBoolean()).isTrue();
@@ -32,9 +32,9 @@ class ProgressApiTest extends ProgressTestSupport {
 			assertThat(body.path("exerciseStates").size()).isZero();
 			assertContinuation(body.path("continuation"), null);
 		}
-		assertThat(java.path("courseId").asString()).isEqualTo("java");
-		// Since H5 every one of the 199 planned java lessons is available.
-		assertCounts(java.path("progress"), 0, 199, 199, 0.0);
+		assertThat(ejemplo.path("courseId").asString()).isEqualTo(EJEMPLO);
+		// One of the two modules of ejemplo is available; the other one is pending.
+		assertCounts(ejemplo.path("progress"), 0, 1, 2, 0.0);
 		assertThat(demo.path("courseId").asString()).isEqualTo("demo");
 		assertCounts(demo.path("progress"), 0, 2, 3, 0.0);
 		assertThat(snapshot()).isEqualTo(before);
@@ -60,7 +60,7 @@ class ProgressApiTest extends ProgressTestSupport {
 		assertThat(empty.path("courses").size()).isZero();
 		assertThat(snapshot()).isEqualTo(before);
 
-		ok(lessonState(browser, JAVA_LESSON, "completed"));
+		ok(lessonState(browser, EJEMPLO_LESSON, "completed"));
 		ok(add(browser, "demo"));
 		var added = snapshot();
 		JsonNode courses = ok(browser.get("/api/me/courses")).path("courses");
@@ -73,11 +73,11 @@ class ProgressApiTest extends ProgressTestSupport {
 		assertThat(demo.path("course").path("title").asString()).isEqualTo("Demo");
 		assertEnrollment(demo.path("enrollment"), "demo", null);
 		assertCounts(demo.path("enrollment").path("progress"), 0, 2, 3, 0.0);
-		JsonNode java = courses.get(1);
-		assertThat(java.path("course").path("id").asString()).isEqualTo("java");
-		assertThat(java.path("course").path("title").asString()).isEqualTo("Java");
-		assertEnrollment(java.path("enrollment"), "java", JAVA_LESSON);
-		assertCounts(java.path("enrollment").path("progress"), 1, 199, 199, 100.0 / 199);
+		JsonNode ejemplo = courses.get(1);
+		assertThat(ejemplo.path("course").path("id").asString()).isEqualTo(EJEMPLO);
+		assertThat(ejemplo.path("course").path("title").asString()).isEqualTo("Curso de ejemplo");
+		assertEnrollment(ejemplo.path("enrollment"), EJEMPLO, EJEMPLO_LESSON);
+		assertCounts(ejemplo.path("enrollment").path("progress"), 1, 1, 2, 100.0);
 		assertThat(snapshot()).as("GET writes nothing").isEqualTo(added);
 	}
 
@@ -341,7 +341,7 @@ class ProgressApiTest extends ProgressTestSupport {
 		var before = snapshot();
 
 		assertError(continuation(browser, "demo", INTRO), 409, "COURSE_NOT_ADDED");
-		assertError(continuation(browser, "java", JAVA_LESSON), 409, "COURSE_NOT_ADDED");
+		assertError(continuation(browser, EJEMPLO, EJEMPLO_LESSON), 409, "COURSE_NOT_ADDED");
 
 		assertThat(snapshot()).isEqualTo(before);
 	}
@@ -353,7 +353,7 @@ class ProgressApiTest extends ProgressTestSupport {
 		ok(continuation(browser, "demo", INTRO));
 		var before = snapshot();
 
-		assertError(continuation(browser, "demo", JAVA_LESSON), 400, "COURSE_MISMATCH");
+		assertError(continuation(browser, "demo", EJEMPLO_LESSON), 400, "COURSE_MISMATCH");
 
 		assertThat(snapshot()).isEqualTo(before);
 	}
@@ -362,18 +362,15 @@ class ProgressApiTest extends ProgressTestSupport {
 	void continuationToAPendingLessonIsLessonUnavailable() throws Exception {
 		var browser = learner();
 		ok(add(browser, "demo"));
-		ok(add(browser, "java"));
+		ok(add(browser, EJEMPLO));
 		var before = snapshot();
 
 		assertError(continuation(browser, "demo", PENDING), 409, "LESSON_UNAVAILABLE");
 
 		assertThat(snapshot()).isEqualTo(before);
-		// The real java course has no pending lesson since H5: the stored catalog is changed as a later import could.
-		withAvailability(JAVA_PENDING, false, () -> {
-			var unavailable = snapshot();
-			assertError(continuation(browser, "java", JAVA_PENDING), 409, "LESSON_UNAVAILABLE");
-			assertThat(snapshot()).isEqualTo(unavailable);
-		});
+		// The module that curso.json declares not available yet is pending in the imported course too.
+		assertError(continuation(browser, EJEMPLO, EJEMPLO_PENDING), 409, "LESSON_UNAVAILABLE");
+		assertThat(snapshot()).isEqualTo(before);
 	}
 
 	@Test
@@ -398,14 +395,11 @@ class ProgressApiTest extends ProgressTestSupport {
 		}
 
 		assertThat(snapshot()).isEqualTo(before);
-		// The real java course has no pending lesson since H5: the stored catalog is changed as a later import could.
-		withAvailability(JAVA_PENDING, false, () -> {
-			var unavailable = snapshot();
-			for (String state : List.of("completed", "not_completed")) {
-				assertError(lessonState(browser, JAVA_PENDING, state), 409, "LESSON_UNAVAILABLE");
-			}
-			assertThat(snapshot()).isEqualTo(unavailable);
-		});
+		// The module that curso.json declares not available yet is pending in the imported course too.
+		for (String state : List.of("completed", "not_completed")) {
+			assertError(lessonState(browser, EJEMPLO_PENDING, state), 409, "LESSON_UNAVAILABLE");
+		}
+		assertThat(snapshot()).isEqualTo(before);
 	}
 
 	@Test

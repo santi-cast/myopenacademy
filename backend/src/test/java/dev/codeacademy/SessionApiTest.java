@@ -3,12 +3,15 @@ package dev.codeacademy;
 import java.net.HttpCookie;
 import java.util.List;
 
+import dev.codeacademy.content.ExampleContent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -22,6 +25,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SessionApiTest {
+	/** The kit's example courses: these tests need an academy that starts, not any particular content. */
+	@DynamicPropertySource
+	static void content(DynamicPropertyRegistry registry) {
+		registry.add("code-academy.content-dir", () -> ExampleContent.root().toString());
+	}
+
 
 	@Autowired JdbcTemplate jdbc;
 	@Autowired Environment environment;

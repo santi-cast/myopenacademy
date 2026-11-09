@@ -24,25 +24,26 @@ class ProgressConcurrencyTest extends ProgressTestSupport {
 		var browser = ready(learner());
 		String user = userId(browser);
 
+		// ejemplo has two exercises: each one is marked several times at once, besides the lesson twice.
 		List<Callable<HttpResponse<String>>> calls = new ArrayList<>();
-		for (int i = 1; i <= 9; i++) {
-			String exercise = "java-02.01-e0" + i;
+		for (int i = 0; i < REQUESTS; i++) {
+			String exercise = i % 2 == 0 ? EJEMPLO_E01 : EJEMPLO_E02;
 			calls.add(() -> exerciseState(browser, exercise, "solved"));
 		}
-		calls.add(() -> lessonState(browser, JAVA_LESSON, "completed"));
-		calls.add(() -> lessonState(browser, JAVA_LESSON, "completed"));
+		calls.add(() -> lessonState(browser, EJEMPLO_LESSON, "completed"));
+		calls.add(() -> lessonState(browser, EJEMPLO_LESSON, "completed"));
 		List<JsonNode> results = parallel(calls).stream().map(ProgressTestSupport::ok).toList();
 
 		assertThat(results).filteredOn(result -> result.path("courseAutoAdded").asBoolean()).hasSize(1);
-		assertThat(results).allSatisfy(result -> assertContinuation(result.path("continuation"), JAVA_LESSON));
+		assertThat(results).allSatisfy(result -> assertContinuation(result.path("continuation"), EJEMPLO_LESSON));
 		var enrollments = enrollmentsOf(user);
 		assertThat(enrollments).hasSize(1);
 		Object enrollment = enrollments.getFirst().get("id");
 		assertThat(jdbc.queryForObject("select count(*) from code_academy.exercise_states where enrollment_id = ?",
-				Integer.class, enrollment)).isEqualTo(9);
+				Integer.class, enrollment)).isEqualTo(2);
 		assertThat(jdbc.queryForObject("select count(*) from code_academy.lesson_states where enrollment_id = ?",
 				Integer.class, enrollment)).isEqualTo(1);
-		JsonNode progress = ok(progress(browser, "java"));
+		JsonNode progress = ok(progress(browser, EJEMPLO));
 		assertThat(progress.path("progress").path("completedLessons").asInt()).isEqualTo(1);
 	}
 
@@ -52,25 +53,25 @@ class ProgressConcurrencyTest extends ProgressTestSupport {
 		String user = userId(browser);
 
 		List<Callable<HttpResponse<String>>> calls = new ArrayList<>();
-		for (int i = 1; i <= REQUESTS; i++) {
-			String exercise = "java-02.01-e0" + i;
+		for (int i = 0; i < REQUESTS; i++) {
+			String exercise = i % 2 == 0 ? EJEMPLO_E01 : EJEMPLO_E02;
 			calls.add(() -> exerciseState(browser, exercise, "in_progress"));
 		}
 		List<JsonNode> results = parallel(calls).stream().map(ProgressTestSupport::ok).toList();
 
 		assertThat(results).filteredOn(result -> result.path("courseAutoAdded").asBoolean()).hasSize(1);
 		assertThat(results).allSatisfy(result -> {
-			assertThat(result.path("courseId").asString()).isEqualTo("java");
+			assertThat(result.path("courseId").asString()).isEqualTo(EJEMPLO);
 			assertThat(result.path("state").asString()).isEqualTo("in_progress");
-			assertContinuation(result.path("continuation"), JAVA_LESSON);
+			assertContinuation(result.path("continuation"), EJEMPLO_LESSON);
 		});
 		var enrollments = enrollmentsOf(user);
 		assertThat(enrollments).hasSize(1);
-		assertThat(enrollments.getFirst().get("last_opened_lesson_id")).isEqualTo(JAVA_LESSON);
+		assertThat(enrollments.getFirst().get("last_opened_lesson_id")).isEqualTo(EJEMPLO_LESSON);
 		assertThat(jdbc.queryForObject("select count(*) from code_academy.exercise_states where enrollment_id = ?",
-				Integer.class, enrollments.getFirst().get("id"))).isEqualTo(REQUESTS);
-		JsonNode progress = ok(progress(browser, "java"));
-		assertThat(progress.path("exerciseStates").size()).isEqualTo(REQUESTS);
+				Integer.class, enrollments.getFirst().get("id"))).isEqualTo(2);
+		JsonNode progress = ok(progress(browser, EJEMPLO));
+		assertThat(progress.path("exerciseStates").size()).isEqualTo(2);
 	}
 
 	/**

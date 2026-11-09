@@ -85,7 +85,7 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 		var browser = learner();
 		markSomeProgress(browser);
 		JsonNode demo = ok(progress(browser, "demo"));
-		Manifest java = ContentLoader.load(CONTENT_ROOT, "java/manifest.json").manifest();
+		Manifest ejemplo = ContentLoader.load(CONTENT_ROOT, "ejemplo/manifest.json").manifest();
 		Manifest base = ContentLoader.load(CONTENT_ROOT, "demo/manifest.json").manifest();
 		ContentFixture swapped = ContentFixture.copyInto(tempDir.resolve("swapped"));
 		swapped.editManifest(manifest -> {
@@ -107,21 +107,21 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 		var before = snapshot();
 
 		// A retitle keeps the ID (FORMATO.md 11.2): it is applied, the progress stays, and the original titles come back.
-		synchronizer.synchronize(List.of(java, retitled));
+		synchronizer.synchronize(List.of(ejemplo, retitled));
 		assertThat(ok(progress(browser, "demo"))).isEqualTo(demo);
-		synchronizer.synchronize(List.of(java, base));
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, exerciseRemoved)))
+		synchronizer.synchronize(List.of(ejemplo, base));
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, exerciseRemoved)))
 			.isInstanceOf(CatalogConflictException.class)
 			.hasMessageContaining("exercise demo-01.01-e02 is no longer in the manifest");
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, lessonRemoved)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, lessonRemoved)))
 			.isInstanceOf(CatalogConflictException.class)
 			.hasMessageContaining("lesson demo-01.02 is no longer in the manifest");
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, phaseRemoved)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, phaseRemoved)))
 			.isInstanceOf(CatalogConflictException.class)
 			.hasMessageContaining("phase demo-phase-02 is no longer in the manifest");
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(base)))
 			.isInstanceOf(CatalogConflictException.class)
-			.hasMessageContaining("course java is no longer in the content");
+			.hasMessageContaining("course ejemplo is no longer in the content");
 
 		assertThat(snapshot()).isEqualTo(before);
 		assertThat(ok(progress(browser, "demo"))).isEqualTo(demo);
@@ -133,14 +133,14 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 		var browser = learner();
 		markSomeProgress(browser);
 		JsonNode demo = ok(progress(browser, "demo"));
-		Manifest java = ContentLoader.load(CONTENT_ROOT, "java/manifest.json").manifest();
+		Manifest ejemplo = ContentLoader.load(CONTENT_ROOT, "ejemplo/manifest.json").manifest();
 		Manifest base = ContentLoader.load(CONTENT_ROOT, "demo/manifest.json").manifest();
 		Manifest moved = withLessons(base, lesson -> lesson.id().equals(NEXT) ? withPhase(lesson, "demo-phase-02")
 				: lesson);
 		var progressBefore = TestDatabase.snapshot(jdbc, "users", "enrollments", "lesson_states", "exercise_states");
 
 		try {
-			synchronizer.synchronize(List.of(java, moved));
+			synchronizer.synchronize(List.of(ejemplo, moved));
 
 			assertThat(jdbc.queryForObject("select phase_id from code_academy.lessons where id = ?", String.class, NEXT))
 				.isEqualTo("demo-phase-02");
@@ -149,7 +149,7 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 			assertThat(ok(progress(browser, "demo"))).isEqualTo(demo);
 		}
 		finally {
-			synchronizer.synchronize(List.of(java, base));
+			synchronizer.synchronize(List.of(ejemplo, base));
 		}
 		assertThat(jdbc.queryForObject("select phase_id from code_academy.lessons where id = ?", String.class, NEXT))
 			.isEqualTo("demo-phase-01");
@@ -160,7 +160,7 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 		var browser = learner();
 		markSomeProgress(browser);
 		JsonNode demo = ok(progress(browser, "demo"));
-		Manifest java = ContentLoader.load(CONTENT_ROOT, "java/manifest.json").manifest();
+		Manifest ejemplo = ContentLoader.load(CONTENT_ROOT, "ejemplo/manifest.json").manifest();
 		Manifest base = ContentLoader.load(CONTENT_ROOT, "demo/manifest.json").manifest();
 		ContentFixture broken = ContentFixture.copyInto(tempDir.resolve("broken"));
 		broken.replace(ContentFixture.INTRO, "#### Ejercicio 2 · Segundo `ejercicio`",
@@ -172,23 +172,23 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 				: lesson);
 		var before = snapshot();
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, broken.load().manifest())))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, broken.load().manifest())))
 			.isInstanceOf(ContentValidationException.class)
 			.hasMessageContaining("exercise demo-01.01-e02 «Segundo ejercicio» has no heading with that title");
-		assertThat(catchThrowable(() -> synchronizer.synchronize(List.of(java, clash)))).isNotNull();
+		assertThat(catchThrowable(() -> synchronizer.synchronize(List.of(ejemplo, clash)))).isNotNull();
 
 		assertThat(snapshot()).isEqualTo(before);
 		assertThat(ok(progress(browser, "demo"))).isEqualTo(demo);
 	}
 
-	/** States on both demo lessons and both exercises, a continuation, and the Java course added explicitly. */
+	/** States on both demo lessons and both exercises, a continuation, and the example course added explicitly. */
 	private static void markSomeProgress(ApiClient browser) throws Exception {
 		ok(lessonState(browser, INTRO, "completed"));
 		ok(lessonState(browser, NEXT, "not_completed"));
 		ok(exerciseState(browser, E01, "solved"));
 		ok(exerciseState(browser, E02, "in_progress"));
 		ok(continuation(browser, "demo", NEXT));
-		ok(add(browser, "java"));
+		ok(add(browser, EJEMPLO));
 	}
 
 	/** A separate application on the same database and content, as a restarted backend would be. */

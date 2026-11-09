@@ -1,5 +1,8 @@
 package dev.codeacademy;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -14,12 +17,14 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import dev.codeacademy.content.ContentLoader;
+import dev.codeacademy.content.ExampleContent;
 import dev.codeacademy.content.Manifest;
 import dev.codeacademy.content.Manifest.Lesson;
 
@@ -52,36 +57,36 @@ class PhaseMigrationTest {
 	}
 
 	@Test
-	void upgradingFromV4KeepsProgressAndTheStartupFillsThePhases() {
+	void upgradingFromV4KeepsProgressAndTheStartupFillsThePhases(@TempDir Path temp) throws IOException {
+		// Only the course that V4 knew: a second course would be a new course at startup, not an upgrade.
+		Path content = Files.createDirectory(temp.resolve("content"));
+		ExampleContent.copyCourseInto(ExampleContent.COURSE, content);
 		migrateTo("4");
-		Manifest java = ContentLoader.load(CatalogApiTest.CONTENT, "java/manifest.json").manifest();
-		synchronizeAsV4(java);
+		Manifest ejemplo = ContentLoader.load(content, "ejemplo/manifest.json").manifest();
+		synchronizeAsV4(ejemplo);
 		markProgressAsV4();
 		var progress = progressSnapshot();
 		var enrollments = legacyEnrollmentsSnapshot();
 		List<Map<String, Object>> lessons = jdbc.queryForList(
 				"select id, course_id, title, position, available, source_available from code_academy.lessons order by id");
-		assertThat(lessons).hasSize(199);
+		assertThat(lessons).hasSize(2);
 
 		migrateTo("5");
 
 		assertThat(jdbc.queryForObject("select count(*) from code_academy.phases", Integer.class)).isZero();
 		assertThat(jdbc.queryForObject("select count(*) from code_academy.lessons where phase_id is null",
-				Integer.class)).isEqualTo(199);
+				Integer.class)).isEqualTo(2);
 
-		String[] args = { "--server.port=0", "--code-academy.content-dir=" + CatalogApiTest.CONTENT,
+		String[] args = { "--server.port=0", "--code-academy.content-dir=" + content,
 				"--spring.datasource.url=" + postgres.getJdbcUrl(), "--spring.datasource.username=" + postgres.getUsername(),
 				"--spring.datasource.password=" + postgres.getPassword() };
 		CodeAcademyApplication.application(args).run(args).close();
 
 		assertThat(jdbc.queryForList("select id || ' ' || position || ' ' || title from code_academy.phases "
-				+ "where course_id = 'java' order by position", String.class))
-			.hasSize(21)
-			.startsWith("java-phase-00 1 Lógica de programación", "java-phase-01 2 Entorno y herramientas",
-					"java-phase-02 3 Fundamentos de Java")
-			.endsWith("java-phase-20 21 Desarrollo profesional");
+				+ "where course_id = 'ejemplo' order by position", String.class))
+			.containsExactly("ejemplo.fase.primeros-pasos 1 Primeros pasos");
 		List<String> expected = new ArrayList<>();
-		java.lessons().forEach(lesson -> expected.add(lesson.id() + " " + lesson.phaseId()));
+		ejemplo.lessons().forEach(lesson -> expected.add(lesson.id() + " " + lesson.phaseId()));
 		assertThat(jdbc.queryForList("select id || ' ' || phase_id from code_academy.lessons", String.class))
 			.containsExactlyInAnyOrderElementsOf(expected);
 		assertThat(jdbc.queryForList(
@@ -120,11 +125,12 @@ class PhaseMigrationTest {
 		jdbc.update("insert into code_academy.users (id, username, username_canonical, password_hash, "
 				+ "credentials_version, created_at) values (?, 'Alumna_V4', 'alumna_v4', 'hash-no-usado', 1, ?)", user, at);
 		Long enrollment = jdbc.queryForObject("insert into code_academy.enrollments (user_id, course_id, "
-				+ "last_opened_lesson_id, created_at) values (?, 'java', 'java-02.01', ?) returning id", Long.class, user, at);
+				+ "last_opened_lesson_id, created_at) values (?, 'ejemplo', 'ejemplo.ficheros-json', ?) returning id", Long.class, user, at);
 		jdbc.update("insert into code_academy.lesson_states (enrollment_id, course_id, lesson_id, state, updated_at) "
-				+ "values (?, 'java', 'java-02.01', 'completed', ?)", enrollment, at);
+				+ "values (?, 'ejemplo', 'ejemplo.ficheros-json', 'completed', ?)", enrollment, at);
 		jdbc.update("insert into code_academy.exercise_states (enrollment_id, course_id, exercise_id, state, updated_at) "
-				+ "values (?, 'java', 'java-02.01-e01', 'solved', ?), (?, 'java', 'java-02.01-e02', 'in_progress', ?)",
+				+ "values (?, 'ejemplo', 'ejemplo.ficheros-json.un-pedido', 'solved', ?), "
+				+ "(?, 'ejemplo', 'ejemplo.ficheros-json.la-coma-de-mas', 'in_progress', ?)",
 				enrollment, at, enrollment, at);
 	}
 

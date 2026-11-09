@@ -22,6 +22,7 @@ import dev.codeacademy.catalog.CatalogSynchronizer;
 import dev.codeacademy.content.ContentFixture;
 import dev.codeacademy.content.ContentLoader;
 import dev.codeacademy.content.ContentValidationException;
+import dev.codeacademy.content.ExampleContent;
 import dev.codeacademy.content.Manifest;
 import dev.codeacademy.content.Manifest.Lesson;
 
@@ -43,31 +44,31 @@ class CatalogSynchronizationTest {
 	@TempDir
 	Path tempDir;
 
-	/** The real course takes seconds to load and no test changes it, so every test shares one load. */
-	private static Manifest realJava;
+	/** The kit's example course, installed by the real importer; no test changes it, so every test shares one load. */
+	private static Manifest example;
 
-	Manifest java;
+	Manifest ejemplo;
 	ContentFixture demo;
 
 	@BeforeAll
-	static void loadRealCourse() {
-		realJava = ContentLoader.load(CatalogApiTest.CONTENT, "java/manifest.json").manifest();
+	static void loadExampleCourse() {
+		example = ContentLoader.load(ExampleContent.root(), "ejemplo/manifest.json").manifest();
 	}
 
 	@BeforeEach
 	void synchronizedBase() {
-		java = realJava;
+		ejemplo = example;
 		demo = ContentFixture.copyInto(tempDir);
-		synchronizer.synchronize(List.of(java, demo.load().manifest()));
+		synchronizer.synchronize(List.of(ejemplo, demo.load().manifest()));
 	}
 
 	@Test
 	void insertsEveryCourseLessonAndExerciseAndASecondRunChangesNothing() {
 		assertThat(jdbc.queryForList("select id from code_academy.courses order by id", String.class))
-				.containsExactly("demo", "java");
-		assertThat(count("lessons where course_id = 'java'")).isEqualTo(199);
+				.containsExactly("demo", "ejemplo");
+		assertThat(count("lessons where course_id = 'ejemplo'")).isEqualTo(2);
 		assertThat(count("lessons where course_id = 'demo'")).isEqualTo(3);
-		assertThat(count("exercises where course_id = 'java' and lesson_id = 'java-02.01'")).isEqualTo(9);
+		assertThat(count("exercises where course_id = 'ejemplo' and lesson_id = 'ejemplo.ficheros-json'")).isEqualTo(2);
 		assertThat(jdbc.queryForList("select id, lesson_id, title, position from code_academy.exercises "
 				+ "where course_id = 'demo' order by id")).containsExactly(
 						Map.of("id", "demo-01.01-e01", "lesson_id", "demo-01.01", "title", "Primer ejercicio",
@@ -84,15 +85,17 @@ class CatalogSynchronizationTest {
 		assertThat(jdbc.queryForList("select id || ' ' || phase_id from code_academy.lessons where course_id = 'demo' "
 				+ "order by position", String.class)).containsExactly("demo-01.01 demo-phase-01",
 						"demo-01.02 demo-phase-01", "demo-02.01 demo-phase-02");
-		assertThat(count("phases where course_id = 'java'")).isEqualTo(21);
-		assertThat(jdbc.queryForObject("select title from code_academy.phases where id = 'java-phase-02'", String.class))
-				.isEqualTo("Fundamentos de Java");
-		assertThat(jdbc.queryForObject("select phase_id from code_academy.lessons where id = 'java-02.01'", String.class))
-				.isEqualTo("java-phase-02");
+		assertThat(count("phases where course_id = 'ejemplo'")).isEqualTo(1);
+		assertThat(jdbc.queryForObject("select title from code_academy.phases where id = 'ejemplo.fase.primeros-pasos'",
+				String.class)).isEqualTo("Primeros pasos");
+		assertThat(jdbc.queryForList("select id || ' ' || phase_id || ' ' || available from code_academy.lessons "
+				+ "where course_id = 'ejemplo' order by position", String.class)).containsExactly(
+						"ejemplo.ficheros-json ejemplo.fase.primeros-pasos true",
+						"ejemplo.ficheros-yaml ejemplo.fase.primeros-pasos false");
 		assertThat(count("lessons where phase_id is null")).isZero();
 		var before = TestDatabase.snapshot(jdbc);
 
-		synchronizer.synchronize(List.of(java, demo.load().manifest()));
+		synchronizer.synchronize(List.of(ejemplo, demo.load().manifest()));
 
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}
@@ -106,7 +109,7 @@ class CatalogSynchronizationTest {
 					.putNull("bodyPath");
 		});
 
-		synchronizer.synchronize(List.of(java, demo.load().manifest()));
+		synchronizer.synchronize(List.of(ejemplo, demo.load().manifest()));
 
 		assertThat(jdbc.queryForObject("select title from code_academy.courses where id = 'demo'", String.class))
 				.isEqualTo("Demo renovado");
@@ -124,7 +127,7 @@ class CatalogSynchronizationTest {
 			ContentFixture.phase(manifest, "demo-phase-02").put("title", "Segunda fase renovada");
 		});
 
-		synchronizer.synchronize(List.of(java, demo.load().manifest()));
+		synchronizer.synchronize(List.of(ejemplo, demo.load().manifest()));
 
 		assertThat(jdbc.queryForList("select id || ' ' || phase_id from code_academy.lessons where course_id = 'demo' "
 				+ "order by position", String.class)).containsExactly("demo-01.01 demo-phase-01",
@@ -142,7 +145,7 @@ class CatalogSynchronizationTest {
 			ContentFixture.lesson(manifest, "demo-01.01").put("position", 3);
 		});
 
-		synchronizer.synchronize(List.of(java, demo.load().manifest()));
+		synchronizer.synchronize(List.of(ejemplo, demo.load().manifest()));
 
 		assertThat(jdbc.queryForList("select id || ' ' || position from code_academy.phases where course_id = 'demo' "
 				+ "order by position", String.class)).containsExactly("demo-phase-02 1", "demo-phase-01 2");
@@ -158,7 +161,7 @@ class CatalogSynchronizationTest {
 		Manifest withoutPhase = demo.load().manifest();
 		var before = TestDatabase.snapshot(jdbc);
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, withoutPhase)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, withoutPhase)))
 				.isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("phase demo-phase-02 is no longer in the manifest");
 
@@ -174,7 +177,7 @@ class CatalogSynchronizationTest {
 		Manifest renamed = demo.load().manifest();
 		var before = TestDatabase.snapshot(jdbc);
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, renamed)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, renamed)))
 				.isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("phase demo-phase-02 is no longer in the manifest");
 
@@ -195,7 +198,7 @@ class CatalogSynchronizationTest {
 		Manifest withoutLesson = demo.load().manifest();
 		var before = TestDatabase.snapshot(jdbc);
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, withoutLesson)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, withoutLesson)))
 				.isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("lesson demo-02.01 is no longer in the manifest");
 
@@ -211,7 +214,7 @@ class CatalogSynchronizationTest {
 		Manifest moved = demo.load().manifest();
 		var before = TestDatabase.snapshot(jdbc);
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, moved)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, moved)))
 				.isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("lesson demo-01.01 belongs to course demo, not demo-nuevo")
 				.hasMessageContaining("phase demo-phase-01 belongs to course demo, not demo-nuevo")
@@ -237,10 +240,10 @@ class CatalogSynchronizationTest {
 		});
 		var before = TestDatabase.snapshot(jdbc);
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, removed)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, removed)))
 				.isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("exercise demo-01.01-e02 is no longer in the manifest");
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, moved)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, moved)))
 				.isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("exercise demo-01.01-e02 belongs to lesson demo-01.01 of course demo, "
 						+ "not demo-01.02 of course demo");
@@ -261,7 +264,7 @@ class CatalogSynchronizationTest {
 						l.exercises())).toList(), base.resources(), base.sourceToId());
 		var before = TestDatabase.snapshot(jdbc);
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, demoWithout, other)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, demoWithout, other)))
 				.isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("phase demo-phase-02 belongs to course demo, not otro");
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
@@ -281,11 +284,11 @@ class CatalogSynchronizationTest {
 		Manifest loaded = swapped.load().manifest();
 		var before = TestDatabase.snapshot(jdbc);
 
-		synchronizer.synchronize(List.of(java, loaded));
+		synchronizer.synchronize(List.of(ejemplo, loaded));
 		assertThat(jdbc.queryForList("select title from code_academy.exercises where id in ('demo-01.01-e01', "
 				+ "'demo-01.01-e02') order by id", String.class)).containsExactly("Segundo ejercicio", "Primer ejercicio");
 		// Back to the original titles: the same rows, only their titles changed.
-		synchronizer.synchronize(List.of(java, demo.load().manifest()));
+		synchronizer.synchronize(List.of(ejemplo, demo.load().manifest()));
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}
 
@@ -299,10 +302,10 @@ class CatalogSynchronizationTest {
 		var before = TestDatabase.snapshot(jdbc);
 
 		// The load has no database access: it fails before the synchronization is ever called.
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, retitled.load().manifest())))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, retitled.load().manifest())))
 				.isInstanceOf(ContentValidationException.class)
 				.hasMessageContaining("exercise demo-01.01-e01 «Otro título» has no heading with that title");
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, missing.load().manifest())))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, missing.load().manifest())))
 				.isInstanceOf(ContentValidationException.class)
 				.hasMessageContaining("exercise demo-01.01-e01 «Primer ejercicio» has no heading with that title");
 
@@ -322,7 +325,7 @@ class CatalogSynchronizationTest {
 				clash.sourceToId());
 		var before = TestDatabase.snapshot(jdbc);
 
-		assertThat(catchThrowable(() -> synchronizer.synchronize(List.of(java, renamed)))).isNotNull();
+		assertThat(catchThrowable(() -> synchronizer.synchronize(List.of(ejemplo, renamed)))).isNotNull();
 
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}
@@ -336,7 +339,7 @@ class CatalogSynchronizationTest {
 				: lesson);
 		var before = TestDatabase.snapshot(jdbc);
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, noPhase)))
+		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, noPhase)))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("lessons without phase after synchronization: [demo-02.01]");
 

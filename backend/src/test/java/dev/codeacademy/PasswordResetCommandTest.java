@@ -9,12 +9,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import dev.codeacademy.content.ExampleContent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import dev.codeacademy.account.PasswordResetCommand;
@@ -30,6 +33,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class PasswordResetCommandTest {
+	/** The kit's example courses: these tests need an academy that starts, not any particular content. */
+	@DynamicPropertySource
+	static void content(DynamicPropertyRegistry registry) {
+		registry.add("code-academy.content-dir", () -> ExampleContent.root().toString());
+	}
+
 
 	static final String NL = System.lineSeparator();
 	static final String NEW_PASSWORD = "otra frase bastante larga";
