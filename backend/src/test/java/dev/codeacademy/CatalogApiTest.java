@@ -180,9 +180,9 @@ class CatalogApiTest {
 		assertThat(ids).containsExactly(ExampleContent.E01, ExampleContent.E02);
 		assertThat(exercises.get(1).path("title").asString()).isEqualTo("La coma de más");
 
-		// Seven code files and one image, plus one ZIP per linked folder.
+		// Eight code files and one image, plus one ZIP per linked folder.
 		JsonNode resources = body.path("resources");
-		assertThat(resources.size()).isEqualTo(12);
+		assertThat(resources.size()).isEqualTo(13);
 		int files = 0;
 		int zips = 0;
 		for (JsonNode resource : resources) {
@@ -201,7 +201,7 @@ class CatalogApiTest {
 				assertThat(resource.path("fileName").asString()).endsWith(".zip").doesNotContain(LESSON, "/");
 			}
 		}
-		assertThat(files).isEqualTo(8);
+		assertThat(files).isEqualTo(9);
 		assertThat(zips).isEqualTo(4);
 		assertThat(find(resources, SCRIPT).path("fileName").asString()).isEqualTo("contar.sh");
 		assertThat(find(resources, IMAGE).path("fileName").asString()).isEqualTo("estructura.svg");
@@ -265,6 +265,24 @@ class CatalogApiTest {
 			assertThat(headers.firstValue("Cache-Control").orElse("")).doesNotContain("public");
 		}
 		assertThat(new String(expected, StandardCharsets.UTF_8)).contains("Clientes de");
+	}
+
+	/** A resource whose ID has non-ASCII letters downloads through its encoded link, with its name in UTF-8. */
+	@Test
+	void aResourceWhoseIdHasNonAsciiLettersDownloadsThroughItsEncodedLink() throws Exception {
+		String id = "ejemplo.ficheros-json-r-año-pequeñocsv-8ab61787";
+		byte[] expected = Files.readAllBytes(ExampleContent.root().resolve("ejemplo/resources/" + id));
+
+		// Percent-encoded as a browser does it with the link of the lesson (ñ = %C3%B1), written out in full.
+		String path = "/api/resources/ejemplo.ficheros-json-r-a%C3%B1o-peque%C3%B1ocsv-8ab61787";
+		assertThat(java.net.URI.create(path).getPath()).isEqualTo("/api/resources/" + id);
+		var response = browser.download(path, "*/*");
+
+		assertThat(response.statusCode()).isEqualTo(200);
+		assertThat(response.body()).isEqualTo(expected);
+		assertThat(response.headers().allValues("Content-Disposition"))
+				.containsExactly("attachment; filename=\"a_o-peque_o.csv\"; filename*=UTF-8''a%C3%B1o-peque%C3%B1o.csv");
+		assertThat(response.headers().allValues("X-Content-Type-Options")).containsExactly("nosniff");
 	}
 
 	@Test
