@@ -18,14 +18,19 @@ Lo que ya existe en los otros proyectos:
 
 **9 de noviembre de 2026:** prueba de importación hecha y **`PLAN.md` reescrito con el autor** para MyOpenAcademy, con los hitos H6 a H11 hasta el pack base 1.0 (unos 20 días de trabajo). **Siguiente: H7, cursos como DLC** (`PLAN.md`, apartado 4): rama `feat/h7-…`, tareas en `odd/tasks/` y, como primer paso, el curso de ejemplo pequeño. H6 (uso real) va en paralelo.
 
-**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 hecha salvo la etiqueta (A5): el generador lee `curso.json` y genera el curso de ejemplo, `ejemplo-destino` y el curso inicial completo. **T4b hecha:** la comparación verifica cada curso contra su origen, los de otros repositorios tienen que llegar idénticos byte a byte, y los retítulos son un cambio, no un conflicto. Cursos de ejemplo del kit (`bueno` y `ejemplo-destino`) traídos de `4a79c20`. Detalle en `odd/tasks/h7-cursos-dlc.md` (L1 a L6).
+**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 hecha salvo la etiqueta (A5): el generador lee `curso.json` y genera el curso de ejemplo, `ejemplo-destino` y el curso inicial completo. **T4b hecha:** la comparación verifica cada curso contra su origen, los de otros repositorios tienen que llegar idénticos byte a byte, y los retítulos son un cambio, no un conflicto. Cursos de ejemplo del kit (`bueno` y `ejemplo-destino`) traídos de `4a79c20`. **T3 hecha:** ninguna prueba usa ya el curso de Java ni lee `content/` (las pruebas instalan los cursos de ejemplo con el importador real), y `content/` está fuera de Git salvo su README. **T3b hecha:** «Mis cursos» se ordena por identificador byte a byte (`collate "C"`), igual con cualquier intercalación de la base. Detalle en `odd/tasks/h7-cursos-dlc.md` (L1 a L10).
 
 **Siguiente, en este orden:**
 
 1. ~~Traer el commit nuevo de los cursos de ejemplo del kit~~ **Hecho** (`4a79c20`, 9 de noviembre de 2026), con la prueba real de la comparación por curso: sin conflictos y aplicada (`odd/tasks/h7-cursos-dlc.md`, L8).
-2. **T3:** pruebas sin el curso de Java real y `content/java/` fuera de Git.
-3. **T2:** solo identificadores `<curso>.`.
+2. ~~**T3:** pruebas sin el curso de Java real y `content/java/` fuera de Git~~ **Hecho** (L9), con **T3b**, el orden de «Mis cursos» (L10).
+3. **T2:** solo identificadores `<curso>.`. Visto en T3: el frontend saca de los identificadores, al estilo de Java, los números de fase y de módulo («Fase 00», «00.01»), así que con los de `curso.json` salen mal (T2 o T6).
 4. Lo demás de H7: la etiqueta (A5), T5 a T8 y la revisión del autor.
+
+**Preguntas abiertas para el autor:**
+
+- **Orden de «Mis cursos»** (T3b): por identificador (lo de ahora), el curso inicial primero, por título o por orden de alta. Para cuando se revise esa pantalla.
+- **Recurso con ñ o tilde en el identificador:** con Java se perdió la única prueba de descarga de un recurso así. ¿Pedimos al kit un fichero con ñ en el curso de ejemplo?
 
 **Para cuando se toquen los ZIP de código:** se generan con los ficheros del commit fijado del curso (objetos de Git), nunca con una copia en disco. Así lo hace hoy el generador; que siga así (nota de la sesión de la raíz, 9 de noviembre de 2026: los cursos llegan siempre con LF por el `.gitattributes` del kit, y la comparación byte a byte depende de eso).
 
@@ -117,7 +122,7 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 
 - **H6, uso real:** el autor usa la academia para estudiar y anota lo que encuentra. Tiene prioridad sobre funciones nuevas (`../PLAN.md`, apartado 8.5).
 - **Antes de publicar** (H11; `../PLAN.md`, apartado 8.6): rutas absolutas en `odd/tasks/` (las de `PLAN.md` se quitaron al reescribirlo); README desactualizado y con voseo; `gitleaks` sobre todo el historial; licencias de las dependencias (elkjs, dompurify); el nombre MyOpenAcademy en un solo sitio (hoy «Code Academy» está en `index.html`, `src/layout/Layouts.tsx` y `e2e/stages.spec.ts`).
-- **`content/` fuera de Git:** hoy guarda en el repositorio la copia del curso de Java (unos 22.600 recursos). Sale del repositorio en H7, con el curso de ejemplo pequeño para las pruebas.
+- ~~**`content/` fuera de Git**~~ **Hecho** en H7, T3 (9 de noviembre de 2026). El historial sigue guardando la copia de Java de antes; si pesa al publicar, se decide en H11.
 
 ## Dependencias con el kit y el curso inicial
 
@@ -143,3 +148,4 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-09 | `.env` propio. Prueba de importación de la fase 1 del curso inicial (`tools/curso_a_manifiesto.py`, base desechable, revisión del autor en el navegador), comprobación de los identificadores con punto y lista de cambios para instalar cursos según `FORMATO.md`. |
 | 2026-11-09 | `PLAN.md` reescrito con el autor: hitos H6 a H11 hasta el pack base 1.0, con la lista de cambios de la prueba de importación y lo que faltaba del plan común. |
 | 2026-11-09 | H7, T1, T4 (salvo la etiqueta) y T4b: cursos de ejemplo del kit, importador por `curso.json` y comparación por curso con retítulos permitidos. |
+| 2026-11-09 | H7, T3 y T3b: pruebas con los cursos de ejemplo instalados por el importador real, `content/` fuera de Git y orden de «Mis cursos» igual con cualquier intercalación. |
