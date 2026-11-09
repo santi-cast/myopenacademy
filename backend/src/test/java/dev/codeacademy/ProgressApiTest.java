@@ -50,6 +50,36 @@ class ProgressApiTest extends ProgressTestSupport {
 		assertThat(snapshot()).isEqualTo(before);
 	}
 
+	/**
+	 * T3b: «Mis cursos» follows the IDs byte by byte, whatever the database collation. java-web and javascript sort
+	 * the other way round with en_US.utf8 (postgres:18.6's default), which ignores the hyphen at the first level.
+	 * The stored catalog gets two extra courses for this test only, as a later import could add them.
+	 */
+	@Test
+	void myCoursesFollowTheIdsByteByByteWhateverTheCollation() throws Exception {
+		var browser = learner();
+		String user = userId(browser);
+		List<String> ids = List.of("javascript", "java-web");
+		try {
+			for (String id : ids) {
+				jdbc.update("insert into code_academy.courses (id, title) values (?, ?)", id, "Curso " + id);
+				jdbc.update("insert into code_academy.enrollments (user_id, course_id, created_at) values (?::uuid, ?, now())",
+						user, id);
+			}
+			JsonNode courses = ok(browser.get("/api/me/courses")).path("courses");
+			List<String> listed = new java.util.ArrayList<>();
+			courses.forEach(course -> listed.add(course.path("course").path("id").asString()));
+
+			assertThat(listed).containsExactly("java-web", "javascript");
+		}
+		finally {
+			for (String id : ids) {
+				jdbc.update("delete from code_academy.enrollments where course_id = ?", id);
+				jdbc.update("delete from code_academy.courses where id = ?", id);
+			}
+		}
+	}
+
 	@Test
 	void myCoursesListsOnlyAddedCoursesInIdOrder() throws Exception {
 		var browser = learner();

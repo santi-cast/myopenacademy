@@ -65,13 +65,17 @@ class ProgressService {
 		this.jdbc = jdbc;
 	}
 
-	/** One snapshot for the whole answer, so counts and continuation never mix two moments. */
+	/**
+	 * One snapshot for the whole answer, so counts and continuation never mix two moments. Courses follow their IDs
+	 * byte by byte (collate "C"), the same order with any database collation; which order learners should see is an
+	 * open question for the author (T3b).
+	 */
 	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	MyCourses courses(UUID user) {
 		List<MyCourse> courses = jdbc.query("""
 				select c.id, c.title, e.id as enrollment_id, e.last_opened_lesson_id, e.last_opened_stage_id
 				from code_academy.enrollments e join code_academy.courses c on c.id = e.course_id
-				where e.user_id = ? order by c.id
+				where e.user_id = ? order by c.id collate "C"
 				""", (row, i) -> {
 			var enrollment = new EnrollmentRow(row.getLong("enrollment_id"), row.getString("last_opened_lesson_id"),
 					row.getString("last_opened_stage_id"));

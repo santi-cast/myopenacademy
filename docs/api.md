@@ -41,7 +41,7 @@ Sin cuerpo de entrada salvo el indicado; arrays vacíos válidos. El cliente usa
 | GET /api/courses/{courseId} | — | 200, `{ "course": Course, "phases": Phase[], "lessons": LessonEntry[] }`, temario completo ordenado: fases por `position` y lecciones por `position`; las lecciones de cada fase son consecutivas y siguen el orden de las fases. |
 | GET /api/lessons/{lessonId} | — | 200, `{ "lesson": LessonEntry, "bodyHtml": string, "exercises": Exercise[], "resources": Resource[], "previousLessonId": ID o null, "nextLessonId": ID o null }`; vecinos disponibles del mismo curso. |
 | GET /api/resources/{resourceId} | — | 200, bytes con tipo seguro del recurso, no JSON; HTML solo descarga/texto escapado y SVG con sandbox según política de contenido. Solo recursos del manifiesto cuyo único propietario (lección o etapa) está disponible; el resto, 404. El encabezado `Accept` no la bloquea. |
-| GET /api/me/courses | — | 200, `{ "courses": [{ "course": Course, "enrollment": Enrollment }] }`; solo los cursos añadidos, ordenados por ID de curso; lista vacía si no hay ninguno. |
+| GET /api/me/courses | — | 200, `{ "courses": [{ "course": Course, "enrollment": Enrollment }] }`; solo los cursos añadidos, ordenados por ID de curso byte a byte (igual con cualquier intercalación de la base; T3b de H7); lista vacía si no hay ninguno. |
 | PUT /api/me/courses/{courseId} | Sin cuerpo; cualquier cuerpo, incluso `{}`, es 400 `INVALID_REQUEST` | 200, Enrollment con `added: true`; repetición no reinicia continuación ni estados. |
 | GET /api/me/courses/{courseId}/progress | — | 200, Progress incluso sin inscripción; 404 si el curso no existe. |
 | PUT /api/me/lessons/{lessonId}/state | `{ "state": "completed" }` | 200, StateResult de lección. |
