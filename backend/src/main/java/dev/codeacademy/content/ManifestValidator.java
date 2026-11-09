@@ -445,7 +445,12 @@ final class ManifestValidator {
 
 	private void register(String id) {
 		if (!ids.add(id)) problems.add("duplicate id " + id);
-		if (!id.startsWith(prefix) || id.length() == prefix.length()) {
+		// FORMATO.md 3.3 names IDs <course>.<name>. The legacy <course>-<name> form stays accepted only while content
+		// imported before curso.json is still installed (H7, task T2 removes it).
+		String dotted = manifest.course().namespace() + ".";
+		boolean inNamespace = (id.startsWith(dotted) && id.length() > dotted.length())
+			|| (id.startsWith(prefix) && id.length() > prefix.length());
+		if (!inNamespace) {
 			problems.add("id " + id + " is not in namespace " + manifest.course().namespace());
 		}
 	}

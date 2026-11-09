@@ -75,10 +75,23 @@ final class ContentImportGenerator {
 			List<Plan> plans = new ArrayList<>();
 			Set<String> findings = new TreeSet<>();
 			Set<String> reported = new TreeSet<>();
-			for (CourseContent course : ContentLoader.loadAll(paths.active())) {
+			// The installed courses: the one this source declares is regenerated, every other one is carried unchanged.
+			List<CourseContent> installed = ContentLoader.loadInstalled(paths.active());
+			for (CourseContent course : installed) {
 				baseRefs.put(course.manifest().course().id(), course.manifest().source().versionRef());
-				plans.add(new Builder(course, paths.active(), source, findings, reported).build());
 			}
+			CourseDescriptor descriptor = descriptor(source, findings);
+			if (descriptor == null) {
+				return new Result(false, List.copyOf(findings), List.copyOf(reported), 0, 0, 0,
+					report(paths, baseRefs, 0, 0, 0, 0, false, findings, reported));
+			}
+			Manifest previous = null;
+			List<String> carried = new ArrayList<>();
+			for (CourseContent course : installed) {
+				if (course.manifest().course().id().equals(descriptor.id())) previous = course.manifest();
+				else carried.add(course.manifest().course().id());
+			}
+			plans.add(new Builder(descriptor, previous, paths.active(), source, findings, reported).build());
 			int lessons = 0;
 			int stages = 0;
 			int resources = 0;
@@ -97,6 +110,7 @@ final class ContentImportGenerator {
 			}
 			Files.createDirectory(paths.output());
 			for (Plan plan : plans) write(plan, paths.output());
+			for (String course : carried) carry(paths.active().resolve(course), paths.output().resolve(course));
 			// The finished candidate is accepted only if the pure runtime loader accepts it, ZIP bytes included.
 			ContentLoader.loadAll(paths.output());
 			return new Result(true, List.of(), List.copyOf(reported), lessons, stages, resources,
@@ -145,6 +159,31 @@ final class ContentImportGenerator {
 		Files.writeString(output.resolve(skeleton.course().id() + "/manifest.json"),
 			JSON.writerWithDefaultPrettyPrinter().writeValueAsString(finished) + "\n",
 			StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+	}
+
+	/** The course's own curso.json at the pinned commit, or null with the reasons among the findings. */
+	private static CourseDescriptor descriptor(ContentImportSource source, Set<String> findings) throws IOException {
+		byte[] bytes = source.read(CourseDescriptor.PATH);
+		if (bytes == null) {
+			findings.add("source has no " + CourseDescriptor.PATH + " at " + source.commit());
+			return null;
+		}
+		List<String> problems = new ArrayList<>();
+		CourseDescriptor descriptor = CourseDescriptor.parse(bytes, problems);
+		findings.addAll(problems);
+		return descriptor;
+	}
+
+	/** Another installed course stays exactly as it is: its accepted files are copied byte for byte. */
+	private static void carry(Path from, Path to) throws IOException {
+		try (var files = Files.walk(from)) {
+			for (Path path : files.toList()) {
+				if (Files.isSymbolicLink(path)) throw new IOException("symbolic links are not allowed: " + path);
+				Path target = to.resolve(from.relativize(path).toString());
+				if (Files.isDirectory(path, java.nio.file.LinkOption.NOFOLLOW_LINKS)) Files.createDirectories(target);
+				else Files.copy(path, target);
+			}
+		}
 	}
 
 	private static MessageDigest sha256() {
@@ -217,10 +256,12 @@ final class ContentImportGenerator {
 	private record Claim(String path, String owner) {
 	}
 
-	/** One course: the accepted identity map plus everything read from the pinned tree for it. */
+	/** One course: the identity its curso.json declares plus everything read from the pinned tree for it. */
 	private static final class Builder {
 
-		private final Manifest accepted;
+		private final CourseDescriptor descriptor;
+		/** The same course as installed now, if any: only to report local adaptations, never as identity. */
+		private final Manifest previous;
 		private final Path acceptedRoot;
 		private final ContentImportSource source;
 		private final Set<String> findings;
@@ -241,36 +282,36 @@ final class ContentImportGenerator {
 		private final Map<String, String> hashes = new TreeMap<>();
 		private final Map<String, FolderPlan> folders = new TreeMap<>();
 		private final Set<String> stageIds = new TreeSet<>();
-		private String indexPath;
+		/**
+		 * Course documents that are not lessons or stages and are not imported: the index and, until they get their own
+		 * page (H8), each phase's challenges. A link to one of them leads to the course entry, never a guessed anchor.
+		 */
+		private final Set<String> entryPaths = new TreeSet<>();
 
-		Builder(CourseContent course, Path acceptedRoot, ContentImportSource source, Set<String> findings,
-				Set<String> reported) {
-			this.accepted = course.manifest();
+		Builder(CourseDescriptor descriptor, Manifest previous, Path acceptedRoot, ContentImportSource source,
+				Set<String> findings, Set<String> reported) {
+			this.descriptor = descriptor;
+			this.previous = previous;
 			this.acceptedRoot = acceptedRoot;
 			this.source = source;
 			this.findings = findings;
 			this.reported = reported;
-			this.directory = accepted.course().id();
+			this.directory = descriptor.id();
 		}
 
 		Plan build() throws IOException {
-			indexPath = accepted.sourceToId().stream().filter(link -> link != null && link.courseId() != null)
-				.map(SourceLink::sourcePath).findFirst().orElse(null);
-			if (indexPath == null || !allowed(indexPath)) {
-				findings.add("course " + directory + " has no readable source index in sourceToId");
-				return empty();
+			entryPaths.add(CourseDescriptor.INDEX);
+			for (CourseDescriptor.Phase phase : descriptor.phases()) {
+				if (phase.challenges() != null && allowed(phase.challenges())) entryPaths.add(phase.challenges());
 			}
-			byte[] indexBytes = source.read(indexPath);
-			if (indexBytes == null) {
-				findings.add("source index unavailable " + indexPath);
-				return empty();
+			List<Lesson> lessons = lessons();
+			List<Stage> stages = stages();
+			try {
+				references();
 			}
-			String indexText = text(indexPath, indexBytes);
-			if (indexText == null) return empty();
-			List<Lesson> lessons = lessons(ContentImportDocuments.lessons(indexText));
-			List<Stage> stages = stages(ContentImportDocuments.stages(indexText));
-			acceptedResources();
-			references();
+			catch (java.io.UncheckedIOException ex) {
+				throw ex.getCause();
+			}
 			Manifest skeleton = manifest(lessons, stages);
 			// Everything is validated before writing: exercises by exact title, links and fragments,
 			// with the same pipeline the runtime uses. Reports accumulate instead of stopping at the first.
@@ -278,113 +319,60 @@ final class ContentImportGenerator {
 			return new Plan(skeleton, copies(skeleton), source, Map.copyOf(documentBodies), Map.copyOf(hashes));
 		}
 
-		private Plan empty() {
-			Manifest manifest = new Manifest(2, accepted.source(), accepted.course(), List.of(), List.of(), List.of(),
-				List.of(), List.of(), new Manifest.Provenance(List.of(), List.of()));
-			return new Plan(manifest, List.of(), source, Map.of(), Map.of());
-		}
-
-		private List<Lesson> lessons(Map<String, ContentImportDocuments.LessonRow> rows) throws IOException {
+		/**
+		 * Modules in the order of curso.json, with the IDs and exercises it declares. A pending module is listed
+		 * without a body; an available one is read once. Nothing is invented: an exercise heading the module has and
+		 * curso.json does not declare is a problem of the shared pipeline, not a new ID.
+		 */
+		private List<Lesson> lessons() throws IOException {
 			List<Lesson> lessons = new ArrayList<>();
-			for (Lesson lesson : accepted.lessons()) {
-				if (!allowed(lesson.sourcePath())) continue;
-				ContentImportDocuments.LessonRow row = rows.get(lesson.sourcePath());
-				if (row == null) {
-					findings.add("lesson " + lesson.id() + " has no source index row: " + lesson.sourcePath());
-					continue;
-				}
-				if (!row.title().equals(lesson.title())) {
-					findings.add("lesson " + lesson.id() + " would be retitled: «" + row.title() + "»");
-				}
-				if (!row.available()) {
-					if (lesson.available()) findings.add("lesson " + lesson.id() + " would lose its imported body");
-					if (!lesson.exercises().isEmpty()) {
-						findings.add("pending lesson " + lesson.id() + " keeps exercises");
+			int position = 0;
+			for (CourseDescriptor.Phase phase : descriptor.phases()) {
+				for (CourseDescriptor.Module module : phase.modules()) {
+					position++;
+					if (!allowed(module.file())) continue;
+					if (!module.available()) {
+						documents.put(module.file(), module.id());
+						lessons.add(new Lesson(module.id(), module.title(), position, phase.id(), module.file(), false,
+							false, null, List.of()));
 						continue;
 					}
-					documents.put(lesson.sourcePath(), lesson.id());
-					lessons.add(new Lesson(lesson.id(), lesson.title(), lesson.position(), lesson.phaseId(),
-						lesson.sourcePath(), false, false, null, List.of()));
-					continue;
+					byte[] body = source.read(module.file());
+					if (body == null) {
+						findings.add("source body unavailable " + module.file());
+						continue;
+					}
+					String bodyPath = directory + "/lessons/" + module.id() + ".md";
+					addDocument(module.id(), module.file(), body, bodyPath);
+					List<Exercise> exercises = module.exercises().stream()
+						.map(exercise -> new Exercise(exercise.id(), module.id(), exercise.title())).toList();
+					lessons.add(new Lesson(module.id(), module.title(), position, phase.id(), module.file(), true, true,
+						bodyPath, exercises));
 				}
-				byte[] body = source.read(lesson.sourcePath());
-				if (body == null) {
-					findings.add("source body unavailable " + lesson.sourcePath());
-					continue;
-				}
-				addDocument(lesson.id(), lesson.sourcePath(), body, lesson.available() ? lesson.bodyPath() : null);
-				String bodyPath = lesson.bodyPath() == null
-					? directory + "/lessons/" + lesson.id() + ".md" : lesson.bodyPath();
-				// An undecodable body is already a finding: its accepted exercises are kept, never regenerated.
-				String markdown = texts.get(lesson.id());
-				lessons.add(new Lesson(lesson.id(), lesson.title(), lesson.position(), lesson.phaseId(),
-					lesson.sourcePath(), true, true, bodyPath,
-					markdown == null ? lesson.exercises() : exercises(lesson, markdown)));
 			}
 			return lessons;
 		}
 
-		/**
-		 * Accepted exercises keep their ID, title and order. Every new exercise heading gets a deterministic ID in the
-		 * lesson prefix, so a rerun of the same pinned tree produces the same manifest. An accepted exercise whose
-		 * heading disappeared is kept, so the pipeline reports it instead of dropping an identity silently.
-		 */
-		private List<Exercise> exercises(Lesson lesson, String markdown) {
-			List<Exercise> exercises = new ArrayList<>(lesson.exercises());
-			Set<String> titles = new HashSet<>();
-			exercises.forEach(exercise -> titles.add(exercise.title()));
-			Set<String> taken = new HashSet<>();
-			exercises.forEach(exercise -> taken.add(exercise.id()));
-			for (String title : LessonPipeline.exerciseTitles(markdown)) {
-				if (!titles.add(title)) continue;
-				String id;
-				int index = exercises.size() + 1;
-				do {
-					id = lesson.id() + "-e%02d".formatted(index++);
-				}
-				while (taken.contains(id));
-				taken.add(id);
-				exercises.add(new Exercise(id, lesson.id(), title));
-			}
-			return List.copyOf(exercises);
-		}
-
-		private List<Stage> stages(List<ContentImportDocuments.StageRow> rows) throws IOException {
-			Map<String, Stage> previous = new TreeMap<>();
-			if (accepted.projectStages() != null) {
-				accepted.projectStages().forEach(stage -> previous.put(stage.sourcePath(), stage));
-			}
+		private List<Stage> stages() throws IOException {
 			List<Stage> stages = new ArrayList<>();
-			Set<String> declared = new TreeSet<>();
-			for (ContentImportDocuments.StageRow row : rows) {
-				if (!allowed(row.sourcePath())) continue;
-				declared.add(row.sourcePath());
-				Stage before = previous.get(row.sourcePath());
-				String id = before != null ? before.id() : directory + "-stage-%02d".formatted(row.position());
-				stageIds.add(id);
-				if (before != null && !before.title().equals(row.title())) {
-					findings.add("stage " + id + " would be retitled: «" + row.title() + "»");
-				}
-				if (!row.available()) {
-					if (before != null && before.available()) findings.add("stage " + id + " would lose its imported body");
-					documents.put(row.sourcePath(), id);
-					stages.add(new Stage(id, row.title(), row.position(), row.sourcePath(), false, false, null));
+			int position = 0;
+			for (CourseDescriptor.Stage stage : descriptor.stages()) {
+				position++;
+				if (!allowed(stage.file())) continue;
+				stageIds.add(stage.id());
+				if (!stage.available()) {
+					documents.put(stage.file(), stage.id());
+					stages.add(new Stage(stage.id(), stage.title(), position, stage.file(), false, false, null));
 					continue;
 				}
-				byte[] body = source.read(row.sourcePath());
+				byte[] body = source.read(stage.file());
 				if (body == null) {
-					findings.add("source body unavailable " + row.sourcePath());
+					findings.add("source body unavailable " + stage.file());
 					continue;
 				}
-				addDocument(id, row.sourcePath(), body, before == null ? null : before.bodyPath());
-				String bodyPath = before != null && before.bodyPath() != null
-					? before.bodyPath() : directory + "/project/" + id + ".md";
-				stages.add(new Stage(id, row.title(), row.position(), row.sourcePath(), true, true, bodyPath));
-			}
-			for (Stage before : previous.values()) {
-				if (!declared.contains(before.sourcePath())) {
-					findings.add("stage " + before.id() + " is no longer declared by the source index");
-				}
+				String bodyPath = directory + "/project/" + stage.id() + ".md";
+				addDocument(stage.id(), stage.file(), body, bodyPath);
+				stages.add(new Stage(stage.id(), stage.title(), position, stage.file(), true, true, bodyPath));
 			}
 			return stages;
 		}
@@ -399,22 +387,6 @@ final class ContentImportGenerator {
 			documentPaths.put(id, sourcePath);
 			documents.put(sourcePath, id);
 			anchors.put(sourcePath, ContentImportDocuments.anchors(text));
-		}
-
-		/** Accepted resources keep their ID, local path and owner; their bytes must still be the committed ones. */
-		private void acceptedResources() throws IOException {
-			for (Resource resource : accepted.resources()) {
-				if (!allowed(resource.sourcePath())) continue;
-				byte[] bytes = source.read(resource.sourcePath());
-				if (bytes == null) {
-					findings.add("source resource unavailable " + resource.sourcePath());
-					continue;
-				}
-				checkAccepted(resource.sourcePath(), resource.localPath(), bytes);
-				String owner = resource.lessonId() != null ? resource.lessonId() : resource.stageId();
-				register(new Claim(resource.sourcePath(), owner), new ResourcePlan(resource.resourceId(),
-					resource.localPath(), resource.mediaType(), owner, resource.stageId() != null));
-			}
 		}
 
 		private void references() {
@@ -454,8 +426,8 @@ final class ContentImportGenerator {
 				findings.add("unsupported destination " + where);
 				return;
 			}
-			if (resolved.equals(indexPath)) {
-				// The course index is not imported: any fragment resolves to the course entry, never a guessed anchor.
+			if (entryPaths.contains(resolved)) {
+				// The index and the challenges are not imported: any fragment resolves to the course entry, never a guessed anchor.
 				return;
 			}
 			if (documents.containsKey(resolved)) {
@@ -527,6 +499,7 @@ final class ContentImportGenerator {
 			String id = owner + "-r-" + HeadingIds.slug(name(path)) + "-" + digest(path);
 			ResourcePlan plan = new ResourcePlan(id, directory + "/resources/" + id,
 				ContentImportDocuments.mediaType(path), owner, stage);
+			checkInstalledResource(path, plan.localPath());
 			register(key, plan);
 			return plan;
 		}
@@ -620,7 +593,7 @@ final class ContentImportGenerator {
 			}
 			resourceEntries.sort(Comparator.comparing(Resource::sourcePath).thenComparing(Resource::resourceId));
 			List<SourceLink> links = new ArrayList<>();
-			links.add(new SourceLink(indexPath, null, null, null, null, directory, null, null));
+			for (String entry : entryPaths) links.add(new SourceLink(entry, null, null, null, null, directory, null, null));
 			for (Lesson lesson : lessons) {
 				links.add(new SourceLink(lesson.sourcePath(), lesson.id(),
 					fragments.getOrDefault(lesson.sourcePath(), Map.of()), null, null, null, null, null));
@@ -642,8 +615,13 @@ final class ContentImportGenerator {
 					folder.zipId()));
 			}
 			links.sort(Comparator.comparing(SourceLink::sourcePath));
-			return new Manifest(2, new Manifest.Source(accepted.source().name(), source.commit()), accepted.course(),
-				accepted.phases(), List.copyOf(lessons), List.copyOf(resourceEntries), List.copyOf(links),
+			List<Manifest.Phase> phases = new ArrayList<>();
+			for (CourseDescriptor.Phase phase : descriptor.phases()) {
+				phases.add(new Manifest.Phase(phase.id(), phase.title(), phases.size() + 1));
+			}
+			return new Manifest(2, new Manifest.Source(descriptor.title(), source.commit()),
+				new Manifest.Course(descriptor.id(), descriptor.id(), descriptor.title()),
+				List.copyOf(phases), List.copyOf(lessons), List.copyOf(resourceEntries), List.copyOf(links),
 				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()));
 		}
 
@@ -679,6 +657,18 @@ final class ContentImportGenerator {
 			}
 			copies.sort(Comparator.comparing(Copy::localPath));
 			return List.copyOf(copies);
+		}
+
+		/** An installed copy of a resource must still hold the committed bytes; a local edit is reported. */
+		private void checkInstalledResource(String path, String localPath) {
+			if (previous == null || !Files.isRegularFile(acceptedRoot.resolve(localPath))) return;
+			try {
+				byte[] bytes = source.read(path);
+				if (bytes != null) checkAccepted(path, localPath, bytes);
+			}
+			catch (IOException ex) {
+				throw new java.io.UncheckedIOException(ex);
+			}
 		}
 
 		/** A local edit is an adaptation: it is reported, never replaced by the committed bytes. */
