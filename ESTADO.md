@@ -24,13 +24,15 @@ Lo que ya existe en los otros proyectos:
 
 1. ~~Traer el commit nuevo de los cursos de ejemplo del kit~~ **Hecho** (`4a79c20`, 9 de noviembre de 2026), con la prueba real de la comparación por curso: sin conflictos y aplicada (`odd/tasks/h7-cursos-dlc.md`, L8).
 2. ~~**T3:** pruebas sin el curso de Java real y `content/java/` fuera de Git~~ **Hecho** (L9), con **T3b**, el orden de «Mis cursos» (L10).
-3. **T2:** solo identificadores `<curso>.`. Visto en T3: el frontend saca de los identificadores, al estilo de Java, los números de fase y de módulo («Fase 00», «00.01»), así que con los de `curso.json` salen mal (T2 o T6).
+3. **T2:** solo identificadores `<curso>.`. Además (raíz, 9 de noviembre de 2026): **los números de fase y de módulo salen del orden de `curso.json`, nunca del identificador**, con una prueba de que se ve «Fase 01» y «01.01» (hoy el frontend los saca del identificador al estilo de Java y muestra «Fase 00» y «00.01»).
 4. Lo demás de H7: la etiqueta (A5), T5 a T8 y la revisión del autor.
 
 **Preguntas abiertas para el autor:**
 
-- **Orden de «Mis cursos»** (T3b): por identificador (lo de ahora), el curso inicial primero, por título o por orden de alta. Para cuando se revise esa pantalla.
-- **Recurso con ñ o tilde en el identificador:** con Java se perdió la única prueba de descarga de un recurso así. ¿Pedimos al kit un fichero con ñ en el curso de ejemplo?
+- **Orden de «Mis cursos»** (T3b): por identificador (lo de ahora, `collate "C"`), el curso inicial primero, por título o por orden de alta. Lo decide el autor al revisar esa pantalla.
+- **Historial de Git con `content/java`** (antes de H11): el historial heredado de Code Academy sigue guardando la copia de Java (unos 22.856 ficheros). El autor decide si se reescribe antes de la primera publicación; es barato mientras no haya remoto.
+
+**Pendiente de otra sesión:** el kit añade al curso de ejemplo un fichero con «ñ» y tilde en el nombre. Cuando avise, se trae el curso de ejemplo nuevo (`tools/traer_curso_ejemplo.sh`) y se recupera la prueba de descarga de un recurso con letras no ASCII en el identificador, perdida en T3 (L9).
 
 **Para cuando se toquen los ZIP de código:** se generan con los ficheros del commit fijado del curso (objetos de Git), nunca con una copia en disco. Así lo hace hoy el generador; que siga así (nota de la sesión de la raíz, 9 de noviembre de 2026: los cursos llegan siempre con LF por el `.gitattributes` del kit, y la comparación byte a byte depende de eso).
 
@@ -122,7 +124,7 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 
 - **H6, uso real:** el autor usa la academia para estudiar y anota lo que encuentra. Tiene prioridad sobre funciones nuevas (`../PLAN.md`, apartado 8.5).
 - **Antes de publicar** (H11; `../PLAN.md`, apartado 8.6): rutas absolutas en `odd/tasks/` (las de `PLAN.md` se quitaron al reescribirlo); README desactualizado y con voseo; `gitleaks` sobre todo el historial; licencias de las dependencias (elkjs, dompurify); el nombre MyOpenAcademy en un solo sitio (hoy «Code Academy» está en `index.html`, `src/layout/Layouts.tsx` y `e2e/stages.spec.ts`).
-- ~~**`content/` fuera de Git**~~ **Hecho** en H7, T3 (9 de noviembre de 2026). El historial sigue guardando la copia de Java de antes; si pesa al publicar, se decide en H11.
+- ~~**`content/` fuera de Git**~~ **Hecho** en H7, T3 (9 de noviembre de 2026). El historial sigue guardando la copia de Java: el autor decide antes de H11 si se reescribe (ver «Preguntas abiertas»).
 
 ## Dependencias con el kit y el curso inicial
 
@@ -131,6 +133,7 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 | Curso inicial | Fase 1 escrita, con `curso.json` | La prueba de importación | **Hecho** (aprobada por el autor el 8 de noviembre de 2026) |
 | Kit | `FORMATO.md` estable | Saber qué tiene que importar | Versión 1, con ajustes dentro de la versión mientras no haya nada publicado |
 | Kit | Ampliar su curso «bueno» para que sirva también a la academia: un segundo curso pequeño de destino, **con su propio `id` y su propio `repositorio`** (no los del curso inicial real, para que no puedan chocar; decisión del autor, 9 de noviembre de 2026), con `glosario.md`, un módulo y el proyecto de tipo «modulo»; desde «bueno», un enlace a un módulo de ese curso con ancla y otro a un término del glosario; y que el «Siguiente» del último módulo disponible lleve a `retos.md`. Y ajustar `FORMATO.md` 14: el curso de ejemplo vive en el kit y la academia guarda una copia desde un commit fijo | Curso de ejemplo de H7 (cambio 1) y pruebas de H8 | **Hecho** por el kit en `94d93c8` (9 de noviembre de 2026): `bueno` y `ejemplo-destino` (id y repositorio propios), `FORMATO.md` 9 (cualquier curso puede tener glosario) y 14 (los cursos de ejemplo viven en el kit). Copiados a `cursos-ejemplo/` |
+| Kit | Un fichero con «ñ» y tilde en el nombre dentro del curso de ejemplo (en una carpeta de `codigo/`) | Recuperar la prueba de descarga de un recurso con letras no ASCII en el identificador, perdida al quitar Java (T3, L9) | **Pedido** el 9 de noviembre de 2026 |
 
 | Otros esperan de la academia | Qué | Para | Estado |
 |---|---|---|---|
