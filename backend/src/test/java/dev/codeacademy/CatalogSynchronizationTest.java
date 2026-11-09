@@ -268,8 +268,8 @@ class CatalogSynchronizationTest {
 	}
 
 	@Test
-	void aStoredExerciseWhoseTitleChangesIsRejectedWithoutChanges() {
-		// The title binds an exercise ID to its content, so swapping titles in the manifest would move progress.
+	void aStoredExerciseKeepsItsIdWhenItsTitleChanges() {
+		// Since H7 the ID is the identity (curso.json), not the title: a new title is an update (FORMATO.md 11.2).
 		ContentFixture swapped = ContentFixture.copyInto(tempDir.resolve("swapped"));
 		swapped.editManifest(manifest -> {
 			var exercises = ContentFixture.lesson(manifest, "demo-01.01").get("exercises");
@@ -281,10 +281,11 @@ class CatalogSynchronizationTest {
 		Manifest loaded = swapped.load().manifest();
 		var before = TestDatabase.snapshot(jdbc);
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, loaded)))
-				.isInstanceOf(CatalogConflictException.class)
-				.hasMessageContaining("exercise demo-01.01-e01 is titled «Primer ejercicio», not «Segundo ejercicio»")
-				.hasMessageContaining("exercise demo-01.01-e02 is titled «Segundo ejercicio», not «Primer ejercicio»");
+		synchronizer.synchronize(List.of(java, loaded));
+		assertThat(jdbc.queryForList("select title from code_academy.exercises where id in ('demo-01.01-e01', "
+				+ "'demo-01.01-e02') order by id", String.class)).containsExactly("Segundo ejercicio", "Primer ejercicio");
+		// Back to the original titles: the same rows, only their titles changed.
+		synchronizer.synchronize(List.of(java, demo.load().manifest()));
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}
 

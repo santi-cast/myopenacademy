@@ -245,10 +245,11 @@ class ContentImportCliTest {
 		JsonNode lesson = manifest().path("lessons").get(1);
 		assertThat(lesson.path("id").asString()).isEqualTo("demo-01.02");
 		assertThat(lesson.path("title").asString()).isEqualTo("Otro título");
-		// The comparison still refuses retitles, as since H5; FORMATO.md 11.2 allows them, so H7 has to revisit it.
+		// The comparison shows it as a change to review, not a conflict (FORMATO.md 11.2).
 		var result = ContentUpdateComparison.compare(
 			new ContentUpdateCli.Paths(active.root, output, source, temp.resolve("comparison.json")));
-		assertThat(result.conflicts()).contains("retitle demo-01.02");
+		assertThat(result.conflicts()).isEmpty();
+		assertThat(result.report()).contains("retitle demo-01.02: «Siguiente» -> «Otro título»");
 	}
 
 	@Test void fragmentsFollowTheSharedHeadingRule() throws Exception {

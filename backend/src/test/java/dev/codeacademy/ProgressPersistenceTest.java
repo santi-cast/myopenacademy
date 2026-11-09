@@ -106,9 +106,10 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 					.toList(), base.resources(), base.sourceToId());
 		var before = snapshot();
 
-		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, retitled)))
-			.isInstanceOf(CatalogConflictException.class)
-			.hasMessageContaining("exercise demo-01.01-e01 is titled «Primer ejercicio», not «Segundo ejercicio»");
+		// A retitle keeps the ID (FORMATO.md 11.2): it is applied, the progress stays, and the original titles come back.
+		synchronizer.synchronize(List.of(java, retitled));
+		assertThat(ok(progress(browser, "demo"))).isEqualTo(demo);
+		synchronizer.synchronize(List.of(java, base));
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(java, exerciseRemoved)))
 			.isInstanceOf(CatalogConflictException.class)
 			.hasMessageContaining("exercise demo-01.01-e02 is no longer in the manifest");

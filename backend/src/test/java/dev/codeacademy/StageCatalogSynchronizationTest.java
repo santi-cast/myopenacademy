@@ -81,8 +81,6 @@ class StageCatalogSynchronizationTest extends StageTestSupport {
 		Manifest removed = withStages(reordered, reordered.projectStages().stream().filter(s -> !s.id().equals(FIRST)).toList());
 		Manifest renamed = mapStages(reordered, s -> s.id().equals(FIRST)
 			? new Stage("demo-stage-renamed", s.title(), s.position(), s.sourcePath(), s.sourceAvailable(), s.available(), s.bodyPath()) : s);
-		Manifest retitled = mapStages(reordered, s -> s.id().equals(FIRST)
-			? new Stage(s.id(), "Different identity title", s.position(), s.sourcePath(), s.sourceAvailable(), s.available(), s.bodyPath()) : s);
 		Manifest moved = withStages(other, List.of(reordered.projectStages().stream().filter(s -> s.id().equals(FIRST)).findFirst().orElseThrow()));
 		Manifest duplicatePosition = mapStages(reordered, s -> new Stage(s.id(), s.title(), 1, s.sourcePath(),
 			s.sourceAvailable(), s.available(), s.bodyPath()));
@@ -93,7 +91,7 @@ class StageCatalogSynchronizationTest extends StageTestSupport {
 		Manifest crossedId = mapStages(reordered, s -> s.id().equals(FIRST)
 			? new Stage(INTRO, s.title(), s.position(), s.sourcePath(), s.sourceAvailable(), s.available(), s.bodyPath()) : s);
 		for (List<Manifest> conflict : List.of(List.of(removed, other), List.of(renamed, other),
-			List.of(retitled, other), List.of(removed, moved), List.of(duplicatePosition, other),
+			List.of(removed, moved), List.of(duplicatePosition, other),
 			List.of(zeroPosition, other), List.of(invalidAvailability, other), List.of(crossedId, other))) {
 			assertThatThrownBy(() -> synchronizer.synchronize(conflict)).isInstanceOf(CatalogConflictException.class);
 			assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);

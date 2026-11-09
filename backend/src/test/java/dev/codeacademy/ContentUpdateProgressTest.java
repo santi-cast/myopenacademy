@@ -156,14 +156,13 @@ class ContentUpdateProgressTest {
 				assertStages(second, Map.of(STAGE_3, "not_completed"), STAGE_1, 0);
 			}
 
-			// A candidate that retitles an existing exercise (its identity) is refused at startup, before any write.
+			// A candidate in which an existing exercise lost its ID is refused at startup, before any write.
 			Path conflict = conflictingCopy(temp.resolve("conflict"));
 			var before = TestDatabase.snapshot(jdbc);
 			Throwable failure = catchThrowable(() -> start(postgres, conflict).close());
 			assertThat(NestedExceptionUtils.getMostSpecificCause(failure)).isInstanceOf(CatalogConflictException.class)
 				.hasMessageContaining("nothing was changed")
-				.hasMessageContaining("exercise java-02.01-e01 is titled «La ficha de la tienda», not «Predice la salida»")
-				.hasMessageContaining("exercise java-02.01-e02 is titled «Predice la salida», not «La ficha de la tienda»");
+				.hasMessageContaining("exercise java-02.01-e01 is no longer in the manifest");
 			assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 
 			try (var server = start(postgres, IMPORTED)) {
@@ -262,11 +261,8 @@ class ContentUpdateProgressTest {
 		JsonNode manifest = ApiClient.JSON.readTree(Files.readString(manifestPath));
 		for (JsonNode lesson : manifest.path("lessons")) {
 			if (!lesson.path("id").asString().equals(JAVA_LESSON)) continue;
-			var first = (ObjectNode) lesson.path("exercises").get(0);
-			var second = (ObjectNode) lesson.path("exercises").get(1);
-			String title = first.path("title").asString();
-			first.put("title", second.path("title").asString());
-			second.put("title", title);
+			// The same exercise under a new ID: its stored ID disappears, which only an equivalence could resolve.
+			((ObjectNode) lesson.path("exercises").get(0)).put("id", JAVA_LESSON + "-e99");
 		}
 		Files.writeString(manifestPath, ApiClient.JSON.writeValueAsString(manifest));
 		return root;

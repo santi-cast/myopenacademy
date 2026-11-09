@@ -42,8 +42,11 @@ final class ContentUpdateComparison {
         Copy base = read(paths.active());
         Copy next = read(paths.candidate());
         List<String> conflicts = new ArrayList<>();
-        verifySource(base, paths.source(), "active", conflicts);
-        verifySource(next, paths.source(), "candidate", conflicts);
+        // Every course whose commit is in this source is verified against it, and so is every course the update
+        // changes. A course from another repository can only be carried byte for byte: nothing here can verify it.
+        Set<String> updated = updatedCourses(base, next, conflicts);
+        verifySource(base, paths.source(), "active", updated, conflicts);
+        verifySource(next, paths.source(), "candidate", updated, conflicts);
         List<String> changes = new ArrayList<>();
         for (var entry : base.entities().entrySet()) {
             String id = entry.getKey();
@@ -51,7 +54,10 @@ final class ContentUpdateComparison {
             Entity replacement = next.entities().get(id);
             if (replacement == null) { conflicts.add("removal " + id); continue; }
             if (!old.kind().equals(replacement.kind())) conflicts.add("identity kind change " + id);
-            if (!old.title().equals(replacement.title())) conflicts.add("retitle " + id);
+            // The ID is the identity (curso.json): a new title is a change, not a conflict (FORMATO.md 11.2).
+            if (!old.title().equals(replacement.title())) {
+                changes.add("retitle " + id + ": «" + old.title() + "» -> «" + replacement.title() + "»");
+            }
             if (!old.owner().equals(replacement.owner())) conflicts.add("owner move " + id);
             if ((old.available() && !replacement.available()) || (old.sourceAvailable() && !replacement.sourceAvailable())) {
                 conflicts.add("availability loss " + id);
@@ -115,7 +121,7 @@ final class ContentUpdateComparison {
 
     static Copy read(Path root) throws IOException {
         Map<String, String> files = snapshot(root);
-        List<CourseContent> courses = ContentLoader.loadAll(root);
+        List<CourseContent> courses = ContentLoader.loadInstalled(root);
         Set<String> manifests = new TreeSet<>();
         try (var dirs = Files.list(root)) {
             dirs.filter(Files::isDirectory).forEach(dir -> manifests.add(root.relativize(dir.resolve("manifest.json")).toString()));
@@ -224,11 +230,41 @@ final class ContentUpdateComparison {
         safeNames(path);
     }
 
-    private static void verifySource(Copy copy, Path source, String label, List<String> conflicts) throws IOException {
+    /**
+     * The courses this update changes: those whose manifest differs between both copies, or that only one of them has.
+     * A course with the same manifest in both must also keep every file; otherwise it changed without a source.
+     */
+    private static Set<String> updatedCourses(Copy base, Copy next, List<String> conflicts) {
+        Set<String> ids = new TreeSet<>();
+        base.courses().forEach(course -> ids.add(course.manifest().course().id()));
+        next.courses().forEach(course -> ids.add(course.manifest().course().id()));
+        Set<String> updated = new TreeSet<>();
+        for (String id : ids) {
+            String manifest = id + "/manifest.json";
+            if (!Objects.equals(base.files().get(manifest), next.files().get(manifest)) || base.files().get(manifest) == null) {
+                updated.add(id);
+                continue;
+            }
+            Set<String> paths = new TreeSet<>(base.files().keySet());
+            paths.addAll(next.files().keySet());
+            for (String path : paths) {
+                if (path.startsWith(id + "/") && !Objects.equals(base.files().get(path), next.files().get(path))) {
+                    conflicts.add("course " + id + " changed without its source: " + path);
+                }
+            }
+        }
+        return updated;
+    }
+
+    private static void verifySource(Copy copy, Path source, String label, Set<String> updated, List<String> conflicts)
+            throws IOException {
         for (CourseContent course : copy.courses()) {
             Manifest m = course.manifest();
             String ref = m.source().versionRef();
             byte[] type = git(source, "cat-file", "-t", ref);
+            boolean fromThisSource = type != null && new String(type, StandardCharsets.UTF_8).strip().equals("commit");
+            // A course from another repository cannot be verified here: it may only be carried unchanged.
+            if (!fromThisSource && !updated.contains(m.course().id())) continue;
             if (type == null || !new String(type, StandardCharsets.UTF_8).strip().equals("commit")) {
                 conflicts.add(label + ": source commit unavailable " + ref);
                 continue;

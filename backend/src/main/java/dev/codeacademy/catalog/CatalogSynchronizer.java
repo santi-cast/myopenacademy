@@ -19,10 +19,10 @@ import dev.codeacademy.content.Manifest.Phase;
 
 /**
  * Brings the catalog tables in line with the manifests in one transaction: inserts what is new and updates phase
- * titles and positions and lesson titles, positions, phases and availability. Rows are never deleted. A permanent ID
- * that disappeared or changed course or lesson, or an exercise whose title changed (the title binds the ID to its
- * content), rejects the whole synchronization; resolving those is H5 work. Moving a lesson to another phase is not a
- * conflict: progress never refers to phases.
+ * titles and positions and lesson, exercise and stage titles, positions, phases and availability. Rows are never
+ * deleted. A permanent ID that disappeared or changed course or lesson rejects the whole synchronization. Since H7 the
+ * identity comes from the course's curso.json, not from a title: changing a title keeps the ID (FORMATO.md 11.2), so
+ * it is an update, not a conflict. Moving a lesson to another phase is not a conflict: progress never refers to phases.
  */
 @Component
 public class CatalogSynchronizer {
@@ -96,10 +96,11 @@ public class CatalogSynchronizer {
 		jdbc.batchUpdate("""
 				insert into code_academy.project_stages (id, course_id, title, position, available, source_available)
 				values (?, ?, ?, ?, ?, ?)
-				on conflict (id) do update set position = excluded.position, available = excluded.available,
-				    source_available = excluded.source_available
-				where (project_stages.position, project_stages.available, project_stages.source_available)
-				    is distinct from (excluded.position, excluded.available, excluded.source_available)
+				on conflict (id) do update set title = excluded.title, position = excluded.position,
+				    available = excluded.available, source_available = excluded.source_available
+				where (project_stages.title, project_stages.position, project_stages.available,
+				    project_stages.source_available)
+				    is distinct from (excluded.title, excluded.position, excluded.available, excluded.source_available)
 				""", stages);
 		// lessons.phase_id is nullable only so V5 could run on databases that already had lessons (see V5__phases.sql).
 		List<String> withoutPhase = jdbc.queryForList(
@@ -124,9 +125,7 @@ public class CatalogSynchronizer {
 		Map<String, String> phaseCourses = new HashMap<>();
 		Map<String, String> lessonCourses = new HashMap<>();
 		Map<String, Owner> exerciseOwners = new HashMap<>();
-		Map<String, String> exerciseTitles = new HashMap<>();
 		Map<String, String> stageCourses = new HashMap<>();
-		Map<String, String> stageTitles = new HashMap<>();
 		List<String> courseIds = new ArrayList<>();
 		for (Manifest manifest : manifests) {
 			courseIds.add(manifest.course().id());
@@ -144,7 +143,6 @@ public class CatalogSynchronizer {
 							|| (Boolean.TRUE.equals(stage.available()) && !Boolean.TRUE.equals(stage.sourceAvailable()))) {
 						problems.add("invalid stage availability for " + stage.id());
 					}
-					stageTitles.put(stage.id(), stage.title());
 				});
 			}
 			manifest.phases().forEach(phase -> phaseCourses.put(phase.id(), manifest.course().id()));
@@ -152,20 +150,16 @@ public class CatalogSynchronizer {
 				lessonCourses.put(lesson.id(), manifest.course().id());
 				lesson.exercises().forEach(exercise -> {
 					exerciseOwners.put(exercise.id(), new Owner(manifest.course().id(), lesson.id()));
-					exerciseTitles.put(exercise.id(), exercise.title());
 				});
 			}
 		}
-		jdbc.query("select id, course_id, title from code_academy.project_stages order by id", row -> {
+		jdbc.query("select id, course_id from code_academy.project_stages order by id", row -> {
 			String id = row.getString("id");
 			String stored = row.getString("course_id");
 			String current = stageCourses.get(id);
 			if (current == null) problems.add("stage " + id + " is no longer in the manifest");
 			else if (!stored.equals(current)) {
 				problems.add("stage " + id + " belongs to course " + stored + ", not " + current);
-			}
-			else if (!row.getString("title").equals(stageTitles.get(id))) {
-				problems.add("stage " + id + " is titled «" + row.getString("title") + "», not «" + stageTitles.get(id) + "»");
 			}
 		});
 		jdbc.query("select id from code_academy.courses order by id", row -> {
@@ -190,7 +184,7 @@ public class CatalogSynchronizer {
 				problems.add("lesson " + id + " belongs to course " + stored + ", not " + current);
 			}
 		});
-		jdbc.query("select id, course_id, lesson_id, title from code_academy.exercises order by id", row -> {
+		jdbc.query("select id, course_id, lesson_id from code_academy.exercises order by id", row -> {
 			String id = row.getString("id");
 			Owner stored = new Owner(row.getString("course_id"), row.getString("lesson_id"));
 			Owner current = exerciseOwners.get(id);
@@ -198,10 +192,6 @@ public class CatalogSynchronizer {
 			else if (!Objects.equals(current, stored)) {
 				problems.add("exercise " + id + " belongs to lesson " + stored.lessonId() + " of course "
 						+ stored.courseId() + ", not " + current.lessonId() + " of course " + current.courseId());
-			}
-			else if (!row.getString("title").equals(exerciseTitles.get(id))) {
-				problems.add("exercise " + id + " is titled «" + row.getString("title") + "», not «"
-						+ exerciseTitles.get(id) + "»");
 			}
 		});
 		return problems;
