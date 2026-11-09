@@ -96,7 +96,7 @@ Los números de la columna «Cambios» son los de la lista de `ESTADO.md` («Lis
 
 ## 5. Después del 1.0
 
-Sin orden fijo (`../PLAN.md` 8.5): partes de los cursos y su avance (las necesita el curso de Java, primer DLC aparte) · equivalencias entre versiones · preguntas de repaso como test · datos de la cabecera (tiempo, nivel, «Conviene saber antes») como datos y duración de cada curso · registro por invitación · roadmaps · instalar cursos desde GitHub y desde el panel · guía «Crea tu propio curso» · búsqueda, notas, tamaño de letra, atajos, retomar en la sección exacta · corrección automática · **publicación en internet** (dominio, HTTPS, copias de seguridad, límite de intentos, CSP y lo del apartado 9).
+Sin orden fijo (`../PLAN.md` 8.5): partes de los cursos y su avance (las necesita el curso de Java, primer DLC aparte) · equivalencias entre versiones · preguntas de repaso como test · datos de la cabecera (tiempo, nivel, «Conviene saber antes») como datos y duración de cada curso · registro por invitación · roadmaps · instalar cursos desde GitHub y desde el panel · guía «Crea tu propio curso» · búsqueda, notas, tamaño de letra, atajos, retomar en la sección exacta · corrección automática · **listas de tareas de Markdown** (`- [ ]`, `- [x]`: la extensión de listas de tareas de commonmark-java y casillas desactivadas permitidas en el saneador; hoy ningún curso las usa fuera de bloques de código y el kit avisa si aparecen; cuando esté, se avisa al kit para que quite el aviso; raíz, 9 de noviembre de 2026) · **publicación en internet** (dominio, HTTPS, copias de seguridad, límite de intentos, CSP y lo del apartado 9).
 
 **Fuera:** certificados, pagos, mentorías, ejecutar el código del alumno en el servidor y aplicaciones móviles nativas.
 

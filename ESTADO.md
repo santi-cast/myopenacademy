@@ -139,6 +139,7 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 |---|---|---|---|
 | Kit y curso inicial | La lista de lo que no encaje del formato | Ajustar `FORMATO.md` antes de publicar | **Hecho** (9 de noviembre de 2026): nada que cambiar; la academia aceptará los identificadores con punto tal cual |
 | Curso inicial | Un importador que lea `curso.json` | Instalarse en la academia (pack base 1.0) | Pendiente: cambios 2 a 8 y 10 de la lista de la prueba de importación |
+| Kit | Que la academia dibuje las listas de tareas de Markdown, para quitar su aviso | Después del pack base 1.0 (`PLAN.md`, apartado 5) | Pendiente: cuando esté, avisar al kit |
 
 Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 
