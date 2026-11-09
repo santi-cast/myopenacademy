@@ -20,6 +20,7 @@ record CourseDescriptor(int format, String id, String title, String description,
 
 	static final String PATH = "curso.json";
 	static final String INDEX = "00-indice.md";
+	static final String GLOSSARY = "glosario.md";
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 	private static final Pattern COURSE_ID = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*");

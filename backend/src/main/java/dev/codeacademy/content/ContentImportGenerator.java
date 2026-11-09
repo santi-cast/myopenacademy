@@ -284,7 +284,7 @@ final class ContentImportGenerator {
 		private final Set<String> stageIds = new TreeSet<>();
 		/**
 		 * Course documents that are not lessons or stages and are not imported: the index and, until they get their own
-		 * page (H8), each phase's challenges. A link to one of them leads to the course entry, never a guessed anchor.
+		 * page (H8), each phase's challenges and the course glossary. A link to one of them leads to the course entry, never a guessed anchor.
 		 */
 		private final Set<String> entryPaths = new TreeSet<>();
 
@@ -301,6 +301,8 @@ final class ContentImportGenerator {
 
 		Plan build() throws IOException {
 			entryPaths.add(CourseDescriptor.INDEX);
+			// Any course may have its glossary (FORMATO.md 9); until H8 gives it its own page, it leads to the entry.
+			if (source.file(CourseDescriptor.GLOSSARY)) entryPaths.add(CourseDescriptor.GLOSSARY);
 			for (CourseDescriptor.Phase phase : descriptor.phases()) {
 				if (phase.challenges() != null && allowed(phase.challenges())) entryPaths.add(phase.challenges());
 			}
