@@ -76,11 +76,58 @@ class CatalogController {
 	record CoursesView(List<CourseView> courses) {
 	}
 
-	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons) {
+	/** A document without progress (H8): {@code kind} "retos" (with its {@code phaseId}) or "glosario". */
+	record DocumentEntry(String id, String courseId, String kind, String title, String phaseId) {
+		static DocumentEntry of(String courseId, Manifest.Document document) {
+			return new DocumentEntry(document.id(), courseId, document.kind(), document.title(), document.phaseId());
+		}
 	}
 
+	/** For challenges, the last module of their phase and the first module of the next one (H8); null otherwise. */
+	record DocumentView(DocumentEntry document, String bodyHtml, List<ResourceView> resources, String previousLessonId,
+			String nextLessonId) {
+	}
+
+	/** The challenges of a phase, if the course has them. */
+	private static String challenges(CourseContent course, String phaseId) {
+		return Catalog.documents(course).stream()
+			.filter(document -> Manifest.Document.CHALLENGES.equals(document.kind()) && document.phaseId().equals(phaseId))
+			.map(Manifest.Document::id).findFirst().orElse(null);
+	}
+
+	/** The course project (H8, T4): "etapas" (its own page) or "modulo" (the lesson that is the project), or null. */
+	record ProjectView(String kind, String title, String lessonId) {
+		static ProjectView of(Manifest.Project project) {
+			return project == null ? null : new ProjectView(project.kind(), project.title(), project.lessonId());
+		}
+	}
+
+	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons, List<DocumentEntry> documents,
+			ProjectView project) {
+	}
+
+	/** {@code improveUrl}: where to propose a change to the lesson, or null (H8, T2). */
+	/**
+	 * {@code previousDocumentId}/{@code nextDocumentId} (H8): the challenges that come between two phases. The last
+	 * module of a phase with challenges leads to them, and the first module of the next phase comes back from them;
+	 * when set, they take the place of the neighbouring lesson.
+	 */
 	record LessonView(LessonEntry lesson, String bodyHtml, List<ExerciseView> exercises, List<ResourceView> resources,
-			String previousLessonId, String nextLessonId) {
+			String previousLessonId, String nextLessonId, String improveUrl, String previousDocumentId, String nextDocumentId) {
+	}
+
+	/**
+	 * «Mejorar esta lección»: the GitHub page that edits the file in the course repository (curso.json
+	 * {@code repositorio}, branch main as in FORMATO.md 10.2), each path segment encoded. Only an https address
+	 * gives a link; without one there is no button.
+	 */
+	static String improveUrl(String repository, String sourcePath) {
+		if (repository == null || !repository.matches("https://[^\\s?#\"'<>]+")) return null;
+		StringBuilder url = new StringBuilder(repository.replaceAll("/+$", "").replaceAll("\\.git$", "")).append("/edit/main");
+		for (String segment : sourcePath.split("/")) {
+			url.append('/').append(java.net.URLEncoder.encode(segment, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20"));
+		}
+		return url.toString();
 	}
 
 	record StageEntry(String id, String courseId, String title, int position, boolean available) {
@@ -119,7 +166,35 @@ class CatalogController {
 		CourseContent course = catalog.course(courseId).orElseThrow(CatalogController::notFound);
 		return new SyllabusView(view(course.manifest().course()),
 				Catalog.phases(course).stream().map(PhaseView::of).toList(), Catalog.syllabus(course).stream()
-					.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList());
+					.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList(),
+				Catalog.documents(course).stream().map(document -> DocumentEntry.of(courseId, document)).toList(),
+				ProjectView.of(course.manifest().course().project()));
+	}
+
+	/** A document without progress: its body and its resources, like a stage but with no state (H8, T3). */
+	@GetMapping(path = "/api/documents/{documentId}", produces = MediaType.APPLICATION_JSON_VALUE)
+	DocumentView document(@PathVariable String documentId) {
+		var ref = catalog.document(documentId).orElseThrow(CatalogController::notFound);
+		String courseId = ref.course().manifest().course().id();
+		var content = ref.course().documents().get(documentId);
+		List<ResourceView> resources = ref.course().manifest().resources().stream()
+				.filter(resource -> documentId.equals(resource.documentId()))
+				.map(resource -> new ResourceView(resource.resourceId(), "/api/resources/" + resource.resourceId(),
+						resource.mediaType(), ref.course().resources().get(resource.resourceId()).originalFileName()))
+				.toList();
+		String previous = null;
+		String next = null;
+		if (ref.document().phaseId() != null) {
+			List<Lesson> available = Catalog.syllabus(ref.course()).stream().filter(Lesson::available).toList();
+			List<String> phases = Catalog.phases(ref.course()).stream().map(Manifest.Phase::id).toList();
+			int phase = phases.indexOf(ref.document().phaseId());
+			for (Lesson lesson : available) {
+				int at = phases.indexOf(lesson.phaseId());
+				if (at <= phase) { if (at == phase) previous = lesson.id(); }
+				else if (next == null) next = lesson.id();
+			}
+		}
+		return new DocumentView(DocumentEntry.of(courseId, ref.document()), content.bodyHtml(), resources, previous, next);
 	}
 
 	/** Pending lessons keep their syllabus entry but never open; neighbours skip them. */
@@ -140,7 +215,14 @@ class CatalogController {
 		return new LessonView(LessonEntry.of(ref), content.bodyHtml(),
 				content.exercises().stream().map(ExerciseView::of).toList(), resources,
 				index > 0 ? available.get(index - 1).id() : null,
-				index < available.size() - 1 ? available.get(index + 1).id() : null);
+				index < available.size() - 1 ? available.get(index + 1).id() : null,
+				improveUrl(ref.course().manifest().source().repository(), ref.lesson().sourcePath()),
+				// The first module of a phase comes back from the challenges of the phase before it.
+				index > 0 && !available.get(index - 1).phaseId().equals(ref.lesson().phaseId())
+					? challenges(ref.course(), available.get(index - 1).phaseId()) : null,
+				// The last available module of a phase leads to its challenges.
+				index == available.size() - 1 || !available.get(index + 1).phaseId().equals(ref.lesson().phaseId())
+					? challenges(ref.course(), ref.lesson().phaseId()) : null);
 	}
 
 	@GetMapping(path = "/api/courses/{courseId}/stages", produces = MediaType.APPLICATION_JSON_VALUE)

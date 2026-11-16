@@ -163,7 +163,7 @@ final class ContentImportGenerator {
 		}
 		Manifest finished = new Manifest(skeleton.schemaVersion(), skeleton.source(), skeleton.course(), skeleton.phases(),
 			skeleton.lessons(), skeleton.resources(), skeleton.sourceToId(), skeleton.projectStages(),
-			new Manifest.Provenance(List.copyOf(copies), List.copyOf(generated)));
+			new Manifest.Provenance(List.copyOf(copies), List.copyOf(generated)), skeleton.documents());
 		Files.writeString(output.resolve(skeleton.course().id() + "/manifest.json"),
 			JSON.writerWithDefaultPrettyPrinter().writeValueAsString(finished) + "\n",
 			StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
@@ -258,7 +258,8 @@ final class ContentImportGenerator {
 			Map<String, byte[]> documents, Map<String, String> hashes) {
 	}
 
-	private record ResourcePlan(String id, String localPath, String mediaType, String owner, boolean stage) {
+	/** {@code kind}: the kind of the owner, "lesson", "stage" or "document"; one path has one owner of each kind. */
+	private record ResourcePlan(String id, String localPath, String mediaType, String owner, String kind) {
 	}
 
 	/** One claimed source path for one owner: a lesson and a stage may hold the same path with different IDs. */
@@ -291,11 +292,14 @@ final class ContentImportGenerator {
 		private final Map<String, String> hashes = new TreeMap<>();
 		private final Map<String, FolderPlan> folders = new TreeMap<>();
 		private final Set<String> stageIds = new TreeSet<>();
+		/** The documents without progress (challenges and glossary; H8): owners of their own resources. */
+		private final Set<String> documentIds = new TreeSet<>();
 		/** Charset declared by each folder's codificacion.txt, read once per folder ("" for none). */
 		private final Map<String, String> csvCharsets = new TreeMap<>();
 		/**
-		 * Course documents that are not lessons or stages and are not imported: the index and, until they get their own
-		 * page (H8), each phase's challenges and the course glossary. A link to one of them leads to the course entry, never a guessed anchor.
+		 * Course documents that are not imported: the index, the README and the challenges still marked
+		 * "retos_disponibles": false.
+		 * A link to one of them leads to the course entry, never a guessed anchor.
 		 */
 		private final Set<String> entryPaths = new TreeSet<>();
 		/** The version tag this copy is installed from, or null when it is installed from a commit. */
@@ -315,13 +319,11 @@ final class ContentImportGenerator {
 
 		Plan build() throws IOException {
 			entryPaths.add(CourseDescriptor.INDEX);
-			// Any course may have its glossary (FORMATO.md 9); until H8 gives it its own page, it leads to the entry.
-			if (source.file(CourseDescriptor.GLOSSARY)) entryPaths.add(CourseDescriptor.GLOSSARY);
-			for (CourseDescriptor.Phase phase : descriptor.phases()) {
-				if (phase.challenges() != null && allowed(phase.challenges())) entryPaths.add(phase.challenges());
-			}
+			// The README is the course's presentation on GitHub, as the index is: a link to it leads to the course entry.
+			if (source.file("README.md")) entryPaths.add("README.md");
 			List<Lesson> lessons = lessons();
 			List<Stage> stages = stages();
+			List<Manifest.Document> courseDocuments = courseDocuments();
 			installedResources();
 			try {
 				references();
@@ -329,7 +331,7 @@ final class ContentImportGenerator {
 			catch (java.io.UncheckedIOException ex) {
 				throw ex.getCause();
 			}
-			Manifest skeleton = manifest(lessons, stages);
+			Manifest skeleton = manifest(lessons, stages, courseDocuments);
 			// Everything is validated before writing: exercises by exact title, links and fragments,
 			// with the same pipeline the runtime uses. Reports accumulate instead of stopping at the first.
 			validate(skeleton);
@@ -394,6 +396,54 @@ final class ContentImportGenerator {
 			return stages;
 		}
 
+		/**
+		 * The documents without progress (H8): each phase's challenges (FORMATO.md 6), when they are available and the
+		 * file is in the commit, and the course glossary (FORMATO.md 9). Challenges still marked "retos_disponibles":
+		 * false are not shown: a link to them leads to the course entry. The title is the document's own heading.
+		 */
+		private List<Manifest.Document> courseDocuments() throws IOException {
+			List<Manifest.Document> result = new ArrayList<>();
+			for (CourseDescriptor.Phase phase : descriptor.phases()) {
+				if (phase.challenges() == null || !allowed(phase.challenges())) continue;
+				if (!phase.challengesAvailable() || !source.file(phase.challenges())) {
+					entryPaths.add(phase.challenges());
+					continue;
+				}
+				Manifest.Document document = courseDocument(phase.id() + "." + Manifest.Document.CHALLENGES,
+					Manifest.Document.CHALLENGES, phase.id(), phase.challenges(), "Retos de la fase");
+				if (document != null) result.add(document);
+			}
+			if (source.file(CourseDescriptor.GLOSSARY) && allowed(CourseDescriptor.GLOSSARY)) {
+				Manifest.Document document = courseDocument(descriptor.id() + "." + Manifest.Document.GLOSSARY,
+					Manifest.Document.GLOSSARY, null, CourseDescriptor.GLOSSARY, "Glosario");
+				if (document != null) result.add(document);
+			}
+			return result;
+		}
+
+		private Manifest.Document courseDocument(String id, String kind, String phaseId, String sourcePath, String fallback)
+				throws IOException {
+			byte[] body = source.read(sourcePath);
+			if (body == null) {
+				findings.add("source body unavailable " + sourcePath);
+				return null;
+			}
+			String bodyPath = directory + "/documents/" + id + ".md";
+			documentIds.add(id);
+			addDocument(id, sourcePath, body, bodyPath);
+			String text = texts.get(id);
+			if (text == null) return null;
+			String title = text.lines().filter(line -> line.startsWith("# ")).findFirst()
+				.map(line -> line.substring(2).strip()).filter(line -> !line.isEmpty()).orElse(fallback);
+			return new Manifest.Document(id, kind, title, phaseId, sourcePath, bodyPath);
+		}
+
+		/** The kind of an owner: "stage", "document" or "lesson". */
+		private String kind(String owner) {
+			if (stageIds.contains(owner)) return "stage";
+			return documentIds.contains(owner) ? "document" : "lesson";
+		}
+
 		/** Reads one available document once: it is copied, anchored and scanned with the same bytes. */
 		private void addDocument(String id, String sourcePath, byte[] body, String acceptedBodyPath) throws IOException {
 			String text = text(sourcePath, body);
@@ -415,7 +465,8 @@ final class ContentImportGenerator {
 			if (previous == null) return;
 			for (Resource resource : previous.resources()) {
 				if ("zip".equals(resource.kind())) continue;
-				String owner = resource.lessonId() != null ? resource.lessonId() : resource.stageId();
+				String owner = resource.lessonId() != null ? resource.lessonId()
+					: resource.stageId() != null ? resource.stageId() : resource.documentId();
 				if (!documents.containsValue(owner) || !allowed(resource.sourcePath())) continue;
 				byte[] bytes = source.read(resource.sourcePath());
 				if (bytes == null) {
@@ -424,7 +475,7 @@ final class ContentImportGenerator {
 				}
 				checkAccepted(resource.sourcePath(), resource.localPath(), bytes);
 				register(new Claim(resource.sourcePath(), owner), new ResourcePlan(resource.resourceId(),
-					resource.localPath(), resource.mediaType(), owner, resource.stageId() != null));
+					resource.localPath(), resource.mediaType(), owner, kind(owner)));
 			}
 		}
 
@@ -529,9 +580,9 @@ final class ContentImportGenerator {
 			Claim key = new Claim(path, owner);
 			ResourcePlan existing = resources.get(key);
 			if (existing != null) return existing;
-			boolean stage = stageIds.contains(owner);
+			String kind = kind(owner);
 			for (ResourcePlan other : claimsByPath.getOrDefault(path, List.of())) {
-				if (other.stage() != stage) continue;
+				if (!other.kind().equals(kind)) continue;
 				findings.add("resource " + path + " is claimed by " + other.owner() + " and " + owner);
 				return other;
 			}
@@ -540,7 +591,7 @@ final class ContentImportGenerator {
 				return null;
 			}
 			String id = owner + "-r-" + HeadingIds.slug(name(path)) + "-" + digest(path);
-			ResourcePlan plan = new ResourcePlan(id, directory + "/resources/" + id, mediaType(path), owner, stage);
+			ResourcePlan plan = new ResourcePlan(id, directory + "/resources/" + id, mediaType(path), owner, kind);
 			checkInstalledResource(path, plan.localPath());
 			register(key, plan);
 			return plan;
@@ -597,7 +648,7 @@ final class ContentImportGenerator {
 			FolderPlan plan = folders.computeIfAbsent(folder, FolderPlan::new);
 			if (plan.files.containsKey(owner)) return;
 			if (!plan.owners.isEmpty() && plan.owners.stream()
-				.noneMatch(other -> stageIds.contains(other) != stageIds.contains(owner))) {
+				.noneMatch(other -> !kind(other).equals(kind(owner)))) {
 				findings.add("folder " + folder + " is claimed by " + plan.owner() + " and " + owner);
 				return;
 			}
@@ -650,22 +701,23 @@ final class ContentImportGenerator {
 			}
 		}
 
-		private Manifest manifest(List<Lesson> lessons, List<Stage> stages) {
+		private Manifest manifest(List<Lesson> lessons, List<Stage> stages, List<Manifest.Document> courseDocuments) {
 			Map<String, List<String>> members = folderMembers(claimsByPath, folders.keySet(), ResourcePlan::id);
 			List<Resource> resourceEntries = new ArrayList<>();
 			for (Map.Entry<Claim, ResourcePlan> entry : resources.entrySet()) {
 				ResourcePlan plan = entry.getValue();
-				resourceEntries.add(new Resource(plan.id(), plan.stage() ? null : plan.owner(), entry.getKey().path(),
-					plan.localPath(), plan.mediaType(), plan.stage() ? plan.owner() : null, FILE, null, null));
+				resourceEntries.add(new Resource(plan.id(), "lesson".equals(plan.kind()) ? plan.owner() : null,
+					entry.getKey().path(), plan.localPath(), plan.mediaType(), "stage".equals(plan.kind()) ? plan.owner() : null,
+					FILE, null, null, "document".equals(plan.kind()) ? plan.owner() : null));
 			}
 			for (FolderPlan folder : folders.values()) {
 				if (folder.owners.isEmpty()) continue;
 				String plain = folder.sourcePath().substring(0, folder.sourcePath().length() - 1);
 				String owner = folder.owner();
-				boolean stage = stageIds.contains(owner);
-				resourceEntries.add(new Resource(folder.zipId(), stage ? null : owner, folder.sourcePath(),
-					directory + "/resources/" + folder.zipId() + ".zip", "application/zip", stage ? owner : null, ZIP,
-					name(plain) + ".zip", folder.archiveMembers()));
+				String kind = kind(owner);
+				resourceEntries.add(new Resource(folder.zipId(), "lesson".equals(kind) ? owner : null, folder.sourcePath(),
+					directory + "/resources/" + folder.zipId() + ".zip", "application/zip", "stage".equals(kind) ? owner : null,
+					ZIP, name(plain) + ".zip", folder.archiveMembers(), "document".equals(kind) ? owner : null));
 			}
 			resourceEntries.sort(Comparator.comparing(Resource::sourcePath).thenComparing(Resource::resourceId));
 			List<SourceLink> links = new ArrayList<>();
@@ -677,6 +729,10 @@ final class ContentImportGenerator {
 			for (Stage stage : stages) {
 				links.add(new SourceLink(stage.sourcePath(), null,
 					fragments.getOrDefault(stage.sourcePath(), Map.of()), null, null, null, stage.id(), null));
+			}
+			for (Manifest.Document document : courseDocuments) {
+				links.add(new SourceLink(document.sourcePath(), null,
+					fragments.getOrDefault(document.sourcePath(), Map.of()), null, null, null, null, null, document.id()));
 			}
 			// One mapping per source path: the sorted-first owner answers links to a path two owners share.
 			String previous = null;
@@ -698,9 +754,11 @@ final class ContentImportGenerator {
 			return new Manifest(2, new Manifest.Source(descriptor.title(), source.commit(), tag, descriptor.version(),
 				descriptor.repository()),
 				new Manifest.Course(descriptor.id(), descriptor.id(), descriptor.title(), descriptor.description(),
-					descriptor.recommended()),
+					descriptor.recommended(), descriptor.project() == null || descriptor.project().type() == null ? null
+						: new Manifest.Project(descriptor.project().type(), descriptor.project().title(),
+							descriptor.project().module())),
 				List.copyOf(phases), List.copyOf(lessons), List.copyOf(resourceEntries), List.copyOf(links),
-				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()));
+				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()), List.copyOf(courseDocuments));
 		}
 
 		/** Exercises, links and fragments are validated before anything is written, with the runtime pipeline. */
@@ -717,6 +775,7 @@ final class ContentImportGenerator {
 			for (Stage stage : manifest.projectStages()) {
 				if (stage.available()) pipeline.parse(stage, texts.get(stage.id()));
 			}
+			for (Manifest.Document document : manifest.documents()) pipeline.parse(document, texts.get(document.id()));
 			pipeline.render();
 			findings.addAll(pipeline.problems());
 			reported.addAll(pipeline.warnings());
@@ -730,6 +789,7 @@ final class ContentImportGenerator {
 			for (Stage stage : manifest.projectStages()) {
 				if (stage.available()) copies.add(new Copy(stage.sourcePath(), stage.bodyPath()));
 			}
+			for (Manifest.Document document : manifest.documents()) copies.add(new Copy(document.sourcePath(), document.bodyPath()));
 			for (Resource resource : manifest.resources()) {
 				if (!ZIP.equals(resource.kind())) copies.add(new Copy(resource.sourcePath(), resource.localPath()));
 			}

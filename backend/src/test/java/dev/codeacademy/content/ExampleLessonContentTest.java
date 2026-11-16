@@ -58,6 +58,26 @@ class ExampleLessonContentTest {
 	}
 
 	/** The phase and the modules exactly as curso.json declares them, the pending one included. */
+	/** H8, T1: each field of the header quote (FORMATO.md 5.2) on its own line; the course keeps its format. */
+	@Test
+	void eachHeaderFieldStartsItsOwnLine() {
+		String quote = lesson.bodyHtml().substring(lesson.bodyHtml().indexOf("<blockquote>"),
+			lesson.bodyHtml().indexOf("</blockquote>"));
+		assertThat(quote).startsWith("<blockquote>\n<p><strong>Versiones:</strong>")
+			.contains("<br />\n<strong>Conviene saber antes:</strong>", "<br />\n<strong>Tiempo estimado:</strong>",
+				"<br />\n<strong>Nivel:</strong>");
+		assertThat(quote.split("<br />", -1)).hasSize(4);
+	}
+
+	@Test
+	void aQuoteThatIsNotTheHeaderKeepsItsLinesTogether() {
+		var document = Markdown.parse("# Título\n\nTexto.\n\n> **Nota:** una\n> **Otra:** dos\n");
+		assertThat(Markdown.render(document, java.util.Map.of())).doesNotContain("<br />");
+		var wrapped = Markdown.parse("# Título\n\n> **Versiones:** una línea\n> que sigue\n> **Nivel:** Básico\n");
+		assertThat(Markdown.render(wrapped, java.util.Map.of()))
+			.contains("<strong>Versiones:</strong> una línea\nque sigue<br />\n<strong>Nivel:</strong>");
+	}
+
 	@Test
 	void theManifestHasThePhaseAndModulesOfCursoJson() {
 		assertThat(content.manifest().phases())
@@ -319,6 +339,10 @@ class ExampleLessonContentTest {
 				else if (value.startsWith("/api/resources/")) {
 					assertThat(content.resources()).containsKey(value.substring("/api/resources/".length()));
 				}
+				else if (value.startsWith("/documents/")) {
+					assertThat(value.substring("/documents/".length()).replaceFirst("#.*", "")).isIn(content.manifest().documents()
+						.stream().map(Manifest.Document::id).toList());
+				}
 				else if (!isExternal) {
 					assertThat(value).isEqualTo("/courses/ejemplo");
 				}
@@ -327,9 +351,9 @@ class ExampleLessonContentTest {
 		}
 		assertThat(checked).isEqualTo(25);
 		assertThat(external).isEqualTo(2);
-		// The navigation line: the index and, until H8 gives the challenges their page, the index for them too.
+		// The navigation line: the index, and the challenges of the phase on their own page (H8, T3).
 		assertThat(lesson.bodyHtml()).contains("<a href=\"/courses/ejemplo\">Índice</a>")
-			.contains("<a href=\"/courses/ejemplo\">Siguiente: Retos de la fase</a>");
+			.contains("<a href=\"/documents/ejemplo.fase.primeros-pasos.retos\">Siguiente: Retos de la fase</a>");
 	}
 
 	@Test

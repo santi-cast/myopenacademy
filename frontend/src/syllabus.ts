@@ -35,3 +35,9 @@ export function groupByPhase(phases: Phase[], lessons: LessonEntry[]): PhaseGrou
   if (orphans.length > 0) result.push({ key: '', label: 'Sin fase', rows: orphans })
   return result
 }
+
+// «Retos de la fase 01»: the challenges of a phase, numbered like the phase in the order of the course (H8).
+export function challengesLabel(phases: Phase[], phaseId: string | null): string {
+  const index = [...phases].sort((a, b) => a.position - b.position).findIndex((phase) => phase.id === phaseId)
+  return index < 0 ? 'Retos de la fase' : `Retos de la fase ${twoDigits(index + 1)}`
+}

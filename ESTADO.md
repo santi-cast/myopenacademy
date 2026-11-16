@@ -32,7 +32,7 @@ Lo que ya existe en los otros proyectos:
 8. ~~T8~~ **Hecho** (L22): documentación al día, interfaz en tuteo y prueba en el navegador con el curso inicial (`ed6c0b7`).
 9. ~~Revisión del autor~~ **H7 aprobada e integrada en `main`** (16 de noviembre de 2026, L26), con dos retoques de texto («Todavía no has añadido ningún curso», «0 de 1 disponible»).
 
-**Siguiente: H8, contenido según el formato** (`PLAN.md`): retos, glosario, enlaces entre cursos, proyecto desde `curso.json`, «Mejorar esta lección» y la cabecera del módulo con un campo por línea.
+**H8 en marcha** (16 de noviembre de 2026) en la rama `feat/h8-contenido-formato`: tareas y registro en `odd/tasks/h8-contenido-formato.md`. **Hechas T1 a T6** (cabecera con un campo por línea, «Mejorar esta lección», retos y glosario como documentos sin seguimiento, proyecto desde `curso.json`, enlaces entre cursos, documentación y prueba en el navegador con el curso inicial). **Falta la revisión del autor en el navegador**; la copia de revisión está en `backend/target/revision/`.
 
 **Preguntas abiertas para el autor:**
 
@@ -159,6 +159,7 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 | Kit | Un fichero con «ñ» y tilde en el nombre dentro del curso de ejemplo (en una carpeta de `codigo/`) | Recuperar la prueba de descarga de un recurso con letras no ASCII en el identificador, perdida al quitar Java (T3, L9) | **Hecho** por el kit en `23f130f` y, con espacios, en `3c07a76` (9 de noviembre de 2026); traído y prueba recuperada (L12 y L13) |
 
 | Curso inicial | Etiquetar su versión cuando esté completo y aprobado (`v1.0.0`, para el pack base 1.0; `FORMATO.md` 11.1). La academia ya instala por etiqueta (A5) | Instalarlo en la academia como DLC con su versión | **Decidido por el autor** (16 de noviembre de 2026): los cursos no se etiquetan hasta estar completos y aprobados; mientras tanto, se instalan desde un commit |
+| Curso inicial | Que la academia instale `.github/` dentro de `codigo/` (plantilla de issue de la fase 7) y la meta en el ZIP | Fase 7 (07.02 y reto 3) | **Confirmado** (16 de noviembre de 2026, H8 L7): solo se protege el nombre exacto `.git`; prueba nueva con `.github/ISSUE_TEMPLATE/` instalado y en el ZIP byte a byte. Nada que cambiar |
 | Kit | Avisar de los enlaces de correo fuera de código (opción c del autor) | Que los cursos no lleguen con `mailto:` | **Hecho** por el kit en `e44174e` (16 de noviembre de 2026; `FORMATO.md` 10.7). Respondido al kit: la academia no enlaza los correos sueltos (sin `< >`), porque no usa la extensión de enlaces automáticos de GitHub; GitHub sí los enlaza. El kit avisa también del correo suelto desde `cf6c46d`; el curso inicial da 0 avisos y los cursos de ejemplo no cambian (nada que traer) |
 | Kit | Lo mismo para los cursos de ejemplo no hace falta (el E2E los etiqueta en su repositorio temporal); sí, decir en `FORMATO.md` 11.1 o en la guía del kit **cuándo** se etiqueta (al cerrar una versión, después de verificar el commit) | Que los cursos lleguen etiquetados | Pedido el 16 de noviembre de 2026 |
 
@@ -180,6 +181,7 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-09 | `PLAN.md` reescrito con el autor: hitos H6 a H11 hasta el pack base 1.0, con la lista de cambios de la prueba de importación y lo que faltaba del plan común. |
 | 2026-11-09 | H7, T1, T4 (salvo la etiqueta) y T4b: cursos de ejemplo del kit, importador por `curso.json` y comparación por curso con retítulos permitidos. |
 | 2026-11-09 | H7, T3 y T3b: pruebas con los cursos de ejemplo instalados por el importador real, `content/` fuera de Git y orden de «Mis cursos» igual con cualquier intercalación. |
+| 2026-11-16 | H8, T1 a T6 hechas en `feat/h8-contenido-formato`, a falta de la revisión del autor. |
 | 2026-11-16 | **H7 aprobada por el autor e integrada en `main`**: cursos como DLC (importador por `curso.json`, etiquetas, catálogo con recomendaciones, lista de cursos instalados). |
 | 2026-11-16 | Orden de «Mis cursos» y del catálogo: primero el curso inicial y después por título (decisiones del autor). |
 | 2026-11-16 | Enlaces de correo como texto (aviso sin bloquear) y prueba de instalación del curso inicial desde `9f55661`, fases 1 a 5: 0 hallazgos, todo byte a byte. |

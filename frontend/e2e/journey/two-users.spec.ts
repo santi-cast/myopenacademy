@@ -327,6 +327,9 @@ test('two learners keep separate progress across a backend restart, without cros
     await expect(codes.nth(0)).toContainText(LESSON_TITLE)
     await expect(codes.nth(1).getByRole('cell').first()).toHaveText('01.02')
     await expect(codes.nth(1)).toContainText('Ficheros YAML')
+    // The course project, from curso.json (H8, T4): by stages here, with its own page.
+    await expect(pageA.locator('.index-project').getByRole('link')).toHaveText('Proyecto del curso: Mi catálogo')
+    await expect(phaseTable.getByRole('link', { name: 'Retos de la fase' })).toBeVisible()
     await shot(pageA, 'ana-course-index')
     const continuation = pageA.waitForResponse((r) => r.url().endsWith(`/api/me/courses/${COURSE_ID}/continuation`) && r.request().method() === 'PUT')
     await pageA.locator('.phase-grid').getByRole('link', { name: LESSON_TITLE }).click()
@@ -358,6 +361,28 @@ test('two learners keep separate progress across a backend restart, without cros
     await shot(pageA, 'ana-lesson-loaded')
     await pageA.locator('figure.diagram').first().scrollIntoViewIfNeeded()
     await shot(pageA, 'ana-lesson-mermaid')
+
+    // «Mejorar esta lección» (H8, T2): the edit page of the module in the course repository, in a new tab.
+    await expect(pageA.getByRole('link', { name: 'Mejorar esta lección' })).toHaveAttribute('href',
+      'https://github.com/myopenacademy/curso-ejemplo/edit/main/fase-01-primeros-pasos/01-ficheros-json.md')
+
+    // Links to another installed course are internal (H8, T5): the module with its anchor and a glossary term.
+    await expect(pageA.locator('.lesson-body').getByRole('link', { name: 'Mi primer repositorio, 1.1' }))
+      .toHaveAttribute('href', '/lessons/ejemplo-destino.mi-primer-repositorio#11-qué-es-un-repositorio')
+    await expect(pageA.locator('.lesson-body').getByRole('link', { name: 'repositorio', exact: true }))
+      .toHaveAttribute('href', '/documents/ejemplo-destino.glosario#repositorio')
+
+    // The last module of the phase: the pager leads to the challenges, not to the next lesson (H8).
+    await expect(pageA.locator('.pager-next')).toHaveText(/Retos de la fase 01/)
+    await expect(pageA.locator('.pager-next')).toHaveAttribute('href', '/documents/ejemplo.fase.primeros-pasos.retos')
+    // The challenges of the phase have their own page (H8, T3): the lesson's «Siguiente» leads to them, the way back too.
+    await pageA.locator('.lesson-body').getByRole('link', { name: 'Siguiente: Retos de la fase' }).click()
+    await expect(pageA).toHaveURL(/\/documents\/ejemplo\.fase\.primeros-pasos\.retos$/)
+    await expect(pageA.getByRole('heading', { level: 1 })).toContainText('Retos')
+    await expect(pageA.locator('.kicker')).toContainText('Fase 01 · Primeros pasos · Opcionales, sin seguimiento')
+    await shot(pageA, 'ana-challenges')
+    await pageA.goBack()
+    await expect(lessonTitle(pageA)).toContainText(LESSON_TITLE)
 
     // Resource link: downloads with the original file name (S14).
     const scriptLink = pageA.locator('.lesson-files a.resource-link').filter({ hasText: /^contar\.sh$/ }).first()

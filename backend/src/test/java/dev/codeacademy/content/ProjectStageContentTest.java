@@ -56,7 +56,8 @@ class ProjectStageContentTest {
 			ObjectNode provenance = m.putObject("provenance");
 			ArrayNode files = provenance.putArray("files");
 			provenance.putArray("generated");
-			for (String array : new String[] { "lessons", "projectStages", "resources" }) {
+			for (String array : new String[] { "lessons", "projectStages", "resources", "documents" }) {
+				if (!m.has(array)) continue;
 				m.get(array).forEach(entry -> {
 					String field = array.equals("resources") ? "localPath" : "bodyPath";
 					if (entry.get(field).isNull()) return;
@@ -71,6 +72,49 @@ class ProjectStageContentTest {
 				});
 			}
 		});
+	}
+
+	boolean glossaryAdded;
+
+	/** H8, T3: a glossary as a document without progress, with its own page and the anchors of its terms. */
+	void addGlossary(String kind, String phaseId) {
+		if (!glossaryAdded) {
+			fixture.write("demo/lessons/glosario.md", "# Glosario\n\n## A\n\n### API\n\nUna definición.\n");
+			fixture.replace("demo/lessons/demo.01.01.md", "Texto de cuerpo.", "Texto de cuerpo con la [API](../glosario.md#api).");
+			glossaryAdded = true;
+		}
+		fixture.editManifest(m -> {
+			ArrayNode links = (ArrayNode) m.get("sourceToId");
+			for (int i = links.size() - 1; i >= 0; i--) {
+				if ("glosario.md".equals(links.get(i).path("sourcePath").asString())) links.remove(i);
+			}
+			ObjectNode document = m.putArray("documents").addObject().put("id", "demo.glosario").put("kind", kind)
+				.put("title", "Glosario").put("sourcePath", "glosario.md").put("bodyPath", "demo/lessons/glosario.md");
+			if (phaseId == null) document.putNull("phaseId");
+			else document.put("phaseId", phaseId);
+			((ArrayNode) m.get("sourceToId")).addObject().put("sourcePath", "glosario.md").put("documentId", "demo.glosario")
+				.putObject("fragments").put("api", "api");
+		});
+		refreshProvenance();
+	}
+
+	@Test
+	void aGlossaryIsADocumentWithItsPageAndTheAnchorsOfItsTerms() {
+		addGlossary("glosario", null);
+		CourseContent loaded = fixture.load();
+		assertThat(loaded.documents()).containsOnlyKeys("demo.glosario");
+		assertThat(loaded.documents().get("demo.glosario").bodyHtml()).contains("<h3 id=\"api\">API</h3>");
+		assertThat(loaded.lessons().get("demo.01.01").bodyHtml()).contains("<a href=\"/documents/demo.glosario#api\">API</a>");
+	}
+
+	@Test
+	void aDocumentNeedsAKnownKindAndChallengesNeedTheirPhase() {
+		addGlossary("otro", null);
+		fixture.rejected("document demo.glosario: unsupported kind otro");
+		addGlossary("retos", null);
+		fixture.rejected("document demo.glosario: unknown phase null");
+		addGlossary("glosario", "demo.phase-01");
+		fixture.rejected("document demo.glosario: a glossary has no phase");
 	}
 
 	@Test

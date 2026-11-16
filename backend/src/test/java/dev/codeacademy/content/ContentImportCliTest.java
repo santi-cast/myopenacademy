@@ -93,7 +93,7 @@ class ContentImportCliTest {
 	 * again in H7, when its identity started to come from curso.json (source.name is now the course's own title).
 	 */
 	static final String SHARED_MANIFEST_SHA =
-		"df268b7e5b3744b72282d1786772dc61ac0cb7a1f9e6c3bda79c6e5d6d5f6e58";
+		"efc70ec1a14134f2ae06a689aa71d5a32f9e018dbc02281a3dffe7cd4dc6e1a5";
 	static final List<String> SHARED_ARCHIVE_SHA = List.of(
 		"a253f8f587fd349a355352d11015051ae223261e97e9b37734d837711b068eac",
 		"5a38b4b35047d1d7604d2e0dccf3d45f0b3372b465573e1098ee7b19af6cb2e5",
@@ -1259,6 +1259,22 @@ class ContentImportCliTest {
 		assertThat(ContentLoader.loadAll(output)).hasSize(1);
 		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
+	}
+
+	@Test void aGithubFolderIsNotProtectedAndShipsByteForByteInTheZip() throws Exception {
+		// Only the exact name .git is protected: .github (issue templates, workflows) is course material (phase 7 of
+		// the base course), installed and in the learner's ZIP like any other file of the folder.
+		byte[] template = "---\nname: Error\nabout: Algo no funciona\n---\n\n## Qué pasa\n".getBytes(StandardCharsets.UTF_8);
+		files.put("fase-01/codigo/hola/.github/ISSUE_TEMPLATE/error.md", template);
+		assertThat(generate("--commit", commit(files, "github folder\n")).code()).isZero();
+		assertThat(reported()).isEmpty();
+		JsonNode manifest = manifest();
+		JsonNode file = resource(manifest, "fase-01/codigo/hola/.github/ISSUE_TEMPLATE/error.md");
+		assertThat(Files.readAllBytes(output.resolve(file.path("localPath").asString()))).isEqualTo(template);
+		JsonNode zip = resource(manifest, "fase-01/codigo/hola/");
+		try (var archive = new java.util.zip.ZipFile(output.resolve(zip.path("localPath").asString()).toFile(), StandardCharsets.UTF_8)) {
+			assertThat(archive.getInputStream(archive.getEntry(".github/ISSUE_TEMPLATE/error.md")).readAllBytes()).isEqualTo(template);
+		}
 	}
 
 	@Test void aCsvTakesTheCharsetItsFolderDeclaresInCodificacionTxt() throws Exception {

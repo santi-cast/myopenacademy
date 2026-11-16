@@ -1,9 +1,9 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseStateResult, LessonStateResult } from './api/types'
-import { ana, apiCalls, counts, error, installFakeBackend, notAddedProgress, type Reply } from './test/fakeBackend'
+import { ana, apiCalls, counts, error, installFakeBackend, javaCourse, javaPhases, notAddedProgress, type Reply } from './test/fakeBackend'
 import {
-  BODY_CODE, BODY_DIAGRAMS, BODY_LINKS, BROKEN_MERMAID_SOURCE, MERMAID_SOURCE, addedProgress, lessonView, routeLesson,
+  BODY_CODE, BODY_DIAGRAMS, BODY_LINKS, BROKEN_MERMAID_SOURCE, MERMAID_SOURCE, addedProgress, lessonView, lessonsWithNext, routeLesson,
 } from './test/lessonFixtures'
 import { renderApp } from './test/renderApp'
 
@@ -112,6 +112,41 @@ describe('lesson HTML as delivered', () => {
     expect(card).not.toBeNull()
     expect(within(card!).getByRole('heading', { name: '¿Qué main se ejecuta?' })).toBeVisible()
     expect(document.getElementById('java-02.01-e01')).not.toBeNull()
+  })
+})
+
+describe('the challenges between two phases (H8)', () => {
+  it('the last module of a phase leads to «Retos de la fase NN» instead of the next lesson', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    routeLesson(backend, lessonView({ nextDocumentId: 'java.fase.fundamentos.retos' }))
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases: javaPhases, lessons: lessonsWithNext,
+      documents: [{ id: 'java.fase.fundamentos.retos', courseId: 'java', kind: 'retos', title: 'Retos', phaseId: javaPhases[1].id }] } })
+    renderApp('/lessons/java-02.01')
+    const pager = await screen.findByRole('navigation', { name: 'Lecciones anterior y siguiente' })
+    const next = await within(pager).findByRole('link', { name: /Siguiente →/ })
+    expect(next).toHaveAttribute('href', '/documents/java.fase.fundamentos.retos')
+    expect(next).toHaveTextContent('Retos de la fase 02')
+  })
+})
+
+describe('«Mejorar esta lección» (H8, T2)', () => {
+  it('links to the edit page of the module in a new tab, and is absent without a repository', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    const url = 'https://github.com/myopenacademy/curso-java/edit/main/fase-02/01-tu-primer-programa.md'
+    routeLesson(backend, lessonView({ improveUrl: url }))
+    renderApp('/lessons/java-02.01')
+    const link = await screen.findByRole('link', { name: 'Mejorar esta lección' })
+    expect(link).toHaveAttribute('href', url)
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('shows no link when the course has no repository', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    routeLesson(backend, lessonView({ improveUrl: null }))
+    renderApp('/lessons/java-02.01')
+    await screen.findByRole('heading', { name: 'Al terminar la lección' })
+    expect(screen.queryByRole('link', { name: 'Mejorar esta lección' })).not.toBeInTheDocument()
   })
 })
 

@@ -23,7 +23,7 @@ export function StagePage() {
   if (loaded.status === 'loading') return <div className="page"><p role="status">Cargando…</p></div>
   if (loaded.status === 'failed') return <div className="page">
     {errorCode(loaded.error) === 'STAGE_UNAVAILABLE'
-      ? <><h1>Esta etapa todavía no está disponible.</h1><p>Podés verla en el índice del proyecto, pero todavía no se puede abrir.</p><Link to="/">Volver a Mis cursos</Link></>
+      ? <><h1>Esta etapa todavía no está disponible.</h1><p>Puedes verla en el índice del proyecto, pero todavía no se puede abrir.</p><Link to="/">Volver a Mis cursos</Link></>
       : <LoadFailure error={loaded.error} />}
   </div>
   return <StageContent key={id} {...loaded.data} />

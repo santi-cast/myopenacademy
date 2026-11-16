@@ -54,7 +54,15 @@ export type MyCourses = { courses: { course: Course; enrollment: Enrollment }[] 
 
 export type Courses = { courses: Course[] }
 
-export type Syllabus = { course: Course; phases: Phase[]; lessons: LessonEntry[] }
+// A document without progress (H8): the challenges of a phase ("retos", with its phaseId) or the glossary.
+export type DocumentEntry = { id: string; courseId: string; kind: 'retos' | 'glosario'; title: string; phaseId: string | null }
+// For challenges, the last module of their phase and the first module of the next one (H8).
+export type DocumentView = {
+  document: DocumentEntry; bodyHtml: string; resources: Resource[]; previousLessonId?: string | null; nextLessonId?: string | null
+}
+// The course project (H8, T4): by stages (its own page) or a module that is the project.
+export type ProjectInfo = { kind: 'etapas' | 'modulo'; title: string | null; lessonId: string | null }
+export type Syllabus = { course: Course; phases: Phase[]; lessons: LessonEntry[]; documents?: DocumentEntry[]; project?: ProjectInfo | null }
 
 export type Exercise = {
   id: string
@@ -74,6 +82,11 @@ export type LessonView = {
   resources: Resource[]
   previousLessonId: string | null
   nextLessonId: string | null
+  // «Mejorar esta lección»: the page that edits the file in the course repository, or null (H8, T2).
+  improveUrl?: string | null
+  // The challenges between two phases (H8): when set, they take the place of the neighbouring lesson.
+  previousDocumentId?: string | null
+  nextDocumentId?: string | null
 }
 
 type StateResultBase = {

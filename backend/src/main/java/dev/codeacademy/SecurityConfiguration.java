@@ -77,7 +77,7 @@ class SecurityConfiguration {
 								.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/me").authenticated()
 						.requestMatchers(HttpMethod.GET, "/api/courses", "/api/courses/*", "/api/lessons/*",
-								"/api/resources/*", "/api/courses/*/stages", "/api/stages/*").authenticated()
+								"/api/resources/*", "/api/courses/*/stages", "/api/stages/*", "/api/documents/*").authenticated()
 						.requestMatchers(HttpMethod.GET, "/api/me/courses", "/api/me/courses/*/progress",
 								"/api/me/courses/*/stage-progress").authenticated()
 						.requestMatchers(HttpMethod.PUT, "/api/me/courses/*", "/api/me/courses/*/continuation",

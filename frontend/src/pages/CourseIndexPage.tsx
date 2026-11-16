@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router'
 import { apiGet } from '../api/client'
-import type { LessonEntry, Progress, Syllabus } from '../api/types'
+import type { DocumentEntry, LessonEntry, Progress, Syllabus } from '../api/types'
 import { groupByPhase, type SyllabusRow } from '../syllabus'
 import { LoadFailure } from './LoadFailure'
 import { ProgressSummary } from './ProgressSummary'
@@ -27,11 +27,13 @@ function LessonState({ lesson, completed }: { lesson: LessonEntry; completed: bo
     : <span className="badge badge-todo">No completada</span>
 }
 
-function LessonTable({ caption, count, rows, completed }: {
+function LessonTable({ caption, count, rows, completed, challenges, projectLessonId }: {
   caption: string
   count: string
   rows: SyllabusRow[]
   completed: Set<string>
+  challenges?: DocumentEntry
+  projectLessonId?: string | null
 }) {
   return (
     <table className="phase-table">
@@ -51,13 +53,42 @@ function LessonTable({ caption, count, rows, completed }: {
               {lesson.available
                 ? <Link to={`/lessons/${encodeURIComponent(lesson.id)}`}>{lesson.title}</Link>
                 : <span className="lesson-pending" tabIndex={0} aria-describedby={PENDING_DESCRIPTION_ID}>{lesson.title}</span>}
+              {lesson.id === projectLessonId && <> <span className="badge badge-project">Proyecto del curso</span></>}
             </td>
             <td><LessonState lesson={lesson} completed={completed.has(lesson.id)} /></td>
           </tr>
         ))}
       </tbody>
+      {challenges && (
+        // The challenges close their phase: optional, with no progress and outside the counts (FORMATO.md 6).
+        <tfoot>
+          <tr className="phase-challenges">
+            <td>Retos</td>
+            <td><Link to={`/documents/${encodeURIComponent(challenges.id)}`}>Retos de la fase</Link></td>
+            <td><span className="badge badge-optional">Opcionales</span></td>
+          </tr>
+        </tfoot>
+      )}
     </table>
   )
+}
+
+// The course project, from curso.json (FORMATO.md 8), never from the course ID: a project by stages has its own
+// page; a module project is a lesson of the syllabus, marked in its row and linked here.
+function ProjectLink({ courseId, syllabus }: { courseId: string; syllabus: Syllabus }) {
+  const project = syllabus.project
+  if (!project) return null
+  const name = project.title ? `Proyecto del curso: ${project.title}` : 'Proyecto del curso'
+  if (project.kind === 'etapas') {
+    return <p className="index-project"><Link to={`/courses/${encodeURIComponent(courseId)}/project`}>{name}</Link></p>
+  }
+  const lesson = syllabus.lessons.find((entry) => entry.id === project.lessonId)
+  if (!lesson) return null
+  return <p className="index-project">
+    {lesson.available
+      ? <Link to={`/lessons/${encodeURIComponent(lesson.id)}`}>{name} ({lesson.title})</Link>
+      : <span>{name} ({lesson.title}, todavía no disponible)</span>}
+  </p>
 }
 
 export function CourseIndexPage() {
@@ -71,6 +102,8 @@ export function CourseIndexPage() {
   const completed = new Set(progress.lessonStates.filter((state) => state.state === 'completed').map((state) => state.lessonId))
   const continuation = syllabus.lessons.find((lesson) => lesson.id === progress.continuation.lastOpenedLessonId)
   const phases = groupByPhase(syllabus.phases, syllabus.lessons)
+  const documents = syllabus.documents ?? []
+  const glossary = documents.find((document) => document.kind === 'glosario')
 
   return (
     <div className="index">
@@ -79,6 +112,7 @@ export function CourseIndexPage() {
           <p className="kicker">Curso</p>
           <h1>{syllabus.course.title} · Índice del curso</h1>
           <ProgressSummary counts={progress.progress} />
+          {glossary && <p className="index-glossary"><Link to={`/documents/${encodeURIComponent(glossary.id)}`}>Glosario del curso</Link></p>}
         </div>
         {continuation && (
           <Link className="btn btn-end" to={`/lessons/${encodeURIComponent(continuation.id)}`}>
@@ -86,7 +120,7 @@ export function CourseIndexPage() {
           </Link>
         )}
       </div>
-      {courseId === 'java' && <p><Link to={`/courses/${encodeURIComponent(courseId)}/project`}>Proyecto evolutivo</Link></p>}
+      <ProjectLink courseId={courseId} syllabus={syllabus} />
       <p hidden id={PENDING_DESCRIPTION_ID}>Lección pendiente: todavía no disponible, no se puede abrir.</p>
       <div className="phase-grid">
         {phases.map((phase) => (
@@ -96,6 +130,8 @@ export function CourseIndexPage() {
             count={`${phase.rows.filter(({ lesson }) => lesson.available).length} de ${phase.rows.length} ${phase.rows.length === 1 ? 'disponible' : 'disponibles'}`}
             rows={phase.rows}
             completed={completed}
+            challenges={documents.find((document) => document.kind === 'retos' && document.phaseId === phase.key)}
+            projectLessonId={syllabus.project?.kind === 'modulo' ? syllabus.project.lessonId : null}
           />
         ))}
       </div>

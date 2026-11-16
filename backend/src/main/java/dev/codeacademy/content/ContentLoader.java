@@ -76,12 +76,14 @@ public final class ContentLoader {
 				lesson.exercises().forEach(exercise -> courseIds.add(exercise.id()));
 			});
 			if (manifest.projectStages() != null) manifest.projectStages().forEach(stage -> courseIds.add(stage.id()));
+			if (manifest.documents() != null) manifest.documents().forEach(document -> courseIds.add(document.id()));
 			manifest.resources().forEach(resource -> courseIds.add(resource.resourceId()));
 			courseIds.stream().filter(id -> !ids.add(id))
 				.forEach(id -> problems.add("id " + id + " is used by more than one course"));
 		}
 		failIfAny(problems);
-		return courses;
+		// Links to the other installed courses become internal links (FORMATO.md 10.2; H8, T5).
+		return CrossCourseLinks.resolve(courses);
 	}
 
 	/**
@@ -124,6 +126,13 @@ public final class ContentLoader {
 				if (body != null) stageBodies.put(stage.id(), body);
 			}
 		}
+		Map<String, Path> documentBodies = new LinkedHashMap<>();
+		if (manifest.documents() != null) {
+			for (Manifest.Document document : manifest.documents()) {
+				Path body = ContentPaths.file(root, document.bodyPath(), "bodyPath of " + document.id() + ":", problems);
+				if (body != null) documentBodies.put(document.id(), body);
+			}
+		}
 		CopyProvenance.validate(manifest, root, problems);
 		Map<String, ResourceFile> resources = new LinkedHashMap<>();
 		Map<String, String> originalNames = new HashMap<>();
@@ -159,10 +168,21 @@ public final class ContentLoader {
 				}
 			}
 		}
+		if (manifest.documents() != null) {
+			for (Manifest.Document document : manifest.documents()) {
+				try {
+					pipeline.parse(document, Files.readString(documentBodies.get(document.id()), StandardCharsets.UTF_8));
+				}
+				catch (IOException ex) {
+					pipeline.problems().add(document.id() + ": body " + document.bodyPath() + " is not readable UTF-8 text");
+				}
+			}
+		}
 		failIfAny(pipeline.problems());
 		Map<String, LessonContent> lessons = pipeline.render();
 		failIfAny(pipeline.problems());
-		return new CourseContent(manifest, lessons, Collections.unmodifiableMap(resources), pipeline.stages());
+		return new CourseContent(manifest, lessons, Collections.unmodifiableMap(resources), pipeline.stages(),
+			pipeline.documents());
 	}
 
 	private static Path realRoot(Path contentRoot) {
@@ -178,8 +198,8 @@ public final class ContentLoader {
 		try {
 			var tree = JSON.readTree(Files.readString(manifestFile, StandardCharsets.UTF_8));
 			if (tree != null && tree.path("schemaVersion").asInt() == 1) {
-				if (tree.has("projectStages") || tree.has("provenance")) {
-					throw new ContentValidationException("schemaVersion 1 does not allow projectStages or provenance");
+				if (tree.has("projectStages") || tree.has("provenance") || tree.has("documents")) {
+					throw new ContentValidationException("schemaVersion 1 does not allow projectStages, provenance or documents");
 				}
 				for (var resource : tree.path("resources")) {
 					if (resource.has("kind") || resource.has("stageId") || resource.has("fileName") || resource.has("memberResourceIds")) {

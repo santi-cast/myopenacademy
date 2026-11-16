@@ -1,6 +1,6 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { Counts, LessonEntry, Phase } from './api/types'
+import type { Counts, DocumentEntry, LessonEntry, Phase } from './api/types'
 import { ana, apiCalls, counts, error, installFakeBackend, javaCourse, javaLessons, javaPhases, notAddedProgress, type Reply } from './test/fakeBackend'
 import { renderApp } from './test/renderApp'
 
@@ -283,3 +283,71 @@ describe('Índice del curso', () => {
     for (const lesson of javaLessons) expect(screen.getByText(lesson.title)).toBeVisible()
   })
 })
+
+describe('Documentos del curso (H8, T3)', () => {
+  const retos: DocumentEntry = { id: 'java.fase.fundamentos.retos', courseId: 'java', kind: 'retos', title: 'Retos de la fase 02 — Fundamentos de Java', phaseId: javaPhases[1].id }
+  const glosario: DocumentEntry = { id: 'java.glosario', courseId: 'java', kind: 'glosario', title: 'Glosario', phaseId: null }
+
+  it('closes a phase with its optional challenges and links the glossary, outside the counts', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons, documents: [retos, glosario] } })
+    renderApp('/courses/java')
+
+    await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
+    expect(screen.getByRole('link', { name: 'Glosario del curso' })).toHaveAttribute('href', '/documents/java.glosario')
+    const tables = screen.getAllByRole('table')
+    // The challenges do not change the count of the phase.
+    expect(tables[1]).toHaveAccessibleName('Fase 02 · Fundamentos de Java 1 de 2 disponibles')
+    expect(within(tables[1]).getByRole('link', { name: 'Retos de la fase' })).toHaveAttribute('href', '/documents/java.fase.fundamentos.retos')
+    expect(within(tables[1]).getByText('Opcionales')).toBeVisible()
+    expect(within(tables[0]).queryByRole('link', { name: 'Retos de la fase' })).not.toBeInTheDocument()
+  })
+
+  it('shows a document with its phase, its body and its files, and no state to mark', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons, documents: [retos, glosario] } })
+    backend.route('GET /api/documents/java.fase.fundamentos.retos', { status: 200, body: {
+      document: retos,
+      bodyHtml: '<h1 id="retos">Retos de la fase 02 — Fundamentos de Java</h1>\n<h2 id="reto-1--la-tienda">Reto 1 · La tienda</h2>\n<p>Repasa <a href="/lessons/java-02.01">el primer programa</a>.</p>\n',
+      resources: [{ resourceId: 'java.r', url: '/api/resources/java.r', mediaType: 'text/plain; charset=utf-8', fileName: 'tienda.csv' }],
+    } })
+    renderApp('/documents/java.fase.fundamentos.retos')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Retos de la fase 02 — Fundamentos de Java' })).toBeVisible()
+    expect(screen.getByText('Java · Fase 02 · Fundamentos de Java · Opcionales, sin seguimiento')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'tienda.csv' })).toHaveAttribute('href', '/api/resources/java.r')
+    expect(screen.queryByRole('group', { name: /Estado/ })).not.toBeInTheDocument()
+    expect(apiCalls(backend).filter((call) => call.startsWith('PUT'))).toEqual([])
+    // An internal link stays in the application: the lesson is requested, the page is not reloaded.
+    expect(fireEvent.click(screen.getByRole('link', { name: 'el primer programa' }))).toBe(false)
+    await waitFor(() => expect(apiCalls(backend)).toContain('GET /api/lessons/java-02.01'))
+  })
+
+  it('marks the module that is the course project and links it; a course without project shows nothing', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons,
+      project: { kind: 'modulo', title: 'Mi primer programa', lessonId: 'java-02.01' } } })
+    renderApp('/courses/java')
+
+    const link = await screen.findByRole('link', { name: 'Proyecto del curso: Mi primer programa (Tu primer programa)' })
+    expect(link).toHaveAttribute('href', '/lessons/java-02.01')
+    const row = screen.getByRole('link', { name: 'Tu primer programa' }).closest('tr')!
+    expect(within(row).getByText('Proyecto del curso')).toBeVisible()
+    expect(screen.queryByRole('link', { name: /Proyecto evolutivo/ })).not.toBeInTheDocument()
+  })
+
+  it('the challenges sit between the last module of their phase and the first of the next', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons, documents: [retos] } })
+    backend.route('GET /api/documents/java.fase.fundamentos.retos', { status: 200, body: {
+      document: retos, bodyHtml: '<h1 id="retos">Retos</h1>\n', resources: [], previousLessonId: 'java-02.02', nextLessonId: 'java-03.01',
+    } })
+    renderApp('/documents/java.fase.fundamentos.retos')
+    const pager = await screen.findByRole('navigation', { name: 'Lecciones anterior y siguiente' })
+    expect(within(pager).getByRole('link', { name: /Anterior/ })).toHaveAttribute('href', '/lessons/java-02.02')
+    expect(within(pager).getByRole('link', { name: /Anterior/ })).toHaveTextContent('02.02 Variables y tipos de datos')
+    expect(within(pager).getByRole('link', { name: /Siguiente/ })).toHaveAttribute('href', '/lessons/java-03.01')
+    expect(within(pager).getByRole('link', { name: /Siguiente/ })).toHaveTextContent('03.01 Clases y objetos')
+  })
+})
+

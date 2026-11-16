@@ -350,6 +350,32 @@
   font-size: var(--text-xl);
 }
 
+.phase-challenges td {
+  border-top: var(--border-width) solid var(--border);
+}
+
+.badge-optional {
+  color: var(--text-muted);
+}
+
+.index-project {
+  margin: 0 0 var(--space-4);
+}
+
+.badge-project {
+  color: var(--text-muted);
+}
+
+.index-glossary {
+  margin: var(--space-2) 0 0;
+}
+
+.lesson-improve {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 .course-description {
   margin: 0 0 var(--space-2);
 }

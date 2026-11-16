@@ -1,6 +1,6 @@
 # Instalar y actualizar cursos sin conexión
 
-Los cursos se instalan como DLC: cada uno desde su repositorio (`FORMATO.md`, en el kit), en la versión que diga su etiqueta, y se guardan en `content/<id>/` con el [manifiesto](manifiesto.md) que genera la academia. Ningún paso arranca Spring, escribe en PostgreSQL ni necesita internet, y no hay ninguna ruta web para instalar. Estado: H7 (16 de noviembre de 2026).
+Los cursos se instalan como DLC: cada uno desde su repositorio (`FORMATO.md`, en el kit), en la versión que diga su etiqueta, y se guardan en `content/<id>/` con el [manifiesto](manifiesto.md) que genera la academia. Ningún paso arranca Spring, escribe en PostgreSQL ni necesita internet, y no hay ninguna ruta web para instalar. Estado: H8 (16 de noviembre de 2026).
 
 | Comando | Qué hace |
 |---|---|
@@ -61,7 +61,8 @@ Usage: content-import generate --active DIR --source GIT (--tag vX.Y.Z | --commi
 - Lee `curso.json` del commit y toma de él **toda la identidad**: fases, módulos (los de `"disponible": false`, como pendientes, sin cuerpo), ejercicios y etapas, con sus identificadores tal cual. No lee el índice del curso ni inventa identificadores: un ejercicio que el módulo tiene y `curso.json` no declara, o al revés, es un hallazgo.
 - Copia los cuerpos y los ficheros **de los objetos de Git del commit** (nunca de una carpeta en disco, ni HEAD, ni el índice), una sola vez cada uno, y registra su SHA-256 en la procedencia. Las carpetas enlazadas se recorren enteras, también las ocultas, y cada una da su ZIP canónico.
 - Si la copia activa tenía un cuerpo adaptado a mano, es un hallazgo (`local adaptation would be replaced`): nunca lo sobrescribe.
-- Valida ejercicios, enlaces y anclas con el mismo procesado que usa la academia al servir (`LessonPipeline`). Un enlace que no se resuelve se informa con `ruta:línea` y no se escribe nada; nunca se adivina el destino. Provisional hasta H8: los enlaces a `retos.md` y a `glosario.md` llevan al índice del curso.
+- Valida ejercicios, enlaces y anclas con el mismo procesado que usa la academia al servir (`LessonPipeline`). Un enlace que no se resuelve se informa con `ruta:línea` y no se escribe nada; nunca se adivina el destino. Los enlaces a `00-indice.md`, a `README.md` y a unos retos con `"retos_disponibles": false` llevan al índice del curso.
+- Instala también los **documentos sin seguimiento** (H8): los retos de cada fase (`retos.md`, si están disponibles) y el glosario (`glosario.md`), con su código.
 - **Rutas protegidas:** `.git`, `.env` y `.env.*` nunca se leen ni se copian, salvo el nombre exacto `.env.example` (la plantilla sin secretos que enseñan los cursos). Un fichero así se excluye y sale en `reported`, sin bloquear; un enlace directo a él conserva solo su texto.
 - **Codificación de los CSV:** si la carpeta tiene `codificacion.txt` (`FORMATO.md` 7.1), sus `.csv` se sirven con esa codificación (`charset=windows-1252`); una codificación desconocida es un hallazgo. El resto del texto, en UTF-8.
 - **Saneado:** si el saneado del HTML solo quita formato inerte (`<span>`, `<u>`, un ancla…), se avisa sin bloquear. Un `<script>`, un marco, un manejador de eventos, una imagen en HTML crudo o un `id` desconocido bloquean.
