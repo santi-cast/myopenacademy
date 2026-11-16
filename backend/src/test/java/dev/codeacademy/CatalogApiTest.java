@@ -126,7 +126,11 @@ class CatalogApiTest {
 		var response = browser.get("/api/documents/ejemplo.fase.primeros-pasos.retos");
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
 		JsonNode body = json(response);
-		assertThat(body.propertyNames()).containsExactlyInAnyOrder("document", "bodyHtml", "resources");
+		assertThat(body.propertyNames()).containsExactlyInAnyOrder("document", "bodyHtml", "resources", "previousLessonId",
+			"nextLessonId");
+		// Between the last module of the phase and the first module of the next phase (none in the example course).
+		assertThat(body.path("previousLessonId").asString()).isEqualTo(LESSON);
+		assertThat(body.path("nextLessonId").isNull()).isTrue();
 		assertThat(body.path("document").path("title").asString()).startsWith("Retos de la fase");
 		assertThat(body.path("bodyHtml").asString()).contains("<h1 ").contains("<details>");
 		assertThat(body.path("resources").size()).isGreaterThan(0);
@@ -191,7 +195,7 @@ class CatalogApiTest {
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
 		var body = json(response);
 		assertThat(body.propertyNames()).containsExactlyInAnyOrder("lesson", "bodyHtml", "exercises", "resources",
-				"previousLessonId", "nextLessonId", "improveUrl");
+				"previousLessonId", "nextLessonId", "improveUrl", "previousDocumentId", "nextDocumentId");
 		assertThat(body.path("lesson").propertyNames()).containsExactlyInAnyOrder("id", "courseId", "title", "position",
 				"phaseId", "available");
 		assertThat(body.path("lesson").path("id").asString()).isEqualTo(LESSON);
@@ -201,6 +205,9 @@ class CatalogApiTest {
 		// The first module has no previous one, and the next one is pending: neighbours are available lessons only.
 		assertThat(body.path("previousLessonId").isNull()).isTrue();
 		assertThat(body.path("nextLessonId").isNull()).isTrue();
+		// The last module of the phase leads to its challenges (H8): there is no next lesson, but there are challenges.
+		assertThat(body.path("nextDocumentId").asString()).isEqualTo("ejemplo.fase.primeros-pasos.retos");
+		assertThat(body.path("previousDocumentId").isNull()).isTrue();
 		// «Mejorar esta lección» (H8, T2): the edit page of the module in the course repository.
 		assertThat(body.path("improveUrl").asString()).isEqualTo(
 			"https://github.com/myopenacademy/curso-ejemplo/edit/main/fase-01-primeros-pasos/01-ficheros-json.md");

@@ -4,7 +4,7 @@ import { apiGet } from '../api/client'
 import type { DocumentView, Syllabus } from '../api/types'
 import { copyText } from '../lesson/clipboard'
 import { codeTextFor, decorateCodeBlocks, drawDiagrams, highlightBlocks } from '../lesson/enhance'
-import { groupByPhase } from '../syllabus'
+import { challengesLabel, groupByPhase } from '../syllabus'
 import { currentTheme } from '../theme/theme'
 import { LoadFailure } from './LoadFailure'
 import { useLoad } from './useApi'
@@ -32,8 +32,10 @@ function DocumentContent({ view, syllabus }: Loaded) {
   const navigate = useNavigate()
   const { document: entry } = view
   const course = syllabus.course
-  const phase = entry.phaseId === null ? null
-    : groupByPhase(syllabus.phases, syllabus.lessons).find((group) => group.key === entry.phaseId) ?? null
+  const groups = groupByPhase(syllabus.phases, syllabus.lessons)
+  const phase = entry.phaseId === null ? null : groups.find((group) => group.key === entry.phaseId) ?? null
+  // «02.01 Cómo funciona un ordenador», as the lesson pager writes them.
+  const codes = new Map(groups.flatMap((group) => group.rows.map(({ lesson, code }) => [lesson.id, `${code} ${lesson.title}`] as const)))
 
   useEffect(() => {
     if (!root.current) return
@@ -74,7 +76,7 @@ function DocumentContent({ view, syllabus }: Loaded) {
 
   const firstIsTitle = new DOMParser().parseFromString(view.bodyHtml, 'text/html').body.firstElementChild?.localName === 'h1'
   const kicker = entry.kind === 'retos'
-    ? `${course.title} · ${phase ? phase.label : 'Retos'} · Opcionales, sin seguimiento`
+    ? `${course.title} · ${phase ? phase.label : challengesLabel(syllabus.phases, entry.phaseId)} · Opcionales, sin seguimiento`
     : `${course.title} · Glosario`
   return <div className="page">
     <p><Link to={`/courses/${encodeURIComponent(course.id)}`}>Índice del curso</Link></p>
@@ -87,6 +89,24 @@ function DocumentContent({ view, syllabus }: Loaded) {
       {view.resources.length > 0 && <section className="lesson-files"><h2>Archivos</h2><ul>
         {view.resources.map((resource) => <li key={resource.resourceId}><a className="resource-link" href={resource.url}>{resource.fileName}</a></li>)}
       </ul></section>}
+      {entry.kind === 'retos' && (
+        // Between the last module of the phase and the first module of the next one (H8).
+        <nav className="pager" aria-label="Lecciones anterior y siguiente">
+          {[view.previousLessonId, view.nextLessonId].map((id, position) => {
+            const title = id ? codes.get(id) : undefined
+            const className = position === 1 ? 'pager-item pager-next' : 'pager-item'
+            const direction = position === 0 ? '← Anterior' : 'Siguiente →'
+            return id && title
+              ? <Link key={position} className={className} to={`/lessons/${encodeURIComponent(id)}`}>
+                <span className="pager-dir">{direction}</span><span className="pager-title">{title}</span>
+              </Link>
+              : <div key={position} className={`${className} is-empty`}>
+                <span className="pager-dir">{direction}</span>
+                <span className="pager-title">No hay lección {position === 0 ? 'anterior' : 'siguiente'} disponible</span>
+              </div>
+          })}
+        </nav>
+      )}
     </article>
   </div>
 }

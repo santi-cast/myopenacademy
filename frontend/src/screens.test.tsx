@@ -335,5 +335,19 @@ describe('Documentos del curso (H8, T3)', () => {
     expect(within(row).getByText('Proyecto del curso')).toBeVisible()
     expect(screen.queryByRole('link', { name: /Proyecto evolutivo/ })).not.toBeInTheDocument()
   })
+
+  it('the challenges sit between the last module of their phase and the first of the next', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons, documents: [retos] } })
+    backend.route('GET /api/documents/java.fase.fundamentos.retos', { status: 200, body: {
+      document: retos, bodyHtml: '<h1 id="retos">Retos</h1>\n', resources: [], previousLessonId: 'java-02.02', nextLessonId: 'java-03.01',
+    } })
+    renderApp('/documents/java.fase.fundamentos.retos')
+    const pager = await screen.findByRole('navigation', { name: 'Lecciones anterior y siguiente' })
+    expect(within(pager).getByRole('link', { name: /Anterior/ })).toHaveAttribute('href', '/lessons/java-02.02')
+    expect(within(pager).getByRole('link', { name: /Anterior/ })).toHaveTextContent('02.02 Variables y tipos de datos')
+    expect(within(pager).getByRole('link', { name: /Siguiente/ })).toHaveAttribute('href', '/lessons/java-03.01')
+    expect(within(pager).getByRole('link', { name: /Siguiente/ })).toHaveTextContent('03.01 Clases y objetos')
+  })
 })
 

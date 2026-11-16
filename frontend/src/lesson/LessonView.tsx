@@ -6,7 +6,7 @@ import type {
   Enrollment, Exercise, ExerciseState, ExerciseStateResult, LessonState, LessonStateResult, LessonView as LessonPayload, Progress,
   Syllabus as SyllabusData,
 } from '../api/types'
-import { groupByPhase } from '../syllabus'
+import { challengesLabel, groupByPhase } from '../syllabus'
 import { currentTheme } from '../theme/theme'
 import { copyText } from './clipboard'
 import {
@@ -103,13 +103,23 @@ function ExerciseCard({ exercise, saved, save, onChange }: {
   )
 }
 
-function Pager({ label, direction, lessonId, titles }: {
+function Pager({ label, direction, lessonId, titles, challenges }: {
   label: 'anterior' | 'siguiente'
   direction: string
   lessonId: string | null
   titles: Map<string, string>
+  // The challenges of a phase in place of the neighbouring lesson (H8).
+  challenges?: { id: string; title: string } | null
 }) {
   const className = label === 'siguiente' ? 'pager-item pager-next' : 'pager-item'
+  if (challenges) {
+    return (
+      <Link className={className} to={`/documents/${encodeURIComponent(challenges.id)}`}>
+        <span className="pager-dir">{direction}</span>
+        <span className="pager-title">{challenges.title}</span>
+      </Link>
+    )
+  }
   if (lessonId === null) {
     return (
       <div className={`${className} is-empty`}>
@@ -152,6 +162,10 @@ export function LessonView({ data }: { data: LessonData }) {
     const codes = new Map(groups.flatMap((group) => group.rows.map(({ lesson: entry, code }) => [entry.id, code] as const)))
     return new Map(syllabus.lessons.map((entry) => [entry.id, `${codes.get(entry.id) ?? ''} ${entry.title}`.trim()]))
   }, [groups, syllabus])
+  const challengesOf = (id: string | null | undefined) => {
+    const document = id ? syllabus.documents?.find((entry) => entry.id === id) : undefined
+    return document ? { id: document.id, title: challengesLabel(syllabus.phases, document.phaseId) } : null
+  }
   const group = groups.find((candidate) => candidate.rows.some((row) => row.lesson.id === lesson.id))
   const code = group?.rows.find((row) => row.lesson.id === lesson.id)?.code ?? ''
 
@@ -459,8 +473,8 @@ export function LessonView({ data }: { data: LessonData }) {
                   )}
                 </section>
                 <nav className="pager" aria-label="Lecciones anterior y siguiente">
-                  <Pager label="anterior" direction="← Anterior" lessonId={view.previousLessonId} titles={titles} />
-                  <Pager label="siguiente" direction="Siguiente →" lessonId={view.nextLessonId} titles={titles} />
+                  <Pager label="anterior" direction="← Anterior" lessonId={view.previousLessonId} titles={titles} challenges={challengesOf(view.previousDocumentId)} />
+                  <Pager label="siguiente" direction="Siguiente →" lessonId={view.nextLessonId} titles={titles} challenges={challengesOf(view.nextDocumentId)} />
                 </nav>
               </article>
             </div>

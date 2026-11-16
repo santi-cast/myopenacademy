@@ -83,7 +83,16 @@ class CatalogController {
 		}
 	}
 
-	record DocumentView(DocumentEntry document, String bodyHtml, List<ResourceView> resources) {
+	/** For challenges, the last module of their phase and the first module of the next one (H8); null otherwise. */
+	record DocumentView(DocumentEntry document, String bodyHtml, List<ResourceView> resources, String previousLessonId,
+			String nextLessonId) {
+	}
+
+	/** The challenges of a phase, if the course has them. */
+	private static String challenges(CourseContent course, String phaseId) {
+		return Catalog.documents(course).stream()
+			.filter(document -> Manifest.Document.CHALLENGES.equals(document.kind()) && document.phaseId().equals(phaseId))
+			.map(Manifest.Document::id).findFirst().orElse(null);
 	}
 
 	/** The course project (H8, T4): "etapas" (its own page) or "modulo" (the lesson that is the project), or null. */
@@ -98,8 +107,13 @@ class CatalogController {
 	}
 
 	/** {@code improveUrl}: where to propose a change to the lesson, or null (H8, T2). */
+	/**
+	 * {@code previousDocumentId}/{@code nextDocumentId} (H8): the challenges that come between two phases. The last
+	 * module of a phase with challenges leads to them, and the first module of the next phase comes back from them;
+	 * when set, they take the place of the neighbouring lesson.
+	 */
 	record LessonView(LessonEntry lesson, String bodyHtml, List<ExerciseView> exercises, List<ResourceView> resources,
-			String previousLessonId, String nextLessonId, String improveUrl) {
+			String previousLessonId, String nextLessonId, String improveUrl, String previousDocumentId, String nextDocumentId) {
 	}
 
 	/**
@@ -168,7 +182,19 @@ class CatalogController {
 				.map(resource -> new ResourceView(resource.resourceId(), "/api/resources/" + resource.resourceId(),
 						resource.mediaType(), ref.course().resources().get(resource.resourceId()).originalFileName()))
 				.toList();
-		return new DocumentView(DocumentEntry.of(courseId, ref.document()), content.bodyHtml(), resources);
+		String previous = null;
+		String next = null;
+		if (ref.document().phaseId() != null) {
+			List<Lesson> available = Catalog.syllabus(ref.course()).stream().filter(Lesson::available).toList();
+			List<String> phases = Catalog.phases(ref.course()).stream().map(Manifest.Phase::id).toList();
+			int phase = phases.indexOf(ref.document().phaseId());
+			for (Lesson lesson : available) {
+				int at = phases.indexOf(lesson.phaseId());
+				if (at <= phase) { if (at == phase) previous = lesson.id(); }
+				else if (next == null) next = lesson.id();
+			}
+		}
+		return new DocumentView(DocumentEntry.of(courseId, ref.document()), content.bodyHtml(), resources, previous, next);
 	}
 
 	/** Pending lessons keep their syllabus entry but never open; neighbours skip them. */
@@ -190,7 +216,13 @@ class CatalogController {
 				content.exercises().stream().map(ExerciseView::of).toList(), resources,
 				index > 0 ? available.get(index - 1).id() : null,
 				index < available.size() - 1 ? available.get(index + 1).id() : null,
-				improveUrl(ref.course().manifest().source().repository(), ref.lesson().sourcePath()));
+				improveUrl(ref.course().manifest().source().repository(), ref.lesson().sourcePath()),
+				// The first module of a phase comes back from the challenges of the phase before it.
+				index > 0 && !available.get(index - 1).phaseId().equals(ref.lesson().phaseId())
+					? challenges(ref.course(), available.get(index - 1).phaseId()) : null,
+				// The last available module of a phase leads to its challenges.
+				index == available.size() - 1 || !available.get(index + 1).phaseId().equals(ref.lesson().phaseId())
+					? challenges(ref.course(), ref.lesson().phaseId()) : null);
 	}
 
 	@GetMapping(path = "/api/courses/{courseId}/stages", produces = MediaType.APPLICATION_JSON_VALUE)

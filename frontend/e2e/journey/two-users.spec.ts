@@ -372,6 +372,9 @@ test('two learners keep separate progress across a backend restart, without cros
     await expect(pageA.locator('.lesson-body').getByRole('link', { name: 'repositorio', exact: true }))
       .toHaveAttribute('href', '/documents/ejemplo-destino.glosario#repositorio')
 
+    // The last module of the phase: the pager leads to the challenges, not to the next lesson (H8).
+    await expect(pageA.locator('.pager-next')).toHaveText(/Retos de la fase 01/)
+    await expect(pageA.locator('.pager-next')).toHaveAttribute('href', '/documents/ejemplo.fase.primeros-pasos.retos')
     // The challenges of the phase have their own page (H8, T3): the lesson's «Siguiente» leads to them, the way back too.
     await pageA.locator('.lesson-body').getByRole('link', { name: 'Siguiente: Retos de la fase' }).click()
     await expect(pageA).toHaveURL(/\/documents\/ejemplo\.fase\.primeros-pasos\.retos$/)

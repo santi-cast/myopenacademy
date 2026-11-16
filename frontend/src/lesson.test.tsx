@@ -1,9 +1,9 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseStateResult, LessonStateResult } from './api/types'
-import { ana, apiCalls, counts, error, installFakeBackend, notAddedProgress, type Reply } from './test/fakeBackend'
+import { ana, apiCalls, counts, error, installFakeBackend, javaCourse, javaPhases, notAddedProgress, type Reply } from './test/fakeBackend'
 import {
-  BODY_CODE, BODY_DIAGRAMS, BODY_LINKS, BROKEN_MERMAID_SOURCE, MERMAID_SOURCE, addedProgress, lessonView, routeLesson,
+  BODY_CODE, BODY_DIAGRAMS, BODY_LINKS, BROKEN_MERMAID_SOURCE, MERMAID_SOURCE, addedProgress, lessonView, lessonsWithNext, routeLesson,
 } from './test/lessonFixtures'
 import { renderApp } from './test/renderApp'
 
@@ -112,6 +112,20 @@ describe('lesson HTML as delivered', () => {
     expect(card).not.toBeNull()
     expect(within(card!).getByRole('heading', { name: '¿Qué main se ejecuta?' })).toBeVisible()
     expect(document.getElementById('java-02.01-e01')).not.toBeNull()
+  })
+})
+
+describe('the challenges between two phases (H8)', () => {
+  it('the last module of a phase leads to «Retos de la fase NN» instead of the next lesson', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    routeLesson(backend, lessonView({ nextDocumentId: 'java.fase.fundamentos.retos' }))
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases: javaPhases, lessons: lessonsWithNext,
+      documents: [{ id: 'java.fase.fundamentos.retos', courseId: 'java', kind: 'retos', title: 'Retos', phaseId: javaPhases[1].id }] } })
+    renderApp('/lessons/java-02.01')
+    const pager = await screen.findByRole('navigation', { name: 'Lecciones anterior y siguiente' })
+    const next = await within(pager).findByRole('link', { name: /Siguiente →/ })
+    expect(next).toHaveAttribute('href', '/documents/java.fase.fundamentos.retos')
+    expect(next).toHaveTextContent('Retos de la fase 02')
   })
 })
 
