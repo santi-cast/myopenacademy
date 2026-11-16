@@ -21,7 +21,7 @@ Pruebas: `./mvnw -B verify` en `backend/`; `npm run test -- --run`, `npm run lin
 
 ## Tareas
 
-T1 | A1 | Roles en la base, seguridad por rol, `--create-admin` por consola y usuarios desactivados | pendiente.
+T1 | A1 | Roles en la base, seguridad por rol, `--create-admin` por consola y usuarios desactivados | hecho: L2.
 T2 | A2 | API de administración: ajustes (registro, nombre), usuarios (listar, desactivar, reactivar, restablecer contraseña) y cursos instalados | pendiente.
 T3 | A2 | Pantallas del panel | pendiente.
 T4 | A3 | Perfil: cambiar la propia contraseña (API y pantalla) | pendiente.
@@ -30,3 +30,5 @@ T5 | todos | Documentación, prueba en el navegador y cierre | pendiente.
 ## Registro
 
 L1. 16 de noviembre de 2026: H8 integrada en `main` (`d08a5a5`) y rama borrada; el autor pide seguir con H9. Rama `feat/h9-cuentas-admin` desde `9ae8115`. Decisiones de diseño D1 a D5 propuestas, para la revisión del autor.
+L2. 16 de noviembre de 2026, T1. Migración `V7__roles.sql`: `users.role` (`user` o `admin`, por defecto `user`) y `users.active` (por defecto `true`); las cuentas que ya existían quedan como usuarios activos. La sesión guarda el rol (`AccountPrincipal.role`) y las autoridades `ROLE_USER` y, para un administrador, `ROLE_ADMIN`; `GET /api/me`, el registro y la entrada devuelven `role`. Una cuenta desactivada no entra: con la contraseña correcta responde 403 `ACCOUNT_DISABLED` y, con una incorrecta, el 401 de siempre (no se revela nada más). **Consola** (D1): `java -jar … --create-admin=<usuario>` en una terminal real (sin ella no hace nada, como `--reset-password`, y nunca arranca el servidor web); si el usuario no existe lo crea como administrador pidiendo la contraseña dos veces con la misma regla; si existe, lo hace administrador sin tocar su contraseña y sube su versión de credenciales (sus sesiones se cierran y la siguiente entrada ya es de administrador); si ya lo era, no cambia nada. Textos de la consola de `--reset-password` en tuteo («Ejecútala», «Repite»). Las dos pruebas de migración comparan ahora los datos de antes sin las columnas nuevas y comprueban aparte que todas las cuentas quedan como usuarios activos. Pruebas nuevas: `CreateAdminCommandTest` (crear, ascender y cerrar sesiones, ya administrador, sin terminal, usuario no válido, contraseñas distintas o cortas, cuenta desactivada). `./mvnw -B -o verify`: 786 pruebas en verde.
+

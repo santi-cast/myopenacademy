@@ -92,7 +92,7 @@ class PhaseMigrationTest {
 		assertThat(jdbc.queryForList(
 				"select id, course_id, title, position, available, source_available from code_academy.lessons order by id"))
 			.isEqualTo(lessons);
-		assertThat(progressSnapshot()).isEqualTo(progress);
+		assertThat(TestDatabase.withoutAccountRoles(progressSnapshot())).isEqualTo(progress);
 		assertThat(legacyEnrollmentsSnapshot()).isEqualTo(enrollments);
 		assertThat(jdbc.queryForList("select last_opened_stage_id from code_academy.enrollments order by id",
 				String.class)).hasSize(enrollments.size()).containsOnlyNulls();

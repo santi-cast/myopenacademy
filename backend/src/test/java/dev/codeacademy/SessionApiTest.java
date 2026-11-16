@@ -53,7 +53,7 @@ class SessionApiTest {
 
 		assertThat(login.statusCode()).as(login.body()).isEqualTo(200);
 		var user = json(login);
-		assertThat(user.propertyNames()).containsExactlyInAnyOrder("id", "username");
+		assertThat(user.propertyNames()).containsExactlyInAnyOrder("id", "username", "role");
 		assertThat(user.path("username").asString()).isEqualTo(username);
 		String setCookie = login.headers().allValues("Set-Cookie").stream()
 				.filter(value -> value.startsWith("JSESSIONID=")).findFirst().orElseThrow();

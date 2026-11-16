@@ -11,6 +11,6 @@ class MeController {
 	/** The security chain has already checked the credentials version against the database. */
 	@GetMapping(path = "/api/me", produces = MediaType.APPLICATION_JSON_VALUE)
 	UserView me(@AuthenticationPrincipal AccountPrincipal principal) {
-		return new UserView(principal.id().toString(), principal.username());
+		return new UserView(principal.id().toString(), principal.username(), principal.role());
 	}
 }

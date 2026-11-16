@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 public class PasswordResetCommand {
 
 	static final String NO_TERMINAL = "Esta herramienta necesita una terminal interactiva para pedir la contraseña "
-			+ "sin mostrarla. Ejecutala con java -jar desde una terminal. No se cambió nada.";
+			+ "sin mostrarla. Ejecútala con java -jar desde una terminal. No se cambió nada.";
 	static final String UNKNOWN_USER = "No existe el usuario indicado. No se cambió nada.";
 	static final String NO_INPUT = "No se recibió la contraseña. No se cambió nada.";
 	static final String MISMATCH = "Las contraseñas no coinciden. No se cambió nada.";
@@ -26,7 +26,7 @@ public class PasswordResetCommand {
 			+ "en su próxima solicitud.";
 
 	private static final String PROMPT = "Nueva contraseña: ";
-	private static final String CONFIRMATION_PROMPT = "Repetí la nueva contraseña: ";
+	private static final String CONFIRMATION_PROMPT = "Repite la nueva contraseña: ";
 
 	private final AccountRepository accounts;
 	private final PasswordEncoder passwordEncoder;

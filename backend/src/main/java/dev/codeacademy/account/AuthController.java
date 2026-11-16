@@ -57,7 +57,8 @@ class AuthController {
 		List<String> fields = StrictJson.strings(body, "username", "password");
 		Account account = login.authenticate(fields.get(0), fields.get(1));
 		Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
-				AccountPrincipal.of(account), null, AuthorityUtils.NO_AUTHORITIES);
+				AccountPrincipal.of(account), null, AuthorityUtils.createAuthorityList(
+					account.admin() ? new String[] { "ROLE_USER", "ROLE_ADMIN" } : new String[] { "ROLE_USER" }));
 		sessionStrategy.onAuthentication(authentication, request, response);
 		SecurityContext context = contextHolder.createEmptyContext();
 		context.setAuthentication(authentication);

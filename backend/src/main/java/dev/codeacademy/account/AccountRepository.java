@@ -24,4 +24,12 @@ interface AccountRepository extends JpaRepository<Account, UUID> {
 			update Account a set a.passwordHash = :passwordHash, a.credentialsVersion = a.credentialsVersion + 1
 			where a.usernameCanonical = :usernameCanonical""")
 	int replacePassword(String usernameCanonical, String passwordHash);
+
+	/** Console promotion (H9): the role changes with the next credentials version, so open sessions take it again. */
+	@Transactional
+	@Modifying(clearAutomatically = true)
+	@Query("""
+			update Account a set a.role = 'admin', a.credentialsVersion = a.credentialsVersion + 1
+			where a.usernameCanonical = :usernameCanonical""")
+	int promoteToAdmin(String usernameCanonical);
 }
