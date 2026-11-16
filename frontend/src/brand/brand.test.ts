@@ -1,7 +1,11 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_NAME } from '../instance/instance'
 import brand from './brand.json'
+
+// Read from disk as styles.test.ts does: the module name is a variable, so the app's TypeScript needs no Node types.
+type Fs = { readFileSync: (path: string, encoding: 'utf8') => string }
+const NODE_FS = 'node:fs'
+const { readFileSync } = (await import(/* @vite-ignore */ NODE_FS)) as Fs
 
 // H10: the name and the logo live in src/brand/brand.json and nowhere else.
 describe('brand in one place', () => {

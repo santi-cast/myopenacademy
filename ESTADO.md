@@ -36,7 +36,7 @@ Lo que ya existe en los otros proyectos:
 
 **H9 aprobada por el autor e integrada en `main`** (`f042a55`, 16 de noviembre de 2026): roles, administrador por consola (`--create-admin`), cuentas desactivadas, panel de administración, contraseñas temporales, «Mi perfil» y «MyOpenAcademy» como nombre por defecto. Detalle en `odd/tasks/h9-cuentas-admin.md`.
 
-**Siguiente: H10, instalación** (`PLAN.md`): variables de entorno, un solo comando, red local y marca (nombre y logo en un solo sitio). La guía de instalación avisará de cerrar el registro si la academia se publica en internet (decisión del autor sobre D4 de H9).
+**H10 en marcha** (16 de noviembre de 2026) en la rama `feat/h10-instalacion`: tareas y registro en `odd/tasks/h10-instalacion.md`. **Hechas T1 a T5** (variables de entorno y base en el `5434`, el backend sirve el frontend compilado, imagen y Compose con un solo comando, aviso de HTTP en la red, nombre y logo en un solo sitio, guía `docs/instalacion.md`). **Falta la revisión del autor**, con las decisiones D1 a D4 y dos puntos abiertos (instalar cursos sin Java en el equipo; arrancar sin cursos).
 
 **Preguntas abiertas para el autor:**
 
@@ -185,6 +185,7 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-09 | `PLAN.md` reescrito con el autor: hitos H6 a H11 hasta el pack base 1.0, con la lista de cambios de la prueba de importación y lo que faltaba del plan común. |
 | 2026-11-09 | H7, T1, T4 (salvo la etiqueta) y T4b: cursos de ejemplo del kit, importador por `curso.json` y comparación por curso con retítulos permitidos. |
 | 2026-11-09 | H7, T3 y T3b: pruebas con los cursos de ejemplo instalados por el importador real, `content/` fuera de Git y orden de «Mis cursos» igual con cualquier intercalación. |
+| 2026-11-16 | H10, T1 a T5 hechas en `feat/h10-instalacion`, a falta de la revisión del autor. |
 | 2026-11-16 | **H9 aprobada por el autor e integrada en `main`** (`f042a55`): cuentas y administración. |
 | 2026-11-16 | **H8 aprobada por el autor e integrada en `main`** (`d08a5a5`): contenido según el formato. |
 | 2026-11-16 | **H7 aprobada por el autor e integrada en `main`**: cursos como DLC (importador por `curso.json`, etiquetas, catálogo con recomendaciones, lista de cursos instalados). |
