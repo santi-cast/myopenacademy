@@ -79,6 +79,10 @@ Requisitos, configuración y arranque en local: [`docs/desarrollo-local.md`](doc
 - [Frontend](frontend/README.md) y [licencias de las dependencias](docs/licencias.md).
 - [Plan e hitos](PLAN.md).
 
+## Cómo se ha hecho
+
+La academia se ha escrito con ayuda de asistentes de IA, por hitos y con pruebas en cada uno. Cada decisión y cada cambio los ha revisado y aprobado el autor antes de integrarlos. El registro del trabajo está en el propio repositorio: las reglas en [`CLAUDE.md`](CLAUDE.md), el plan en [`PLAN.md`](PLAN.md), el estado y las decisiones en [`ESTADO.md`](ESTADO.md) y las tareas de cada hito, con sus pruebas, en [`odd/tasks/`](odd/tasks/).
+
 ## Contribuir y licencia
 
 Toda ayuda cuenta: lee [`CONTRIBUTING.md`](CONTRIBUTING.md). Si encuentras una errata en una lección, usa «Mejorar esta lección», que lleva al repositorio del curso.
