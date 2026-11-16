@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { errorMessage } from '../api/errors'
 import { useSession, useUser } from '../session/session'
 
@@ -59,6 +60,7 @@ export function UserMenu() {
       </button>
       <div className="menu" id={menuId} hidden={!open}>
         <p className="menu-who">Sesión iniciada como <strong>{user.username}</strong></p>
+        <Link className="menu-item" to="/profile" onClick={() => setOpen(false)}>Mi perfil</Link>
         <button type="button" className="menu-item" onClick={logout} disabled={busy}>Cerrar sesión</button>
         {failure && <p className="form-error" role="alert">{failure}</p>}
       </div>

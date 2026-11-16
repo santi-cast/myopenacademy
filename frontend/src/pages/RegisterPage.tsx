@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { apiSend } from '../api/client'
 import { errorMessage } from '../api/errors'
 import { ApiError } from '../api/client'
+import { useInstance } from '../instance/instance'
 
 const USERNAME = /^[A-Za-z0-9_]{3,32}$/
 
@@ -15,6 +16,7 @@ function policyError(username: string, password: string): string | null {
 }
 
 export function RegisterPage() {
+  const instance = useInstance()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -37,6 +39,16 @@ export function RegisterPage() {
     }
   }
 
+  // Closed by the administrator (H9): no form, only how to get an account.
+  if (instance?.registrationOpen === false) {
+    return (
+      <section className="auth-card" aria-labelledby="register-title">
+        <h1 id="register-title">Crear una cuenta</h1>
+        <p>El registro está cerrado en esta academia. Pide una cuenta a quien la administra.</p>
+        <p className="auth-alt">¿Ya tienes cuenta? <Link to="/login">Iniciar sesión</Link></p>
+      </section>
+    )
+  }
   return (
     <section className="auth-card" aria-labelledby="register-title">
       <h1 id="register-title">Crear una cuenta</h1>
@@ -66,7 +78,7 @@ export function RegisterPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <p className="field-hint" id="register-password-hint">Entre 15 y 128 caracteres. Podés usar espacios y frases.</p>
+          <p className="field-hint" id="register-password-hint">Entre 15 y 128 caracteres. Puedes usar espacios y frases.</p>
         </div>
         {failure && <p className="form-error" role="alert">{failure}</p>}
         <button type="submit" className="btn" disabled={busy}>Crear cuenta</button>

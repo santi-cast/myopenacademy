@@ -3,9 +3,11 @@ import { Link, useLocation } from 'react-router'
 import { apiSend } from '../api/client'
 import { errorMessage } from '../api/errors'
 import type { User } from '../api/types'
+import { useInstance } from '../instance/instance'
 import { useSession } from '../session/session'
 
 export function LoginPage() {
+  const instance = useInstance()
   const { state, signedIn } = useSession()
   const location = useLocation()
   const [username, setUsername] = useState('')
@@ -63,7 +65,9 @@ export function LoginPage() {
         {failure && <p className="form-error" role="alert">{failure}</p>}
         <button type="submit" className="btn" disabled={busy}>Iniciar sesión</button>
       </form>
-      <p className="auth-alt">¿No tienes cuenta? <Link to="/register">Crear una cuenta</Link></p>
+      {instance?.registrationOpen !== false
+        ? <p className="auth-alt">¿No tienes cuenta? <Link to="/register">Crear una cuenta</Link></p>
+        : <p className="auth-alt">El registro está cerrado. Pide una cuenta a quien administra la academia.</p>}
       <p className="auth-help">
         ¿Olvidaste la contraseña? No hay recuperación por la web: se restablece desde una consola local con la herramienta --reset-password del backend (ver «Recuperar una contraseña» en docs/desarrollo-local.md).
       </p>

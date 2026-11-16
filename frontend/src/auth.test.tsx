@@ -115,7 +115,7 @@ describe('registration', () => {
   it.each([
     ['USERNAME_TAKEN', error(409, 'USERNAME_TAKEN'), 'Ese nombre de usuario ya está en uso. Elige otro.'],
     ['INVALID_USERNAME', error(400, 'INVALID_USERNAME'), 'El usuario debe tener entre 3 y 32 caracteres: letras sin acentos, números o guion bajo.'],
-    ['INVALID_PASSWORD', error(400, 'INVALID_PASSWORD'), 'La contraseña debe tener entre 15 y 128 caracteres. Podés usar espacios y frases.'],
+    ['INVALID_PASSWORD', error(400, 'INVALID_PASSWORD'), 'La contraseña debe tener entre 15 y 128 caracteres. Puedes usar espacios y frases.'],
     ['CSRF_REJECTED', error(403, 'CSRF_REJECTED'), CSRF],
     ['NOT_ACCEPTABLE', error(406, 'NOT_ACCEPTABLE'), GENERIC],
     ['INTERNAL_ERROR', error(500, 'INTERNAL_ERROR'), GENERIC],
@@ -264,7 +264,8 @@ describe('session and CSRF across login and logout', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Iniciar sesión' })).toBeVisible()
     expect(screen.queryByText(/Tu sesión terminó/)).not.toBeInTheDocument()
-    expect(apiCalls(backend)).toEqual(['GET /api/me'])
+    // The login page also reads the public view of the academy (H9): its name and whether registration is open.
+    expect(apiCalls(backend)).toEqual(['GET /api/me', 'GET /api/instance'])
   })
 
   it('the register screen stays reachable without a session', async () => {

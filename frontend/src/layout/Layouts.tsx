@@ -1,13 +1,18 @@
+import { useEffect } from 'react'
 import { Link, NavLink, Navigate, Outlet } from 'react-router'
+import { instanceName, useInstance } from '../instance/instance'
 import { ThemeToggle } from '../theme/ThemeToggle'
 import { useSession } from '../session/session'
 import { UserMenu } from './UserMenu'
 
+// The academy's name: the one its administrator set (H9), or the default. The tab title follows it.
 function Brand() {
+  const name = instanceName(useInstance())
+  useEffect(() => { document.title = name }, [name])
   return (
     <Link className="brand" to="/">
       <span className="brand-mark" aria-hidden="true">{'{ }'}</span>
-      <span>Code Academy</span>
+      <span>{name}</span>
     </Link>
   )
 }
@@ -54,6 +59,7 @@ export function PrivateLayout() {
         <nav className="mainnav" aria-label="Principal">
           <NavLink to="/" end>Mis cursos</NavLink>
           <NavLink to="/courses" end>Catálogo</NavLink>
+          {state.user.role === 'admin' && <NavLink to="/admin" end>Administración</NavLink>}
         </nav>
         <div className="tools">
           <ThemeToggle />

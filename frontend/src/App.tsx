@@ -1,11 +1,13 @@
 import { Route, Routes } from 'react-router'
 import { PrivateLayout, PublicLayout } from './layout/Layouts'
+import { AdminPage } from './pages/AdminPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { CourseIndexPage } from './pages/CourseIndexPage'
 import { LessonPage } from './pages/LessonPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyCoursesPage } from './pages/MyCoursesPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { RegisterPage } from './pages/RegisterPage'
 import { ProjectPage } from './pages/ProjectPage'
 import { DocumentPage } from './pages/DocumentPage'
@@ -30,6 +32,8 @@ function App() {
           <Route path="/courses/:courseId/project" element={<ProjectPage />} />
           <Route path="/stages/:stageId" element={<StagePage />} />
           <Route path="/documents/:documentId" element={<DocumentPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
