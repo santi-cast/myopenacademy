@@ -31,6 +31,21 @@ public class Account {
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
+	/** "user" or "admin" (H9). */
+	@Column(nullable = false, length = 16)
+	private String role;
+
+	/** A deactivated account cannot sign in and keeps its progress (H9). */
+	@Column(nullable = false)
+	private boolean active;
+
+	/** Set by an administrator's reset: the user must choose a new password before anything else (H9, D3). */
+	@Column(name = "must_change_password", nullable = false)
+	private boolean mustChangePassword;
+
+	public static final String USER = "user";
+	public static final String ADMIN = "admin";
+
 	protected Account() {
 	}
 
@@ -41,6 +56,13 @@ public class Account {
 		this.passwordHash = passwordHash;
 		this.credentialsVersion = 1;
 		this.createdAt = Instant.now();
+		this.role = USER;
+		this.active = true;
+	}
+
+	Account(String username, String passwordHash, String role) {
+		this(username, passwordHash);
+		this.role = role;
 	}
 
 	/** Usernames are ASCII by contract, so the root locale gives the same lower case as PostgreSQL. */
@@ -62,5 +84,25 @@ public class Account {
 
 	public long credentialsVersion() {
 		return credentialsVersion;
+	}
+
+	public String role() {
+		return role;
+	}
+
+	public boolean admin() {
+		return ADMIN.equals(role);
+	}
+
+	public boolean active() {
+		return active;
+	}
+
+	public boolean mustChangePassword() {
+		return mustChangePassword;
+	}
+
+	public Instant createdAt() {
+		return createdAt;
 	}
 }

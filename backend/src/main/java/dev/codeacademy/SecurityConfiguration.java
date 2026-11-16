@@ -59,6 +59,8 @@ class SecurityConfiguration {
 						.logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
 				.requestCache(AbstractHttpConfigurer::disable)
 				.addFilterAfter(new CredentialsVersionFilter(credentials), LogoutFilter.class)
+				// After the version check: a stale session is already gone; a temporary password limits a current one.
+				.addFilterAfter(new PasswordChangeRequiredFilter(), CredentialsVersionFilter.class)
 				.exceptionHandling(exceptions -> exceptions
 						.authenticationEntryPoint(authenticationRequired)
 						.accessDeniedHandler((request, response, exception) -> {
@@ -72,7 +74,12 @@ class SecurityConfiguration {
 				.authorizeHttpRequests(requests -> requests
 						// Only the container's error forward; a direct request to /error is still denied.
 						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-						.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+						.requestMatchers(HttpMethod.GET, "/actuator/health", "/api/instance").permitAll()
+						// The administration (H9): only an administrator's session.
+						.requestMatchers(HttpMethod.GET, "/api/admin/settings", "/api/admin/users", "/api/admin/courses")
+								.hasRole("ADMIN")
+						.requestMatchers(HttpMethod.PUT, "/api/admin/settings", "/api/admin/users/*/active",
+								"/api/admin/users/*/password").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/logout")
 								.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/me").authenticated()
@@ -82,7 +89,7 @@ class SecurityConfiguration {
 								"/api/me/courses/*/stage-progress").authenticated()
 						.requestMatchers(HttpMethod.PUT, "/api/me/courses/*", "/api/me/courses/*/continuation",
 								"/api/me/lessons/*/state", "/api/me/exercises/*/state", "/api/me/stages/*/state",
-								"/api/me/courses/*/stage-continuation").authenticated()
+								"/api/me/courses/*/stage-continuation", "/api/me/password").authenticated()
 						.anyRequest().denyAll())
 				.build();
 	}

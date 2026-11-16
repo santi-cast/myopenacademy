@@ -73,7 +73,7 @@ class PasswordResetCommandTest {
 				"Contraseña actualizada. Las sesiones abiertas de este usuario se cerrarán en su próxima solicitud."
 						+ NL);
 		assertThat(result.err()).isEmpty();
-		assertThat(terminal.prompts).containsExactly("Nueva contraseña: ", "Repetí la nueva contraseña: ");
+		assertThat(terminal.prompts).containsExactly("Nueva contraseña: ", "Repite la nueva contraseña: ");
 		terminal.assertWiped();
 
 		Map<String, Object> after = row();
@@ -153,7 +153,7 @@ class PasswordResetCommandTest {
 		assertThat(result.exit()).isEqualTo(1);
 		assertThat(result.out()).isEmpty();
 		assertThat(result.err()).isEqualTo("Esta herramienta necesita una terminal interactiva para pedir la "
-				+ "contraseña sin mostrarla. Ejecutala con java -jar desde una terminal. No se cambió nada." + NL);
+				+ "contraseña sin mostrarla. Ejecútala con java -jar desde una terminal. No se cambió nada." + NL);
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);
 	}
 

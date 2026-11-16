@@ -34,7 +34,7 @@ Lo que ya existe en los otros proyectos:
 
 **H8 aprobada por el autor e integrada en `main`** (`d08a5a5`, 16 de noviembre de 2026): cabecera del módulo con un campo por línea, «Mejorar esta lección», retos y glosario con su página (y el «Siguiente» del último módulo de cada fase a sus retos), proyecto desde `curso.json` y enlaces entre cursos. Detalle en `odd/tasks/h8-contenido-formato.md`.
 
-**Siguiente: H9, cuentas y administración** (`PLAN.md`): roles, administrador creado por consola, panel y perfil.
+**H9 en marcha** (16 de noviembre de 2026) en la rama `feat/h9-cuentas-admin`: tareas y registro en `odd/tasks/h9-cuentas-admin.md`. **Hechas T1 a T5** (roles y cuentas desactivadas, `--create-admin` por consola, API y panel de administración, perfil con cambio de contraseña, registro cerrado y nombre de la academia). **Falta la revisión del autor en el navegador**, con las decisiones de diseño D1 a D5 del fichero de tareas.
 
 **Preguntas abiertas para el autor:**
 
@@ -183,6 +183,7 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-09 | `PLAN.md` reescrito con el autor: hitos H6 a H11 hasta el pack base 1.0, con la lista de cambios de la prueba de importación y lo que faltaba del plan común. |
 | 2026-11-09 | H7, T1, T4 (salvo la etiqueta) y T4b: cursos de ejemplo del kit, importador por `curso.json` y comparación por curso con retítulos permitidos. |
 | 2026-11-09 | H7, T3 y T3b: pruebas con los cursos de ejemplo instalados por el importador real, `content/` fuera de Git y orden de «Mis cursos» igual con cualquier intercalación. |
+| 2026-11-16 | H9, T1 a T5 hechas en `feat/h9-cuentas-admin`, a falta de la revisión del autor. |
 | 2026-11-16 | **H8 aprobada por el autor e integrada en `main`** (`d08a5a5`): contenido según el formato. |
 | 2026-11-16 | **H7 aprobada por el autor e integrada en `main`**: cursos como DLC (importador por `curso.json`, etiquetas, catálogo con recomendaciones, lista de cursos instalados). |
 | 2026-11-16 | Orden de «Mis cursos» y del catálogo: primero el curso inicial y después por título (decisiones del autor). |

@@ -26,7 +26,7 @@ export function LessonPage() {
       return (
         <div className="page">
           <h1>Esta lección todavía no está disponible.</h1>
-          <p>Podés verla en el índice del curso, pero todavía no se puede abrir.</p>
+          <p>Puedes verla en el índice del curso, pero todavía no se puede abrir.</p>
           <p><Link to="/">Volver a Mis cursos</Link></p>
         </div>
       )

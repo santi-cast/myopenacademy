@@ -31,7 +31,13 @@ class LoginService {
 				? accounts.findByUsernameCanonical(Account.canonical(username))
 				: Optional.empty();
 		if (account.isPresent()) {
-			if (passwordEncoder.matches(password, account.get().passwordHash())) return account.get();
+			if (passwordEncoder.matches(password, account.get().passwordHash())) {
+				// Only after the right password: a deactivated account says so, and nothing else is revealed (H9).
+				if (!account.get().active()) {
+					throw new ApiException(HttpStatus.FORBIDDEN, "ACCOUNT_DISABLED", "This account is disabled.");
+				}
+				return account.get();
+			}
 		}
 		else {
 			passwordEncoder.matches(wellFormed ? password : PLACEHOLDER, dummyHash);

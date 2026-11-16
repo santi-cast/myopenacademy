@@ -102,7 +102,8 @@ class StageMigrationTest {
 				StageTestSupport.stageContinuation(marked.path("continuation"), null);
 				assertThat(ok(progress(first, "demo"))).isEqualTo(h4Before);
 				assertThat(StageTestSupport.personal(second)).isEqualTo(secondBefore);
-				assertThat(TestDatabase.snapshot(jdbc, "users", "courses", "phases", "lessons", "exercises", "lesson_states", "exercise_states")).isEqualTo(legacy);
+				assertThat(TestDatabase.withoutAccountRoles(TestDatabase.snapshot(jdbc, "users", "courses", "phases", "lessons", "exercises", "lesson_states", "exercise_states"))).isEqualTo(legacy);
+				assertThat(jdbc.queryForList("select distinct role || ' ' || active from code_academy.users", String.class)).containsExactly("user true");
 				ok(StageTestSupport.open(first, "demo", FIRST));
 				firstSaved = StageTestSupport.personal(first);
 				secondSaved = StageTestSupport.personal(second);

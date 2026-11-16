@@ -49,7 +49,8 @@ class RegistrationApiTest {
 		assertThat(response.statusCode()).isEqualTo(201);
 		assertThat(response.headers().firstValue("Content-Type").orElse("")).startsWith("application/json");
 		var body = json(response);
-		assertThat(body.propertyNames()).containsExactlyInAnyOrder("id", "username");
+		assertThat(body.propertyNames()).containsExactlyInAnyOrder("id", "username", "role", "mustChangePassword");
+		assertThat(body.path("role").asString()).isEqualTo("user");
 		assertThat(body.path("username").asString()).isEqualTo(username);
 		assertThat(UUID.fromString(body.path("id").asString())).isNotNull();
 

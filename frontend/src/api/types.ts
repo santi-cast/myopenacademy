@@ -1,6 +1,12 @@
 // Response shapes from docs/api.md («Formas reutilizables de salida»).
 
-export type User = { id: string; username: string }
+// mustChangePassword (H9, D3): the password an administrator set is temporary; the user chooses a new one first.
+export type User = { id: string; username: string; role?: 'user' | 'admin'; mustChangePassword?: boolean }
+// What anyone may know about this academy (H9): its name (null: the default) and whether registration is open.
+export type Instance = { name: string | null; registrationOpen: boolean }
+export type AdminSettings = { registrationOpen: boolean; instanceName: string | null }
+export type AdminUser = { id: string; username: string; role: 'user' | 'admin'; active: boolean; createdAt: string; mustChangePassword?: boolean }
+export type InstalledCourse = { id: string; title: string; version: string | null; tag: string | null; commit: string; repository: string | null }
 
 export type Counts = {
   completedLessons: number

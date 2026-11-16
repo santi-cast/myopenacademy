@@ -14,7 +14,7 @@ Los nombres de formas siguientes son abreviaturas documentales, no envoltorios a
 
 | Forma | Campos JSON y significado |
 |---|---|
-| User | `id`, `username` (nombre visible conservado). |
+| User | `id`, `username` (nombre visible conservado), `role` (`user` o `admin`; H9) y `mustChangePassword` (H9: la contraseña la puso un administrador y es temporal). |
 | Counts | `completedLessons`, `availableLessons`, `plannedLessons`, `percentage`: cifras calculadas dinámicamente desde el catálogo y los estados, nunca constantes. Porcentaje 0–100 sin redondeo contractual; null si no hay disponibles. |
 | Course | `id`, `title`. En el catálogo (`GET /api/courses` y `GET /api/courses/{courseId}`), además `description` (la `descripcion` de `curso.json`, o `null`) y `recommended`: los cursos de su `conviene_saber_antes`, en orden, como `{ "id", "title" }`, con `title` solo si ese curso está instalado (si no, `null`). Son recomendaciones: nada se bloquea (H7, T6). |
 | Phase | `id`, `title`, `position` (campos añadidos en H4): fase del curso con ID permanente y título literal del índice del curso de origen. `position` empieza en 1 y ordena las fases. |
@@ -33,10 +33,12 @@ Sin cuerpo de entrada salvo el indicado; arrays vacíos válidos. El cliente usa
 
 | Ruta base | Entrada JSON | HTTP y salida |
 |---|---|---|
-| POST /api/auth/register | `{ "username": "Alumno", "password": "una frase extensa" }` | 201, User; no inicia sesión, UI pasa a login. |
+| POST /api/auth/register | `{ "username": "Alumno", "password": "una frase extensa" }` | 201, User; no inicia sesión, UI pasa a login. Con el registro cerrado por el administrador, 403 `REGISTRATION_CLOSED` sin comprobar ni crear nada (H9). |
 | POST /api/auth/login | Campos `username` y `password`; política de acceso indicada abajo, no el mínimo del registro | 200, User y cookie de sesión rotada. |
 | POST /api/auth/logout | Sin cuerpo | 204, sin cuerpo; invalida sesión y limpia cookie. |
 | GET /api/me | — | 200, User. |
+| PUT /api/me/password | `{ "currentPassword", "newPassword" }` | 200, User (H9). Con la actual equivocada, 400 `WRONG_PASSWORD`; la nueva sigue la regla del registro (400 `INVALID_PASSWORD`) y tiene que ser distinta de la actual (400 `SAME_PASSWORD`); deja de ser temporal. Las demás sesiones del usuario se cierran; esta se renueva y sigue abierta. |
+| GET /api/instance | — | 200, `{ "name": string o null, "registrationOpen": boolean }`, **sin sesión** (H9): el nombre que ha puesto el administrador (null: el de siempre) y si el registro está abierto. |
 | GET /api/courses | — | 200, `{ "courses": Course[] }`, en el mismo orden que «Mis cursos»: primero el curso inicial (`code-academy.first-course`) y después por título (decisión del autor, 16 de noviembre de 2026). |
 | GET /api/courses/{courseId} | — | 200, `{ "course": Course, "phases": Phase[], "lessons": LessonEntry[], "documents": DocumentEntry[], "project": Project o null }`, temario completo ordenado: fases por `position` y lecciones por `position`; las lecciones de cada fase son consecutivas y siguen el orden de las fases. `documents` (H8): los documentos sin seguimiento, `{ "id", "courseId", "kind", "title", "phaseId" }`, con los retos de cada fase (`kind` `retos`, en el orden de las fases) y el glosario (`kind` `glosario`, `phaseId` null) al final. `project` (H8): `{ "kind": "etapas" o "modulo", "title", "lessonId" }` (`lessonId`, el módulo que es el proyecto, solo en `modulo`). |
 | GET /api/documents/{documentId} | — | 200, `{ "document": DocumentEntry, "bodyHtml": string, "resources": Resource[] }` (H8): un documento sin seguimiento, sin estado que marcar; 404 si no existe. |
@@ -207,3 +209,17 @@ La resolución parte del documento fuente y de `sourceToId`, como en H4; imágen
 PNG/JPEG registrados para imagen admiten `Content-Disposition: inline` con nombres seguros y tipo validado; los demás recursos mantienen `attachment`, incluidos ZIP y SVG con CSP `sandbox`. Las imágenes SVG solo se usan en contexto `img`, nunca como HTML/SVG insertado en el DOM ni `object`/`iframe`; su visualización autenticada se comprobó en Chromium sin relajar el sandbox. Sin imágenes externas, `data:`, scripts ni manejadores. Todos conservan `nosniff`, `Cache-Control: private, no-store`, comprobación canónica de archivo sin symlinks al servir y acceso por ID. Los ZIP se entregan como `application/zip`, `attachment`, con el nombre original de carpeta más `.zip` codificado por el mismo helper seguro de los otros archivos. Se entregan ya generados y validados desde la copia controlada, nunca desde el origen ni por recorrido dinámico de directorios.
 
 Importar/actualizar no es una operación HTTP ni de estudio: véase el [límite offline de comparación y aplicación](actualizacion-contenido.md).
+
+## Administración (H9)
+
+Solo con la sesión de un administrador (`role` `admin`): un usuario recibe 403 `ACCESS_DENIED` y, sin sesión, 401. El administrador se crea por consola (`--create-admin`, [desarrollo local](desarrollo-local.md)); nunca hay usuario ni contraseña por defecto. Una cuenta desactivada no puede entrar: con la contraseña correcta, la entrada responde 403 `ACCOUNT_DISABLED`; con una incorrecta, el 401 de siempre.
+
+| Método y ruta | Cuerpo | Respuesta |
+|---|---|---|
+| GET /api/admin/settings | — | 200, `{ "registrationOpen", "instanceName" }`. |
+| PUT /api/admin/settings | `{ "registrationOpen": boolean, "instanceName": string o null }` | 200, los ajustes guardados. El nombre se recorta, vacío vuelve a null y admite hasta 80 caracteres sin caracteres de control (si no, 400 `INVALID_INSTANCE_NAME`). |
+| GET /api/admin/users | — | 200, `{ "users": [{ "id", "username", "role", "active", "createdAt", "mustChangePassword" }] }`, por nombre. |
+| PUT /api/admin/users/{id}/active | `{ "active": boolean }` | 200, el usuario. Desactivar cierra sus sesiones y conserva su progreso; se puede reactivar. Nadie se desactiva a sí mismo (409 `CANNOT_DEACTIVATE_SELF`) ni al último administrador activo (409 `LAST_ADMIN`); 404 `USER_NOT_FOUND`. |
+| PUT /api/admin/users/{id}/password | `{ "password" }` | 200, el usuario. La regla del registro (400 `INVALID_PASSWORD`); cierra sus sesiones. Es una contraseña **temporal** (decisión del autor): al entrar con ella, la sesión solo puede pedir `GET /api/me`, cambiar la contraseña (`PUT /api/me/password`) o salir; todo lo demás responde 403 `PASSWORD_CHANGE_REQUIRED`, así que el administrador nunca conoce la definitiva. La academia no envía correos: el administrador se la pasa por su cuenta. |
+| GET /api/admin/courses | — | 200, `{ "courses": [{ "id", "title", "version", "tag", "commit", "repository" }] }`: los cursos instalados, solo para verlos (se instalan por consola). |
+
