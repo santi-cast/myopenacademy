@@ -23,9 +23,25 @@ class LocalEnvironmentConfigurationTest {
 			assertThat(context).hasNotFailed();
 			var environment = context.getEnvironment();
 			assertThat(environment.getRequiredProperty("spring.datasource.url"))
-					.isEqualTo("jdbc:postgresql://127.0.0.1:5433/fixture_database");
+					.isEqualTo("jdbc:postgresql://127.0.0.1:5434/fixture_database");
 			assertThat(environment.getRequiredProperty("spring.datasource.username")).isEqualTo("fixture_user");
 			assertThat(environment.getRequiredProperty("spring.datasource.password")).isEqualTo("fixture_only");
+		});
+	}
+
+	/** H10: everything that changes between installations comes from the environment (.env.example). */
+	@Test
+	void theInstallationIsConfiguredOnlyWithVariables() throws Exception {
+		Path fixture = fixture("DB_NAME=academia\nDB_USERNAME=academia\nDB_PASSWORD=fixture_only\nDB_HOST=db\nDB_PORT=5432\n"
+				+ "APP_ADDRESS=0.0.0.0\nAPP_PORT=9090\nPUBLIC_URL=http://mi-equipo.local:9090\nCONTENT_DIR=/content\n");
+		runner(fixture, true).run(context -> {
+			assertThat(context).hasNotFailed();
+			var environment = context.getEnvironment();
+			assertThat(environment.getRequiredProperty("spring.datasource.url")).isEqualTo("jdbc:postgresql://db:5432/academia");
+			assertThat(environment.getRequiredProperty("server.address")).isEqualTo("0.0.0.0");
+			assertThat(environment.getRequiredProperty("server.port")).isEqualTo("9090");
+			assertThat(environment.getRequiredProperty("code-academy.public-url")).isEqualTo("http://mi-equipo.local:9090");
+			assertThat(environment.getRequiredProperty("code-academy.content-dir")).isEqualTo("/content");
 		});
 	}
 
@@ -56,7 +72,7 @@ class LocalEnvironmentConfigurationTest {
 			assertThat(context).hasNotFailed();
 			assertThat(context.getEnvironment().getActiveProfiles()).doesNotContain("local");
 			assertThat(context.getEnvironment().getProperty("spring.datasource.url"))
-					.isEqualTo("jdbc:postgresql://127.0.0.1:5433/code_academy");
+					.isEqualTo("jdbc:postgresql://127.0.0.1:5434/code_academy");
 		});
 	}
 

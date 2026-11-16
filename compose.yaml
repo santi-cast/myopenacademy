@@ -8,7 +8,8 @@ services:
       POSTGRES_USER: ${DB_USERNAME:-code_academy}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Set a nonempty DB_PASSWORD in your local environment}
     ports:
-      - "127.0.0.1:5433:5432"
+      # 5434 by default (DB_PORT), never the 5433 of the original Code Academy; only this machine.
+      - "127.0.0.1:${DB_PORT:-5434}:5432"
     volumes:
       # PostgreSQL 18 stores versioned PGDATA beneath /var/lib/postgresql.
       - postgres_data:/var/lib/postgresql

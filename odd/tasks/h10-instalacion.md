@@ -21,7 +21,7 @@ Pruebas: `./mvnw -B verify` en `backend/`; `npm run test -- --run`, `npm run lin
 
 ## Tareas
 
-T1 | A1 | Variables de entorno y `.env.example` | pendiente.
+T1 | A1 | Variables de entorno y `.env.example` | hecho: L2.
 T2 | A2 | El backend sirve el frontend compilado, con los identificadores con punto | pendiente.
 T3 | A2, A3 | Imagen de la aplicación y Compose con un solo comando; red local | pendiente.
 T4 | A4 | Nombre y logo en un solo sitio | pendiente.
@@ -30,3 +30,5 @@ T5 | A5 | Guía de instalación, prueba de verdad con Compose y cierre | pendien
 ## Registro
 
 L1. 16 de noviembre de 2026: H9 integrada en `main` (`f042a55`) y rama borrada; el autor pide seguir con H10. Rama `feat/h10-instalacion` desde `3f856b7`. Decisiones de diseño D1 a D4 propuestas, para la revisión del autor.
+L2. 16 de noviembre de 2026, T1. `application.properties` toma del entorno la dirección y el puerto de escucha (`APP_ADDRESS`, `APP_PORT`), la base (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`), la carpeta de contenido (`CONTENT_DIR`) y la dirección pública (`PUBLIC_URL`, nueva: `code-academy.public-url`). Valores por defecto para usarla solo en este equipo: `127.0.0.1`, `8080`, la base en `127.0.0.1:5434` y `../content`. **El puerto de la base pasa de `5433` a `5434`** (en la aplicación, en `compose.yaml` con `DB_PORT` y en `docs/desarrollo-local.md`), así que ya no choca con el Code Academy original. `DB_NAME` y `DB_USERNAME` siguen por defecto en `code_academy`, para no romper el `.env` que ya hay. `.env.example` reescrito y explicado línea a línea (también `APP_BIND` para Compose, en T3). Vite toma el puerto del backend de `APP_PORT`. Pruebas: `LocalEnvironmentConfigurationTest.theInstallationIsConfiguredOnlyWithVariables` (todas las variables mandan) y las de valores por defecto, al `5434`. `./mvnw -B -o verify`: 794 pruebas en verde. **Para el autor:** el aviso de `CLAUDE.md` sobre el `5433` y el proyecto `code-academy` ya no es cierto (Compose se llama `myopenacademy` desde H6 y el puerto es el `5434`); propongo actualizarlo.
+

@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config'
 
 // Backend behind the dev proxy. The journey E2E points it at its own disposable backend; the
 // value is read here in Node only and never reaches the client bundle (no VITE_ prefix).
-const backendUrl = process.env.CODE_ACADEMY_BACKEND_URL ?? 'http://127.0.0.1:8080'
+const backendUrl = process.env.CODE_ACADEMY_BACKEND_URL ?? `http://127.0.0.1:${process.env.APP_PORT ?? '8080'}`
 
 export default defineConfig({
   plugins: [react()],

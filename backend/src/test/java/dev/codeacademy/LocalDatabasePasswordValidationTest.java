@@ -51,7 +51,7 @@ class LocalDatabasePasswordValidationTest {
 			var properties = context.getBean(DataSourceProperties.class);
 			assertThat(properties.determinePassword()).isEqualTo("fixture_only");
 			assertThat(properties.determineUsername()).isEqualTo("fixture_user");
-			assertThat(properties.determineUrl()).isEqualTo("jdbc:postgresql://127.0.0.1:5433/fixture_database");
+			assertThat(properties.determineUrl()).isEqualTo("jdbc:postgresql://127.0.0.1:5434/fixture_database");
 			assertThat(created).isTrue();
 		});
 	}
