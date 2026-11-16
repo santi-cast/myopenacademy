@@ -56,13 +56,17 @@ class ProgressApiTest extends ProgressTestSupport {
 	 * The stored catalog gets two extra courses for this test only, as a later import could add them.
 	 */
 	@Test
-	void myCoursesFollowTheIdsByteByByteWhateverTheCollation() throws Exception {
+	void myCoursesListTheFirstCourseAndThenTheOthersByTitle() throws Exception {
+		// Author's decision (16 November 2026): first the configured first course (code-academy.first-course, «inicial»),
+		// then by title as Spanish sorts it (Á with A, whatever the database collation), and by ID when titles tie.
 		var browser = learner();
 		String user = userId(browser);
-		List<String> ids = List.of("javascript", "java-web");
+		Map<String, String> titles = Map.of("javascript", "Ábaco", "java-web", "Álgebra y Java", "inicial", "Zeta: el curso base",
+				"b-igual", "Mismo título", "a-igual", "Mismo título");
+		List<String> ids = List.copyOf(titles.keySet());
 		try {
 			for (String id : ids) {
-				jdbc.update("insert into code_academy.courses (id, title) values (?, ?)", id, "Curso " + id);
+				jdbc.update("insert into code_academy.courses (id, title) values (?, ?)", id, titles.get(id));
 				jdbc.update("insert into code_academy.enrollments (user_id, course_id, created_at) values (?::uuid, ?, now())",
 						user, id);
 			}
@@ -70,7 +74,7 @@ class ProgressApiTest extends ProgressTestSupport {
 			List<String> listed = new java.util.ArrayList<>();
 			courses.forEach(course -> listed.add(course.path("course").path("id").asString()));
 
-			assertThat(listed).containsExactly("java-web", "javascript");
+			assertThat(listed).containsExactly("inicial", "javascript", "java-web", "a-igual", "b-igual");
 		}
 		finally {
 			for (String id : ids) {
@@ -81,7 +85,7 @@ class ProgressApiTest extends ProgressTestSupport {
 	}
 
 	@Test
-	void myCoursesListsOnlyAddedCoursesInIdOrder() throws Exception {
+	void myCoursesListsOnlyAddedCoursesByTitle() throws Exception {
 		var browser = learner();
 		var before = snapshot();
 		JsonNode empty = ok(browser.get("/api/me/courses"));
@@ -96,14 +100,15 @@ class ProgressApiTest extends ProgressTestSupport {
 		JsonNode courses = ok(browser.get("/api/me/courses")).path("courses");
 
 		assertThat(courses.size()).isEqualTo(2);
-		JsonNode demo = courses.get(0);
+		// «Curso de ejemplo» before «Demo»: by title.
+		JsonNode demo = courses.get(1);
 		assertThat(demo.propertyNames()).containsExactlyInAnyOrder("course", "enrollment");
 		assertThat(demo.path("course").propertyNames()).containsExactlyInAnyOrder("id", "title");
 		assertThat(demo.path("course").path("id").asString()).isEqualTo("demo");
 		assertThat(demo.path("course").path("title").asString()).isEqualTo("Demo");
 		assertEnrollment(demo.path("enrollment"), "demo", null);
 		assertCounts(demo.path("enrollment").path("progress"), 0, 2, 3, 0.0);
-		JsonNode ejemplo = courses.get(1);
+		JsonNode ejemplo = courses.get(0);
 		assertThat(ejemplo.path("course").path("id").asString()).isEqualTo(EJEMPLO);
 		assertThat(ejemplo.path("course").path("title").asString()).isEqualTo("Curso de ejemplo");
 		assertEnrollment(ejemplo.path("enrollment"), EJEMPLO, EJEMPLO_LESSON);
