@@ -2,11 +2,8 @@ package dev.codeacademy.progress;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.Collator;
 import java.time.OffsetDateTime;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,6 +15,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import dev.codeacademy.api.ApiException;
+import dev.codeacademy.catalog.CourseOrder;
 import dev.codeacademy.progress.ProgressViews.Continuation;
 import dev.codeacademy.progress.ProgressViews.Counts;
 import dev.codeacademy.progress.ProgressViews.CourseView;
@@ -73,9 +71,8 @@ class ProgressService {
 	}
 
 	/**
-	 * One snapshot for the whole answer, so counts and continuation never mix two moments. Order (author's decision,
-	 * 16 November 2026): first the configured first course ({@code code-academy.first-course}), then the others by title
-	 * as Spanish sorts it, and by ID byte by byte when two titles are equal. Sorted here, never by the database collation.
+	 * One snapshot for the whole answer, so counts and continuation never mix two moments. In {@link CourseOrder}, the
+	 * same order as the catalog.
 	 */
 	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	MyCourses courses(UUID user) {
@@ -89,11 +86,9 @@ class ProgressService {
 			return new MyCourse(new CourseView(row.getString("id"), row.getString("title")),
 					enrollment(row.getString("id"), enrollment));
 		}, user);
-		Collator spanish = Collator.getInstance(Locale.forLanguageTag("es-ES"));
-		Comparator<MyCourse> order = Comparator.comparing((MyCourse course) -> !course.course().id().equals(firstCourse))
-			.thenComparing(course -> course.course().title(), spanish)
-			.thenComparing(course -> course.course().id());
-		return new MyCourses(courses.stream().sorted(order).toList());
+		return new MyCourses(courses.stream()
+			.sorted(CourseOrder.of(firstCourse, (MyCourse course) -> course.course().id(), course -> course.course().title()))
+			.toList());
 	}
 
 	/** Explicit add: an enrollment with an empty continuation; repeating it changes nothing. */

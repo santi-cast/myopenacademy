@@ -7,6 +7,7 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -99,15 +100,18 @@ class CatalogController {
 	private static final Logger log = LoggerFactory.getLogger(CatalogController.class);
 
 	private final Catalog catalog;
+	private final String firstCourse;
 
-	CatalogController(Catalog catalog) {
+	CatalogController(Catalog catalog, @Value("${code-academy.first-course:}") String firstCourse) {
 		this.catalog = catalog;
+		this.firstCourse = firstCourse;
 	}
 
 	@GetMapping(path = "/api/courses", produces = MediaType.APPLICATION_JSON_VALUE)
 	CoursesView courses() {
+		// The same order as «Mis cursos» (CourseOrder).
 		return new CoursesView(catalog.courses().stream().map(course -> view(course.manifest().course()))
-				.toList());
+				.sorted(CourseOrder.of(firstCourse, CourseView::id, CourseView::title)).toList());
 	}
 
 	@GetMapping(path = "/api/courses/{courseId}", produces = MediaType.APPLICATION_JSON_VALUE)

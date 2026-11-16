@@ -27,7 +27,7 @@ class CatalogRecommendationsTest {
 		data.withObject("course").putArray("recommended").add("ejemplo").add("inicial");
 		Files.writeString(manifest, json.writeValueAsString(data));
 
-		CatalogController controller = new CatalogController(Catalog.load(root));
+		CatalogController controller = new CatalogController(Catalog.load(root), "inicial");
 		CatalogController.CourseView destino = controller.courses().courses().stream()
 			.filter(course -> course.id().equals("ejemplo-destino")).findFirst().orElseThrow();
 		assertThat(destino.description())

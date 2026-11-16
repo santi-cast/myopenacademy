@@ -37,7 +37,7 @@ Sin cuerpo de entrada salvo el indicado; arrays vacíos válidos. El cliente usa
 | POST /api/auth/login | Campos `username` y `password`; política de acceso indicada abajo, no el mínimo del registro | 200, User y cookie de sesión rotada. |
 | POST /api/auth/logout | Sin cuerpo | 204, sin cuerpo; invalida sesión y limpia cookie. |
 | GET /api/me | — | 200, User. |
-| GET /api/courses | — | 200, `{ "courses": Course[] }`. |
+| GET /api/courses | — | 200, `{ "courses": Course[] }`, en el mismo orden que «Mis cursos»: primero el curso inicial (`code-academy.first-course`) y después por título (decisión del autor, 16 de noviembre de 2026). |
 | GET /api/courses/{courseId} | — | 200, `{ "course": Course, "phases": Phase[], "lessons": LessonEntry[] }`, temario completo ordenado: fases por `position` y lecciones por `position`; las lecciones de cada fase son consecutivas y siguen el orden de las fases. |
 | GET /api/lessons/{lessonId} | — | 200, `{ "lesson": LessonEntry, "bodyHtml": string, "exercises": Exercise[], "resources": Resource[], "previousLessonId": ID o null, "nextLessonId": ID o null }`; vecinos disponibles del mismo curso. |
 | GET /api/resources/{resourceId} | — | 200, bytes con tipo seguro del recurso, no JSON; HTML solo descarga/texto escapado y SVG con sandbox según política de contenido. Solo recursos del manifiesto cuyo único propietario (lección o etapa) está disponible; el resto, 404. El encabezado `Accept` no la bloquea. |
