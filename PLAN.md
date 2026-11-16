@@ -2,7 +2,7 @@
 
 > Plan de la plataforma de **MyOpenAcademy**, reescrito con el autor el 9 de noviembre de 2026 tras la prueba de importación de la fase 1 del curso inicial. Se suma al plan común (`../PLAN.md`, sobre todo los apartados 7, 8.5 y 8.6) y al contrato de los cursos (`../Cursos/kit-cursos/FORMATO.md`). Dónde estamos: [`ESTADO.md`](ESTADO.md).
 
-**Estado:** H1 a H5 cerrados (de Code Academy) y **H7 cerrado** (cursos como DLC, 16 de noviembre de 2026). **Siguiente: H8, contenido según el formato.** H6 (uso real) va en paralelo, de forma continua. Sin remotos hasta publicar.
+**Estado:** H1 a H5 cerrados (de Code Academy) y **H7 y H8 cerrados** (cursos como DLC y contenido según el formato, 16 de noviembre de 2026). **Siguiente: H9, cuentas y administración.** H6 (uso real) va en paralelo, de forma continua. Sin remotos hasta publicar.
 
 ## 1. Qué es
 
@@ -42,8 +42,8 @@ Los números de la columna «Cambios» son los de la lista de `ESTADO.md` («Lis
 | H5. Contenido disponible | Cerrado (`1333ed8`) | Curso de Java entero, etapas, recursos y actualización comparada | — | — | (Code Academy) |
 | **H6. Uso real** | Continuo | El autor estudia y anota lo que encuentra; se revisa al empezar cada hito y tiene prioridad sobre lo nuevo | 23 | Tiempo del autor | No queda ningún problema que bloquee el 1.0 |
 | **H7. Cursos como DLC** | Cerrado (`140c9ba`) | Importador nuevo que lee `curso.json` | 1, 2, 3, 4, 5, 8, 13 | ~7 días | La fase 1 del inicial y el curso de ejemplo se instalan desde `../Cursos/…` con su etiqueta; `content/java/` sale del repositorio; las pruebas pasan |
-| **H8. Contenido según el formato** | Siguiente | Lo que el formato pide mostrar | 6, 7, 9, 10, 11 | ~3,5 días | Retos, glosario, enlaces entre cursos, proyecto y «Mejorar esta lección» se ven en el navegador y el autor da el visto bueno |
-| **H9. Cuentas y administración** | Pendiente | Roles, panel de administración y perfil | 14, 15, 16 | ~4 días | Un administrador creado por consola gestiona el registro, los usuarios y el nombre de la instancia; un usuario cambia su contraseña |
+| **H8. Contenido según el formato** | Cerrado (`d08a5a5`) | Lo que el formato pide mostrar | 6, 7, 9, 10, 11 | ~3,5 días | Retos, glosario, enlaces entre cursos, proyecto y «Mejorar esta lección» se ven en el navegador y el autor da el visto bueno |
+| **H9. Cuentas y administración** | Siguiente | Roles, panel de administración y perfil | 14, 15, 16 | ~4 días | Un administrador creado por consola gestiona el registro, los usuarios y el nombre de la instancia; un usuario cambia su contraseña |
 | **H10. Instalación** | Pendiente | Variables de entorno, un comando, red local y marca | 17, 18, 19, 20 | ~4,5 días | Con un comando arranca en la máquina del autor y se usa desde otro dispositivo de casa; nada de la máquina escrito en el código |
 | **H11. Pack base 1.0** | Pendiente | Publicación en GitHub | 21, 22 y el curso inicial completo con su etiqueta | ~2 días | `santi-cast/myopenacademy` publicado con su versión y *release* |
 

@@ -32,7 +32,9 @@ Lo que ya existe en los otros proyectos:
 8. ~~T8~~ **Hecho** (L22): documentación al día, interfaz en tuteo y prueba en el navegador con el curso inicial (`ed6c0b7`).
 9. ~~Revisión del autor~~ **H7 aprobada e integrada en `main`** (16 de noviembre de 2026, L26), con dos retoques de texto («Todavía no has añadido ningún curso», «0 de 1 disponible»).
 
-**H8 en marcha** (16 de noviembre de 2026) en la rama `feat/h8-contenido-formato`: tareas y registro en `odd/tasks/h8-contenido-formato.md`. **Hechas T1 a T6** (cabecera con un campo por línea, «Mejorar esta lección», retos y glosario como documentos sin seguimiento, proyecto desde `curso.json`, enlaces entre cursos, documentación y prueba en el navegador con el curso inicial). **Falta la revisión del autor en el navegador**; la copia de revisión está en `backend/target/revision/`.
+**H8 aprobada por el autor e integrada en `main`** (`d08a5a5`, 16 de noviembre de 2026): cabecera del módulo con un campo por línea, «Mejorar esta lección», retos y glosario con su página (y el «Siguiente» del último módulo de cada fase a sus retos), proyecto desde `curso.json` y enlaces entre cursos. Detalle en `odd/tasks/h8-contenido-formato.md`.
+
+**Siguiente: H9, cuentas y administración** (`PLAN.md`): roles, administrador creado por consola, panel y perfil.
 
 **Preguntas abiertas para el autor:**
 
@@ -181,7 +183,7 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-09 | `PLAN.md` reescrito con el autor: hitos H6 a H11 hasta el pack base 1.0, con la lista de cambios de la prueba de importación y lo que faltaba del plan común. |
 | 2026-11-09 | H7, T1, T4 (salvo la etiqueta) y T4b: cursos de ejemplo del kit, importador por `curso.json` y comparación por curso con retítulos permitidos. |
 | 2026-11-09 | H7, T3 y T3b: pruebas con los cursos de ejemplo instalados por el importador real, `content/` fuera de Git y orden de «Mis cursos» igual con cualquier intercalación. |
-| 2026-11-16 | H8, T1 a T6 hechas en `feat/h8-contenido-formato`, a falta de la revisión del autor. |
+| 2026-11-16 | **H8 aprobada por el autor e integrada en `main`** (`d08a5a5`): contenido según el formato. |
 | 2026-11-16 | **H7 aprobada por el autor e integrada en `main`**: cursos como DLC (importador por `curso.json`, etiquetas, catálogo con recomendaciones, lista de cursos instalados). |
 | 2026-11-16 | Orden de «Mis cursos» y del catálogo: primero el curso inicial y después por título (decisiones del autor). |
 | 2026-11-16 | Enlaces de correo como texto (aviso sin bloquear) y prueba de instalación del curso inicial desde `9f55661`, fases 1 a 5: 0 hallazgos, todo byte a byte. |
