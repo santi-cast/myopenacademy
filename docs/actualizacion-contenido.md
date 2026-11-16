@@ -13,7 +13,7 @@ sh backend/content-import generate --active /srv/academy/content --source /srv/s
 ```
 
 - `--active DIR` es la raíz de la copia aceptada: su manifiesto es el mapa permanente de identidad (IDs, títulos, posiciones, fases, ejercicios, recursos, rutas locales y bytes ya importados) y se valida completo antes de generar.
-- `--source GIT` es el repositorio de origen. Lo que se instala es **una de estas dos cosas** (nunca las dos):
+- `--source GIT` es el repositorio de origen; puede ser una ruta relativa y subir con `..` (`--source ../Cursos/curso-inicial`), porque solo se lee: se normaliza y después pasa las mismas comprobaciones (sin enlaces simbólicos, sin nombres protegidos, sin solaparse con las demás rutas). Las rutas que se escriben (`--active`, `--output`, `--report` y `--candidate`) siguen sin admitir `..`. Lo que se instala es **una de estas dos cosas** (nunca las dos):
   - `--tag vX.Y.Z`, la etiqueta de una versión publicada (`FORMATO.md` 11.1; la forma normal de instalar un curso). Se busca solo entre las etiquetas (`refs/tags/`, ligera o anotada, nunca una rama con ese nombre) y se resuelve a su commit; la `version` de `curso.json` en ese commit tiene que ser la de la etiqueta (`v2.1.0` → `"version": "2.1.0"`), o es un hallazgo. El manifiesto guarda el commit (`source.versionRef`), la etiqueta (`source.versionTag`) y la versión (`source.courseVersion`), y el informe, `tag` y `commit`.
   - `--commit SHA`, un commit completo de 40 caracteres hexadecimales (para probar contenido sin publicar). El manifiesto guarda el commit y la versión de `curso.json`, sin etiqueta.
 

@@ -474,6 +474,15 @@ class ContentUpdateCliTest {
         assertThat(snapshot(temp)).isEqualTo(before);
     }
 
+    @Test void theSourceMayBeRelativeAndClimbWithDotDot() throws Exception {
+        // Only the source, which is only read, may climb with ..; the other paths stay strict (H7, T5).
+        Path relative = Path.of("").toAbsolutePath().relativize(source);
+        assertThat(cli("compare", "--active", active.root.toString(), "--candidate", candidate.root.toString(),
+            "--source", relative.toString(), "--report", report.toString()))
+            .isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+        assertThat(JSON.readTree(Files.readString(report)).path("source").asString()).isEqualTo(source.toString());
+    }
+
     @Test void lexicalEscapeAndCandidateClaimOfComplementAreRejected() throws Exception {
         assertThat(cli("compare", "--active", active.root.resolve("..").resolve("content").toString(),
             "--candidate", candidate.root.toString(), "--source", source.toString(), "--report", report.toString()))

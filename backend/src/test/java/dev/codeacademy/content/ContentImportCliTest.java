@@ -239,6 +239,31 @@ class ContentImportCliTest {
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
 	}
 
+	@Test void theSourceMayBeRelativeAndClimbWithDotDot() throws Exception {
+		// The common plan keeps the courses beside the academy (../Cursos/curso-inicial): the source is only read, so
+		// it is normalized and then checked like any other path (H7, T5).
+		Path relative = Path.of("").toAbsolutePath().relativize(source);
+		assertThat(relative.toString()).startsWith("..");
+		assertThat(generate("--source", relative.toString()).code()).isZero();
+		assertThat(JSON.readTree(Files.readString(report)).path("source").asString()).isEqualTo(source.toString());
+	}
+
+	@Test void aNormalizedSourceIsStillCheckedAndWrittenPathsStayStrict() throws Exception {
+		Path link = Files.createSymbolicLink(temp.resolve("enlace"), source);
+		assertThat(generate("--source", temp.resolve("otra/../enlace").toString()))
+			.isEqualTo(new Result(2, "", "content-import: symbolic links are not allowed\n"));
+		Files.createDirectory(temp.resolve(".env.local"));
+		assertThat(generate("--source", temp.resolve("otra/../.env.local").toString()))
+			.isEqualTo(new Result(2, "", "content-import: protected paths are not allowed\n"));
+		assertThat(generate("--source", output.resolve("../source.git").toString(), "--output",
+				temp.resolve("x/../candidate").toString()))
+			.isEqualTo(new Result(2, "", "content-import: path escapes are not allowed\n"));
+		assertThat(generate("--source", active.root.resolve("demo/..").toString()))
+			.isEqualTo(new Result(2, "", "content-import: paths must not overlap\n"));
+		assertThat(Files.exists(output)).isFalse();
+		assertThat(Files.exists(link)).isTrue();
+	}
+
 	@Test void aVersionTagIsResolvedToItsCommitAndBothAreRecorded() throws Exception {
 		// FORMATO.md 11.1: what the academy installs is the tag of a published version (H7, A5).
 		git(null, "tag", "v1.0.0", commit);

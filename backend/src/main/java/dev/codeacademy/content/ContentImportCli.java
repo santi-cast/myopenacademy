@@ -48,7 +48,7 @@ public final class ContentImportCli {
 		}
 		// Exactly one of --commit and --tag: five options in all, each once.
 		if (options.containsKey("--commit") == options.containsKey("--tag")) throw invalid();
-		Path source = ContentUpdateCli.checked(Path.of(options.get("--source")));
+		Path source = ContentUpdateCli.checkedSource(Path.of(options.get("--source")));
 		String tag = options.get("--tag");
 		String commit = options.get("--commit");
 		if (tag != null) {
