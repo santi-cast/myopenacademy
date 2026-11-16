@@ -50,15 +50,20 @@ class AuthController {
 		return UserView.of(registration.register(fields.get(0), fields.get(1)));
 	}
 
+	/** The session's authentication: the account and its role (H9). */
+	static Authentication authentication(Account account) {
+		return UsernamePasswordAuthenticationToken.authenticated(AccountPrincipal.of(account), null,
+				AuthorityUtils.createAuthorityList(account.admin()
+						? new String[] { "ROLE_USER", "ROLE_ADMIN" } : new String[] { "ROLE_USER" }));
+	}
+
 	/** Rotates the session ID and renews the CSRF token before storing the new security context. */
 	@PostMapping("/login")
 	UserView login(@RequestBody(required = false) JsonNode body, HttpServletRequest request,
 			HttpServletResponse response) {
 		List<String> fields = StrictJson.strings(body, "username", "password");
 		Account account = login.authenticate(fields.get(0), fields.get(1));
-		Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
-				AccountPrincipal.of(account), null, AuthorityUtils.createAuthorityList(
-					account.admin() ? new String[] { "ROLE_USER", "ROLE_ADMIN" } : new String[] { "ROLE_USER" }));
+		Authentication authentication = authentication(account);
 		sessionStrategy.onAuthentication(authentication, request, response);
 		SecurityContext context = contextHolder.createEmptyContext();
 		context.setAuthentication(authentication);

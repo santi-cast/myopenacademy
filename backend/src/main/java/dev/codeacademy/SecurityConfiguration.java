@@ -87,7 +87,7 @@ class SecurityConfiguration {
 								"/api/me/courses/*/stage-progress").authenticated()
 						.requestMatchers(HttpMethod.PUT, "/api/me/courses/*", "/api/me/courses/*/continuation",
 								"/api/me/lessons/*/state", "/api/me/exercises/*/state", "/api/me/stages/*/state",
-								"/api/me/courses/*/stage-continuation").authenticated()
+								"/api/me/courses/*/stage-continuation", "/api/me/password").authenticated()
 						.anyRequest().denyAll())
 				.build();
 	}
