@@ -13,7 +13,7 @@
 Lo que ya existe en los otros proyectos:
 
 - **Contrato de formato:** `../Cursos/kit-cursos/FORMATO.md`, versión 1 (identidad en `curso.json`, enlaces entre cursos, retos, preguntas de repaso, versiones y equivalencias…).
-- **Kit:** `formato_academia.py`, `generar_indice.py`, `generar_chuleta_global.py`, `comprobar_mermaid.py` (Mermaid 12.2.0, la misma biblioteca que usa este frontend) y el verificador de código.
+- **Kit:** `formato_academia.py`, `generar_indice.py`, `generar_chuleta_global.py`, `comprobar_mermaid.py` (Mermaid 12.2.0; el frontend usa la 12.3.0 desde el 16 de noviembre de 2026 y el kit tiene que pasarse a la misma) y el verificador de código.
 - **Curso inicial:** fase 1 escrita, revisada y **aprobada por el autor** (4 módulos y sus retos), con su `curso.json`.
 
 ## Siguiente paso
@@ -174,7 +174,9 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 | Otros esperan de la academia | Qué | Para | Estado |
 |---|---|---|---|
 | Kit y curso inicial | La lista de lo que no encaje del formato | Ajustar `FORMATO.md` antes de publicar | **Hecho** (9 de noviembre de 2026): nada que cambiar; la academia aceptará los identificadores con punto tal cual |
-| Curso inicial | Un importador que lea `curso.json` | Instalarse en la academia (pack base 1.0) | Pendiente: cambios 2 a 8 y 10 de la lista de la prueba de importación |
+| Curso inicial | Un importador que lea `curso.json` | Instalarse en la academia (pack base 1.0) | **Hecho** (H7 y H8). Prueba del curso entero desde `06d4d03` (16 de noviembre de 2026, H11 L5 y L6): se instala tal cual, sin hallazgos ni avisos, tras importar `ROADMAP.md` y `99-chuleta-global.md` como documentos. Falta la instalación desde `v1.0.0` |
+| Kit | La versión de Mermaid de la academia, para `comprobar_mermaid.py` | Que el kit compruebe los diagramas con la misma biblioteca | **Mermaid 12.3.0** desde `4b688f0` (16 de noviembre de 2026, H11 T5); avisado |
+| Kit y curso inicial | Que la academia importe `ROADMAP.md`, `RUTA-MINIMA.md` y `99-chuleta-global.md` (`FORMATO.md` 4) | Que 07.01 y otros enlaces del curso funcionen | **Hecho** en `4be1b6b` (16 de noviembre de 2026): documentos de todo el curso, con página, anclas y enlace en el índice. Nada que cambiar en el formato ni en el curso |
 | Kit | Que la academia dibuje las listas de tareas de Markdown, para quitar su aviso | Después del pack base 1.0 (`PLAN.md`, apartado 5) | Pendiente: cuando esté, avisar al kit |
 
 Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
