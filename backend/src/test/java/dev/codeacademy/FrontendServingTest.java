@@ -58,6 +58,11 @@ class FrontendServingTest {
 		assertThat(script.body()).isEqualTo("console.log('academia')");
 		// A missing file is a 404, never the page; the API keeps its own answers.
 		assertThat(browser.get("/assets/no-existe.js").statusCode()).isEqualTo(404);
+		// Anything that looks like a file and does not exist is a 404, never the page; a path without one gets it.
+		for (String missing : new String[] { "/favicon.ico", "/robots.txt", "/no-existe.png", "/carpeta/fichero.pdf" }) {
+			assertThat(browser.get(missing).statusCode()).as(missing).isEqualTo(404);
+		}
+		assertThat(browser.get("/no-existe").statusCode()).isEqualTo(200);
 		assertThat(browser.get("/api/courses").statusCode()).isEqualTo(401);
 		assertThat(browser.get("/api/no-existe").statusCode()).isNotEqualTo(200);
 		// Only GET reaches the frontend: anything else to a page is refused.

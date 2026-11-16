@@ -72,7 +72,7 @@ class LocalEnvironmentConfigurationTest {
 			assertThat(context).hasNotFailed();
 			assertThat(context.getEnvironment().getActiveProfiles()).doesNotContain("local");
 			assertThat(context.getEnvironment().getProperty("spring.datasource.url"))
-					.isEqualTo("jdbc:postgresql://127.0.0.1:5434/code_academy");
+					.isEqualTo("jdbc:postgresql://127.0.0.1:5434/myopenacademy");
 		});
 	}
 

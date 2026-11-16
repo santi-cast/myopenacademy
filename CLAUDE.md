@@ -18,7 +18,7 @@ Se creó el 8 de noviembre de 2026 **clonando Code Academy con su historial** (h
 
 ## Reglas de este proyecto
 
-- **⚠️ Antes de arrancar nada con Docker:** el `compose.yaml` heredado se llama `code-academy` y publica el puerto `5433`, igual que el original. Arrancarlo tal cual **usaría los contenedores y el volumen de datos del Code Academy original**. Primero se cambia el nombre del proyecto de Compose (y, si hace falta, el puerto) y se crea un `.env` propio. Nunca se leen ni se usan el `.env` ni la base de datos del original.
+- **⚠️ Docker:** el proyecto de Compose se llama `myopenacademy` y la base se publica en el `5434` (desde H10; el Code Academy original usa `code-academy` y el `5433`), con su propio `.env`, así que no comparten contenedores, volumen ni puerto. Nunca se leen ni se usan el `.env` ni la base del original. Las pruebas de instalación, siempre en un proyecto de Compose aparte (`-p …`, con su `--env-file`) y desmontado después; nunca `down -v` sobre `myopenacademy`.
 - **Manda la academia, pero el contrato vive en el kit.** `FORMATO.md` recoge lo que la academia necesita; si la academia necesita cambiarlo, se propone al autor y lo aplica la sesión del kit (`../Cursos/kit-cursos/`). Esta sesión no lo edita.
 - **Ningún curso escrito en el código:** el catálogo, las recomendaciones y los roadmaps salen del contenido instalado (`curso.json` de cada curso).
 - **La identidad la guarda el curso** (`curso.json`): el importador deja de inventar identificadores y los lee del curso. Ver «Decisiones del paso 0» en `../ESTADO.md`.

@@ -6,9 +6,8 @@ Esta guía instala la academia en un equipo con **Docker** y la deja lista para 
 
 ## 1. Lo que hace falta
 
-- Docker con Compose, con el motor en marcha.
-- Para instalar cursos, de momento, **Java 25** en el equipo (las herramientas de instalación se ejecutan fuera de los contenedores; ver el apartado 5).
-- Los repositorios de los cursos al lado de la academia (`../Cursos/curso-inicial`…).
+- Docker con Compose, con el motor en marcha. Nada más: ni Java ni Node en el equipo.
+- Los repositorios de los cursos que quieras instalar, en una carpeta (por defecto `../Cursos`, al lado de la academia: `../Cursos/curso-inicial`…; `CURSOS_DIR` en `.env`).
 
 ## 2. Configurar
 
@@ -27,6 +26,8 @@ Abre `.env` y pon una **contraseña larga para la base** en `DB_PASSWORD` (sin c
 | `PUBLIC_URL` | La dirección con la que se entra, por ejemplo `http://192.168.1.50:8080`. |
 | `CONTENT_HOST_DIR` | La carpeta con los cursos instalados (`./content`). |
 | `DB_PORT` | El puerto de la base en este equipo (5434, que no choca con el 5433 del Code Academy original). |
+| `CURSOS_DIR` | La carpeta con los repositorios de los cursos (`../Cursos`). |
+| `HOST_UID`, `HOST_GID` | Tu usuario y tu grupo (en Linux, `id -u` e `id -g`), para que lo que instalan las herramientas sea tuyo. |
 
 No cambies `DB_NAME`, `DB_USERNAME` ni `DB_PASSWORD` después de crear la base: PostgreSQL se queda con los primeros.
 
@@ -38,7 +39,7 @@ docker compose up -d --build
 
 La primera vez construye la aplicación (unos minutos). Después levanta la base y la academia, que sirve las pantallas y la API en un solo puerto. Abre `http://127.0.0.1:8080` (o tu `PUBLIC_URL`). Al arrancar, el registro de la aplicación (`docker compose logs app`) dice dónde está y avisa si se abre a la red sin HTTPS.
 
-**La academia no arranca sin cursos instalados.** Instala al menos uno (apartado 5) antes de abrirla.
+La primera vez no hay ningún curso: la academia arranca igual, avisa en su registro y el catálogo dice que no hay cursos y quién los instala (apartado 5).
 
 ## 4. Crear el administrador
 
@@ -54,18 +55,28 @@ Pide la contraseña dos veces, sin mostrarla. Si el usuario ya existía, pasa a 
 
 ## 5. Instalar y actualizar cursos
 
-Los cursos se instalan por consola, nunca desde la web, con las herramientas del backend. De momento necesitan Java 25 y el JAR construido en este equipo (`cd backend && ./mvnw -DskipTests package`). El recorrido completo está en [instalar y actualizar cursos](actualizacion-contenido.md); en resumen, con la academia **parada** (`docker compose stop app`):
+Los cursos se instalan por consola, nunca desde la web, con las herramientas de la academia, que van en su imagen: no hace falta Java en el equipo. Se ejecutan con `docker compose run --rm herramientas …`, que ve la carpeta de la academia (con `content/`) y, en `/cursos`, la de los repositorios de los cursos. El recorrido completo y lo que comprueba cada paso está en [instalar y actualizar cursos](actualizacion-contenido.md). En resumen, para instalar o actualizar un curso desde **la etiqueta o el commit que quieras instalar**:
 
 ```sh
-sh backend/content-import generate --active content --source ../Cursos/curso-inicial --tag v1.0.0 \
-    --output ../trabajo/candidata --report ../trabajo/generacion.json
-sh backend/content-update compare --active content --candidate ../trabajo/candidata \
-    --source ../Cursos/curso-inicial --report ../trabajo/comparacion.json
-sh backend/content-update apply --active content --candidate ../trabajo/candidata \
-    --source ../Cursos/curso-inicial --report ../trabajo/comparacion.json
-sh backend/content-courses list --active content --output cursos-instalados.json
+# 1. Preparar la copia nueva (no toca la que está en uso). --tag vX.Y.Z para una versión publicada, o --commit con el commit completo.
+docker compose run --rm herramientas content-import generate --active content --source /cursos/curso-inicial \
+    --commit <commit completo> --output trabajo/candidata --report trabajo/generacion.json
+
+# 2. Compararla con la que está en uso y revisar el informe (trabajo/comparacion.json).
+docker compose run --rm herramientas content-update compare --active content --candidate trabajo/candidata \
+    --source /cursos/curso-inicial --report trabajo/comparacion.json
+
+# 3. Parar la aplicación ANTES de aplicar: la instalación sustituye la carpeta content/ entera.
+docker compose stop app
+
+# 4. Aplicar, anotar la lista de cursos instalados y volver a arrancar.
+docker compose run --rm herramientas content-update apply --active content --candidate trabajo/candidata \
+    --source /cursos/curso-inicial --report trabajo/comparacion.json
+docker compose run --rm herramientas content-courses list --active content --output cursos-instalados.json
 docker compose start app
 ```
+
+La copia anterior queda en `content.previous` por si hay que volver atrás; archívala o bórrala tú antes de la siguiente instalación (no se borra sola). `trabajo/`, `content.previous/` y `content.staged/` no van a Git.
 
 ## 6. En la red de casa
 

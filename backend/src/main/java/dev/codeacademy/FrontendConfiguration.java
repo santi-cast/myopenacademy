@@ -34,6 +34,21 @@ class FrontendConfiguration implements WebMvcConfigurer {
 		registry.addViewController("/").setViewName("forward:/index.html");
 	}
 
+	/** The pages whose last part is an identifier, which may have a dot (inicial.markdown) without being a file. */
+	private static final java.util.List<String> ID_ROUTES = java.util.List.of("courses/", "lessons/", "stages/", "documents/");
+
+	/**
+	 * Whether a path that is not a file gets the application: a page of it (its identifiers may have a dot) or any path
+	 * without a file extension (the application shows its own «not found»). Anything else that looks like a file
+	 * (/favicon.ico, /robots.txt, /no-existe.png, /assets/…) and does not exist is a 404, and so are the API and actuator.
+	 */
+	static boolean applicationPage(String path) {
+		if (path.startsWith("api/") || path.startsWith("actuator/") || path.startsWith("assets/")) return false;
+		if (ID_ROUTES.stream().anyMatch(path::startsWith)) return true;
+		String last = path.substring(path.lastIndexOf('/') + 1);
+		return !last.contains(".");
+	}
+
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
 		registry.addResourceHandler("/**")
@@ -44,8 +59,7 @@ class FrontendConfiguration implements WebMvcConfigurer {
 				protected Resource getResource(String resourcePath, Resource location) throws IOException {
 					Resource found = super.getResource(resourcePath, location);
 					if (found != null) return found;
-					if (resourcePath.startsWith("api/") || resourcePath.startsWith("actuator/")
-							|| resourcePath.startsWith("assets/")) return null;
+					if (!applicationPage(resourcePath)) return null;
 					Resource index = location.createRelative("index.html");
 					return index.exists() && index.isReadable() ? index : null;
 				}

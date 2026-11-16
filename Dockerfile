@@ -16,7 +16,16 @@ COPY backend/src ./src
 RUN mvn -B -q -o -DskipTests package
 
 FROM eclipse-temurin:25.0.5_8-jre
+# Git reads the courses (only their objects, never a working tree), for the installation tools; a course folder may
+# belong to another user than the one in the container.
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/* \
+    && git config --system --add safe.directory '*'
 RUN groupadd --system academia && useradd --system --gid academia --home /app academia
+# The installation tools (content-import, content-update, content-courses), as on a machine with Java.
+RUN for tool in content-import:ContentImportCli content-update:ContentUpdateCli content-courses:ContentCoursesCli; do \
+      printf '#!/bin/sh\nexec java -Dloader.main=dev.codeacademy.content.%s -cp /app/myopenacademy.jar org.springframework.boot.loader.launch.PropertiesLauncher "$@"\n' "${tool#*:}" > "/usr/local/bin/${tool%%:*}"; \
+      chmod 755 "/usr/local/bin/${tool%%:*}"; \
+    done
 WORKDIR /app
 COPY --from=backend /build/backend/target/backend-0.0.1-SNAPSHOT.jar /app/myopenacademy.jar
 COPY --from=frontend /build/frontend/dist /app/frontend
