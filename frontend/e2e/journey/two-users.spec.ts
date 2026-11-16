@@ -6,6 +6,7 @@
 import { randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { inflateRawSync } from 'node:zlib'
 import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test'
 
 const controlUrl = process.env.E2E_CONTROL_URL ?? ''
@@ -29,6 +30,26 @@ const PLANNED = manifest.lessons.length
 const AVAILABLE = manifest.lessons.filter((lesson) => lesson.available).length
 
 /** PLAN §3, «Reglas de progreso»: «X de Y lecciones disponibles completadas · P % · Z previstas». */
+// The entries of a ZIP (name and bytes), read from its central directory: stored or deflated, as the academy writes them.
+function zipEntries(zip: Buffer): Map<string, Buffer> {
+  let end = zip.length - 22
+  while (end >= 0 && zip.readUInt32LE(end) !== 0x06054b50) end--
+  const entries = new Map<string, Buffer>()
+  let at = zip.readUInt32LE(end + 16)
+  for (let i = 0; i < zip.readUInt16LE(end + 10); i++) {
+    const method = zip.readUInt16LE(at + 10)
+    const size = zip.readUInt32LE(at + 20)
+    const nameLength = zip.readUInt16LE(at + 28)
+    const name = zip.toString('utf8', at + 46, at + 46 + nameLength)
+    const local = zip.readUInt32LE(at + 42)
+    const start = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28)
+    const raw = zip.subarray(start, start + size)
+    entries.set(name, method === 0 ? Buffer.from(raw) : inflateRawSync(raw))
+    at += 46 + nameLength + zip.readUInt16LE(at + 30) + zip.readUInt16LE(at + 32)
+  }
+  return entries
+}
+
 const progressLine = (completed: number, percentage: number) =>
   `${completed} de ${AVAILABLE} lecciones disponibles completadas · ${percentage}\u00a0% · ${PLANNED} previstas`
 
@@ -337,6 +358,19 @@ test('two learners keep separate progress across a backend restart, without cros
     mkdirSync(downloadDir, { recursive: true })
     await download.saveAs(join(downloadDir, 'contar.sh'))
     expect(readFileSync(join(downloadDir, 'contar.sh'), 'utf8')).toMatch(/Clientes de/)
+
+    // A folder link downloads the whole folder as a ZIP: the curl example (kit 27893e8) ships its verification files,
+    // servidor.json included, byte for byte as the course has them (FORMATO.md 7.1).
+    const curlFolder = pageA.locator('.lesson-body a').filter({ hasText: /2\.4-preguntar-a-una-api\/$/ }).first()
+    await expect(curlFolder).toBeVisible()
+    const [zipDownload] = await Promise.all([pageA.waitForEvent('download'), curlFolder.click()])
+    expect(zipDownload.suggestedFilename()).toBe('2.4-preguntar-a-una-api.zip')
+    await zipDownload.saveAs(join(downloadDir, '2.4-preguntar-a-una-api.zip'))
+    const curlEntries = zipEntries(readFileSync(join(downloadDir, '2.4-preguntar-a-una-api.zip')))
+    expect([...curlEntries.keys()].sort()).toEqual(['servidor.json', 'sesion.txt'])
+    const curlSource = join('..', 'cursos-ejemplo', 'bueno', 'fase-01-primeros-pasos', 'codigo', '01-ficheros-json', 'ejemplos',
+      '2.4-preguntar-a-una-api')
+    for (const [name, bytes] of curlEntries) expect(bytes.equals(readFileSync(join(curlSource, name))), name).toBe(true)
 
     // «✓ Guardado» only after the server confirms: the request is held, then sent unchanged.
     let releaseSave = () => {}

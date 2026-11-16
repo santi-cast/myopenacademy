@@ -180,9 +180,9 @@ class CatalogApiTest {
 		assertThat(ids).containsExactly(ExampleContent.E01, ExampleContent.E02);
 		assertThat(exercises.get(1).path("title").asString()).isEqualTo("La coma de más");
 
-		// Nine code files and one image, plus one ZIP per linked folder.
+		// Eleven code files and one image, plus one ZIP per linked folder (five).
 		JsonNode resources = body.path("resources");
-		assertThat(resources.size()).isEqualTo(14);
+		assertThat(resources.size()).isEqualTo(17);
 		int files = 0;
 		int zips = 0;
 		for (JsonNode resource : resources) {
@@ -201,8 +201,8 @@ class CatalogApiTest {
 				assertThat(resource.path("fileName").asString()).endsWith(".zip").doesNotContain(LESSON, "/");
 			}
 		}
-		assertThat(files).isEqualTo(10);
-		assertThat(zips).isEqualTo(4);
+		assertThat(files).isEqualTo(12);
+		assertThat(zips).isEqualTo(5);
 		assertThat(find(resources, SCRIPT).path("fileName").asString()).isEqualTo("contar.sh");
 		assertThat(find(resources, IMAGE).path("fileName").asString()).isEqualTo("estructura.svg");
 		assertThat(find(resources, "ejemplo.ficheros-json-zip-ej01-un-pedido-550beecd").path("fileName").asString())

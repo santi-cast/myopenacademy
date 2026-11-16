@@ -171,7 +171,7 @@ class ExampleLessonContentTest {
 			assertThat(matcher.group(2)).isEqualTo(resource.originalFileName()).doesNotContain("-r-");
 			links++;
 		}
-		assertThat(links).isEqualTo(9);
+		assertThat(links).isEqualTo(11);
 		Pattern zipLink = Pattern.compile("<a href=\"/api/resources/([^\"]+)\"><code>([^<]*)</code></a>");
 		Matcher zips = zipLink.matcher(all);
 		int zipLinks = 0;
@@ -182,13 +182,13 @@ class ExampleLessonContentTest {
 			assertThat(zips.group(2)).endsWith("/").endsWith(zip.originalFileName().replaceFirst("\\.zip$", "/"));
 			zipLinks++;
 		}
-		assertThat(zipLinks).isEqualTo(4);
+		assertThat(zipLinks).isEqualTo(5);
 		assertThat(all).doesNotContain("href=\"codigo/", "href=\"../", ".md\"");
-		// Nine code files, one image and four folder ZIPs; the lesson owns exactly its manifest resources.
+		// Eleven code files, one image and five folder ZIPs; the lesson owns exactly its manifest resources.
 		List<String> owned = content.manifest().resources().stream().filter(r -> LESSON.equals(r.lessonId()))
 			.map(Manifest.Resource::resourceId).toList();
-		assertThat(owned).hasSize(14);
-		assertThat(owned.stream().filter(id -> id.startsWith(LESSON + "-zip-"))).hasSize(4);
+		assertThat(owned).hasSize(17);
+		assertThat(owned.stream().filter(id -> id.startsWith(LESSON + "-zip-"))).hasSize(5);
 		assertThat(new LinkedHashSet<>(lesson.resourceIds())).isEqualTo(new LinkedHashSet<>(owned));
 		assertThat(content.resources().keySet()).containsAll(owned);
 	}
@@ -236,6 +236,26 @@ class ExampleLessonContentTest {
 			.contains(new String("canci\u00f3n del a\u00f1o.txt".getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1))
 			.doesNotContain(new String("o\u0301".getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1))
 			.doesNotContain(new String("n\u0303".getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1));
+	}
+
+	/**
+	 * Verification files are files of their folder (FORMATO.md 7.1): the 2.4 example, added by the kit in 27893e8, ships
+	 * its servidor.json (the local HTTP server for curl) and sesion.txt in the learner's ZIP, byte for byte.
+	 */
+	@Test
+	void theCurlExampleFolderShipsWholeInItsZip() throws IOException {
+		Path folder = ExampleContent.COURSES.resolve(
+			"bueno/fase-01-primeros-pasos/codigo/01-ficheros-json/ejemplos/2.4-preguntar-a-una-api");
+		ResourceFile zip = content.resources().values().stream()
+			.filter(resource -> resource.resourceId().startsWith(LESSON + "-zip-24-preguntar-a-una-api-")).findFirst().orElseThrow();
+		assertThat(zip.originalFileName()).isEqualTo("2.4-preguntar-a-una-api.zip");
+		try (var archive = new java.util.zip.ZipFile(zip.localPath().toFile(), StandardCharsets.UTF_8)) {
+			assertThat(archive.stream().map(java.util.zip.ZipEntry::getName)).containsExactlyInAnyOrder("servidor.json", "sesion.txt");
+			for (String name : List.of("servidor.json", "sesion.txt")) {
+				assertThat(archive.getInputStream(archive.getEntry(name)).readAllBytes()).as(name)
+					.isEqualTo(Files.readAllBytes(folder.resolve(name)));
+			}
+		}
 	}
 
 	@Test
@@ -305,7 +325,7 @@ class ExampleLessonContentTest {
 				checked++;
 			}
 		}
-		assertThat(checked).isEqualTo(22);
+		assertThat(checked).isEqualTo(25);
 		assertThat(external).isEqualTo(2);
 		// The navigation line: the index and, until H8 gives the challenges their page, the index for them too.
 		assertThat(lesson.bodyHtml()).contains("<a href=\"/courses/ejemplo\">Índice</a>")
@@ -315,8 +335,8 @@ class ExampleLessonContentTest {
 	@Test
 	void realLessonFixtureCoversEveryHeadingOfTheSource() throws IOException {
 		String source = Files.readString(SOURCE, StandardCharsets.UTF_8);
-		assertThat(HeadingIdsTest.expectedIds("real")).hasSize(22);
-		assertThat(HeadingIds.forMarkdown(source)).hasSize(22);
+		assertThat(HeadingIdsTest.expectedIds("real")).hasSize(23);
+		assertThat(HeadingIds.forMarkdown(source)).hasSize(23);
 	}
 
 	/** The copy is the source byte for byte: the installed body is the module of the pinned commit. */

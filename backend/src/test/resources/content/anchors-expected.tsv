@@ -4,7 +4,8 @@
 #   0c2df357c6628784df6b537df8950da540096a8c, run with python3 -I.
 # real: the module of the kit's example course (cursos-ejemplo/bueno/fase-01-primeros-pasos/01-ficheros-json.md),
 #   frozen from ancla() in herramientas/formato_academia.py of kit-cursos at commit
-#   4a79c20fcd28d6049c52ee12fe5c5d6393b314a2, run with python3 -I (the same rule; no heading repeats).
+#   4a79c20fcd28d6049c52ee12fe5c5d6393b314a2, run with python3 -I (the same rule; no heading repeats); the 2.4
+#   heading, added by the kit in 27893e81b46d4a1a250a8a399f19a2929071b0d9, frozen with ancla() of that commit.
 synthetic	Qué aprenderás	qué-aprenderás
 synthetic	Qué aprenderás	qué-aprenderás-1
 synthetic	Qué aprenderás	qué-aprenderás-2
@@ -54,6 +55,7 @@ real	2. Ejemplos de código	2-ejemplos-de-código
 real	2.1. Un cliente	21-un-cliente
 real	2.2. Contar clientes	22-contar-clientes
 real	2.3. Ver un fichero en la terminal	23-ver-un-fichero-en-la-terminal
+real	2.4. Preguntar a una API con curl	24-preguntar-a-una-api-con-curl
 real	3. Errores típicos	3-errores-típicos
 real	3.1. La coma de más	31-la-coma-de-más
 real	4. Buenas prácticas	4-buenas-prácticas

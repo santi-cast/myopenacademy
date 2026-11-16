@@ -73,6 +73,33 @@ $ cat cliente.json
 
 📁 **Código:** [`codigo/01-ficheros-json/ejemplos/2.3-ver-un-fichero/`](codigo/01-ficheros-json/ejemplos/2.3-ver-un-fichero/)
 
+### 2.4. Preguntar a una API con curl
+
+Una API devuelve JSON. `curl -i` enseña también la línea de estado y las cabeceras de la respuesta:
+
+**En tu terminal** (`sesion.txt`):
+
+```text
+$ curl -i http://localhost:8080/clientes/1
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 39
+
+{
+  "nombre": "Ana",
+  "puntos": 120
+}
+$ curl -s http://localhost:8080/clientes/7
+{
+  "error": "No existe la ruta /clientes/7"
+}
+$ curl -s -o clientes.json http://localhost:8080/clientes
+$ ls
+clientes.json
+```
+
+📁 **Código:** [`codigo/01-ficheros-json/ejemplos/2.4-preguntar-a-una-api/`](codigo/01-ficheros-json/ejemplos/2.4-preguntar-a-una-api/)
+
 ## 3. Errores típicos
 
 ### 3.1. La coma de más

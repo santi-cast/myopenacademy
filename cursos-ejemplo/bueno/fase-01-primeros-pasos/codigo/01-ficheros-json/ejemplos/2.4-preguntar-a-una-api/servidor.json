@@ -1,0 +1,18 @@
+{
+  "puerto": 8080,
+  "rutas": [
+    {
+      "metodo": "GET",
+      "ruta": "/clientes/1",
+      "estado": 200,
+      "cuerpo": {"nombre": "Ana", "puntos": 120}
+    },
+    {
+      "metodo": "GET",
+      "ruta": "/clientes",
+      "estado": 200,
+      "cabeceras": {"Cache-Control": "no-cache"},
+      "cuerpo": [{"nombre": "Ana", "puntos": 120}, {"nombre": "Luis", "puntos": 85}]
+    }
+  ]
+}
