@@ -75,7 +75,7 @@ test('project reading, manual confirmation and independent continuation', async 
   const clientModule = page.waitForResponse((response) => new URL(response.url()).pathname === '/src/api/client.ts')
   await page.goto('/courses/java')
   expect((await clientModule).status()).toBe(200)
-  await expect(page).toHaveTitle('Code Academy')
+  await expect(page).toHaveTitle('MyOpenAcademy')
   await expect(page.getByText(/lecciones disponibles completadas/)).toContainText('199 previstas')
   await expect(page.getByRole('link', { name: 'Continuar: Lección conservada' })).toHaveAttribute('href', '/lessons/java-lesson')
   await page.getByRole('link', { name: 'Proyecto evolutivo' }).click()

@@ -2,11 +2,12 @@ import { useState, type FormEvent } from 'react'
 import { apiSend } from '../api/client'
 import { errorMessage, isAuthRequired } from '../api/errors'
 import type { User } from '../api/types'
-import { useUser } from '../session/session'
+import { useSession, useUser } from '../session/session'
 
 /** The profile (H9, T4): change your own password with the current one; your other sessions close. */
 export function ProfilePage() {
   const user = useUser()
+  const { signedIn } = useSession()
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [repeat, setRepeat] = useState('')
@@ -25,9 +26,11 @@ export function ProfilePage() {
     setFailure(null)
     setBusy(true)
     try {
-      await apiSend<User>('PUT', '/api/me/password', { currentPassword: current, newPassword: next })
+      const changed = await apiSend<User>('PUT', '/api/me/password', { currentPassword: current, newPassword: next })
       setCurrent(''); setNext(''); setRepeat('')
       setDone(true)
+      // The session now knows the password is no longer temporary: the rest of the academy opens again.
+      if (user.mustChangePassword) signedIn(changed)
     } catch (caught) {
       if (!isAuthRequired(caught)) setFailure(errorMessage(caught))
     } finally {
@@ -39,6 +42,11 @@ export function ProfilePage() {
     <div className="page">
       <h1>Mi perfil</h1>
       <p>Usuario: <strong>{user.username}</strong>{user.role === 'admin' && ' · administrador'}</p>
+      {user.mustChangePassword && (
+        <p className="notice" role="status">
+          La contraseña que te ha dado quien administra la academia es temporal: elige una nueva para seguir. Solo la sabrás tú.
+        </p>
+      )}
       <form className="auth-card" onSubmit={submit} noValidate aria-labelledby="password-title">
         <h2 id="password-title">Cambiar la contraseña</h2>
         <div className="field">

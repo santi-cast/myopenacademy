@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Link, NavLink, Navigate, Outlet } from 'react-router'
+import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router'
 import { instanceName, useInstance } from '../instance/instance'
 import { ThemeToggle } from '../theme/ThemeToggle'
 import { useSession } from '../session/session'
@@ -49,8 +49,11 @@ export function PublicLayout() {
 /** Every other screen requires a session; the layout remounts for each sign-in. */
 export function PrivateLayout() {
   const { state } = useSession()
+  const location = useLocation()
   if (state.status === 'loading') return <Loading />
   if (state.status === 'anonymous') return <Navigate to="/login" replace />
+  // A temporary password (H9, D3): nothing else until the user chooses a new one; the server refuses the rest too.
+  if (state.user.mustChangePassword && location.pathname !== '/profile') return <Navigate to="/profile" replace />
   return (
     <div key={state.key} className="app-shell">
       <SkipLink />

@@ -56,7 +56,10 @@ class PasswordChangeController {
 		if (!CredentialsPolicy.validNewPassword(fields.get(1))) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "Password is invalid.");
 		}
-		accounts.replacePasswordById(account.id(), passwordEncoder.encode(fields.get(1)));
+		if (fields.get(1).equals(fields.get(0))) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "SAME_PASSWORD", "The new password must be different.");
+		}
+		accounts.replacePasswordById(account.id(), passwordEncoder.encode(fields.get(1)), false);
 		Account changed = accounts.findById(account.id()).orElseThrow();
 		Authentication authentication = AuthController.authentication(changed);
 		sessionStrategy.onAuthentication(authentication, request, response);

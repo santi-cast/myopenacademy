@@ -10,6 +10,8 @@ const messages: Record<string, string> = {
   REGISTRATION_CLOSED: 'El registro está cerrado en esta academia. Pide una cuenta a quien la administra.',
   ACCOUNT_DISABLED: 'Esta cuenta está desactivada. Habla con quien administra la academia.',
   WRONG_PASSWORD: 'La contraseña actual no es correcta.',
+  SAME_PASSWORD: 'La contraseña nueva tiene que ser distinta de la actual.',
+  PASSWORD_CHANGE_REQUIRED: 'Antes de seguir, elige una contraseña nueva en «Mi perfil».',
   CANNOT_DEACTIVATE_SELF: 'No puedes desactivar tu propia cuenta.',
   LAST_ADMIN: 'No se puede desactivar al último administrador activo.',
   USER_NOT_FOUND: 'Ese usuario ya no existe.',

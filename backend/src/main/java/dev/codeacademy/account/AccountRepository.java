@@ -48,6 +48,8 @@ interface AccountRepository extends JpaRepository<Account, UUID> {
 	/** The administrator's reset (H9): the new hash with the next credentials version, as the console reset. */
 	@Transactional
 	@Modifying(clearAutomatically = true)
-	@Query("update Account a set a.passwordHash = :passwordHash, a.credentialsVersion = a.credentialsVersion + 1 where a.id = :id")
-	int replacePasswordById(UUID id, String passwordHash);
+	@Query("""
+			update Account a set a.passwordHash = :passwordHash, a.credentialsVersion = a.credentialsVersion + 1,
+			a.mustChangePassword = :temporary where a.id = :id""")
+	int replacePasswordById(UUID id, String passwordHash, boolean temporary);
 }

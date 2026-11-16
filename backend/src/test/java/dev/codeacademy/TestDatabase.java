@@ -20,14 +20,15 @@ final class TestDatabase {
 	}
 
 	/**
-	 * A snapshot without the columns H9 adds to users (role and active, with their defaults), to compare the data that
+	 * A snapshot without the columns H9 adds to users (role, active and must_change_password, with their defaults), to compare the data that
 	 * existed before a migration with the same data after it.
 	 */
 	static List<Map<String, Object>> withoutAccountRoles(List<Map<String, Object>> snapshot) {
 		return snapshot.stream().map(row -> {
 			Map<String, Object> copy = new java.util.LinkedHashMap<>(row);
 			copy.computeIfPresent("contents", (key, value) -> value.toString()
-				.replaceAll("\\s*<role>user</role>", "").replaceAll("\\s*<active>true</active>", ""));
+				.replaceAll("\\s*<role>user</role>", "").replaceAll("\\s*<active>true</active>", "")
+				.replaceAll("\\s*<must_change_password>false</must_change_password>", ""));
 			return copy;
 		}).toList();
 	}

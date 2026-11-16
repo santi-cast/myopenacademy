@@ -119,7 +119,21 @@ class AdminApiTest {
 		ok(admin.send("PUT", "/api/admin/users/" + id + "/password", "{\"password\":\"" + OTHER_PASSWORD + "\"}"));
 		assertThat(learner.get("/api/me").statusCode()).isEqualTo(401);
 		assertError(new ApiClient(port).send("POST", "/api/auth/login", credentials(username, PASSWORD)), 401, "AUTHENTICATION_FAILED");
-		assertThat(new ApiClient(port).send("POST", "/api/auth/login", credentials(username, OTHER_PASSWORD)).statusCode()).isEqualTo(200);
+		// Temporary (D3): with it, the session may only see who it is, change the password or sign out.
+		var temporary = new ApiClient(port);
+		var login = temporary.send("POST", "/api/auth/login", credentials(username, OTHER_PASSWORD));
+		assertThat(login.statusCode()).isEqualTo(200);
+		assertThat(ApiClient.JSON.readTree(login.body()).path("mustChangePassword").asBoolean()).isTrue();
+		assertThat(ok(temporary.get("/api/me")).path("mustChangePassword").asBoolean()).isTrue();
+		assertError(temporary.get("/api/courses"), 403, "PASSWORD_CHANGE_REQUIRED");
+		assertError(temporary.send("PUT", "/api/me/courses/ejemplo", null), 403, "PASSWORD_CHANGE_REQUIRED");
+		String change = "{\"currentPassword\":\"" + OTHER_PASSWORD + "\",\"newPassword\":\"";
+		assertError(temporary.send("PUT", "/api/me/password", change + OTHER_PASSWORD + "\"}"), 400, "SAME_PASSWORD");
+		JsonNode changed = ok(temporary.send("PUT", "/api/me/password", change + "la definitiva que solo sé yo\"}"));
+		assertThat(changed.path("mustChangePassword").asBoolean()).isFalse();
+		assertThat(temporary.get("/api/courses").statusCode()).isEqualTo(200);
+		assertThat(ok(admin.get("/api/admin/users")).path("users").findValues("mustChangePassword").stream()
+			.allMatch(value -> !value.asBoolean())).isTrue();
 	}
 
 	@Test

@@ -59,6 +59,8 @@ class SecurityConfiguration {
 						.logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
 				.requestCache(AbstractHttpConfigurer::disable)
 				.addFilterAfter(new CredentialsVersionFilter(credentials), LogoutFilter.class)
+				// After the version check: a stale session is already gone; a temporary password limits a current one.
+				.addFilterAfter(new PasswordChangeRequiredFilter(), CredentialsVersionFilter.class)
 				.exceptionHandling(exceptions -> exceptions
 						.authenticationEntryPoint(authenticationRequired)
 						.accessDeniedHandler((request, response, exception) -> {

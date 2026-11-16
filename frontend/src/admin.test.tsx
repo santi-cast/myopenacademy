@@ -91,3 +91,29 @@ describe('Registro cerrado (H9)', () => {
     expect(screen.queryByRole('link', { name: 'Crear una cuenta' })).not.toBeInTheDocument()
   })
 })
+
+describe('Contraseña temporal (H9, D3)', () => {
+  it('sends the user to «Mi perfil» until a new password is chosen, then the academy opens again', async () => {
+    const backend = installFakeBackend({ loggedInAs: { ...ana, mustChangePassword: true } })
+    backend.route('PUT /api/me/password', { status: 200, body: { ...ana, mustChangePassword: false } })
+    renderApp('/courses')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mi perfil' })).toBeVisible()
+    expect(screen.getByText(/es temporal: elige una nueva para seguir/)).toBeVisible()
+    fireEvent.change(screen.getByLabelText('Contraseña actual'), { target: { value: 'la temporal que me dieron' } })
+    fireEvent.change(screen.getByLabelText('Contraseña nueva'), { target: { value: 'la definitiva que solo sé yo' } })
+    fireEvent.change(screen.getByLabelText('Repite la contraseña nueva'), { target: { value: 'la definitiva que solo sé yo' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar la contraseña' }))
+    await waitFor(() => expect(screen.queryByText(/es temporal/)).not.toBeInTheDocument())
+    fireEvent.click(screen.getByRole('link', { name: 'Catálogo' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Catálogo' })).toBeVisible()
+  })
+
+  it('without a name set, the academy is called MyOpenAcademy', async () => {
+    installFakeBackend({ loggedInAs: ana })
+    renderApp('/')
+    expect(await screen.findByRole('link', { name: /MyOpenAcademy/ })).toBeVisible()
+    await waitFor(() => expect(document.title).toBe('MyOpenAcademy'))
+  })
+})
+

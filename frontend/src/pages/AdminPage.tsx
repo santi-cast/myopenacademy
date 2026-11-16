@@ -86,7 +86,7 @@ function UserRow({ user, self, onChange }: { user: AdminUser; self: boolean; onC
     try {
       await apiSend<AdminUser>('PUT', `/api/admin/users/${encodeURIComponent(user.id)}/password`, { password })
       setResetting(false); setPassword(''); setRepeat('')
-      setNotice(`Contraseña nueva guardada. Pásasela a ${user.username} por tu cuenta; sus sesiones abiertas se cierran.`)
+      setNotice(`Contraseña temporal guardada. Pásasela a ${user.username} por tu cuenta: al entrar tendrá que elegir una nueva, que solo sabrá él o ella. Sus sesiones abiertas se cierran.`)
     } catch (caught) {
       if (!isAuthRequired(caught)) setFailure(errorMessage(caught))
     } finally {
@@ -98,18 +98,18 @@ function UserRow({ user, self, onChange }: { user: AdminUser; self: boolean; onC
     <tr className={user.active ? undefined : 'is-pending'}>
       <td>{user.username}{self && ' (tú)'}</td>
       <td>{user.role === 'admin' ? 'Administrador' : 'Usuario'}</td>
-      <td>{user.active ? 'Activo' : 'Desactivado'}</td>
+      <td>{user.active ? 'Activo' : 'Desactivado'}{user.mustChangePassword && ' · con contraseña temporal'}</td>
       <td>
         {!self && <button type="button" className="btn btn-quiet" onClick={toggle} disabled={busy}>
           {user.active ? `Desactivar a ${user.username}` : `Reactivar a ${user.username}`}
         </button>}{' '}
         <button type="button" className="btn btn-quiet" onClick={() => setResetting(!resetting)} disabled={busy}>
-          Contraseña nueva
+          Contraseña temporal
         </button>
         {resetting && (
           <form onSubmit={reset} noValidate aria-label={`Contraseña nueva para ${user.username}`}>
             <div className="field">
-              <label htmlFor={`reset-${user.id}`}>Contraseña nueva</label>
+              <label htmlFor={`reset-${user.id}`}>Contraseña temporal</label>
               <input id={`reset-${user.id}`} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             <div className="field">

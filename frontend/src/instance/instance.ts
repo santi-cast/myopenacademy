@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { apiGet } from '../api/client'
 import type { Instance } from '../api/types'
 
-/** The name the academy shows when its administrator has not set one (H10 keeps it in one place). */
-export const DEFAULT_NAME = 'Code Academy'
+/** The name the academy shows when its administrator has not set one (author's decision, H9; the logo comes in H10). */
+export const DEFAULT_NAME = 'MyOpenAcademy'
 
 let cached: Promise<Instance> | null = null
 const listeners = new Set<(instance: Instance) => void>()

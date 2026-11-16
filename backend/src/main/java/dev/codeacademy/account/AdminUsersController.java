@@ -24,10 +24,11 @@ import dev.codeacademy.api.ApiException;
 @RestController
 class AdminUsersController {
 
-	record AdminUserView(String id, String username, String role, boolean active, Instant createdAt) {
+	record AdminUserView(String id, String username, String role, boolean active, Instant createdAt,
+			boolean mustChangePassword) {
 		static AdminUserView of(Account account) {
 			return new AdminUserView(account.id().toString(), account.username(), account.role(), account.active(),
-				account.createdAt());
+				account.createdAt(), account.mustChangePassword());
 		}
 	}
 
@@ -82,7 +83,8 @@ class AdminUsersController {
 		if (request == null || request.password() == null || !CredentialsPolicy.validNewPassword(request.password())) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "Password is invalid.");
 		}
-		accounts.replacePasswordById(account.id(), passwordEncoder.encode(request.password()));
+		// Temporary (D3): the user chooses the final one on signing in, so the administrator never knows it.
+		accounts.replacePasswordById(account.id(), passwordEncoder.encode(request.password()), true);
 		return AdminUserView.of(account(id));
 	}
 

@@ -39,6 +39,10 @@ public class Account {
 	@Column(nullable = false)
 	private boolean active;
 
+	/** Set by an administrator's reset: the user must choose a new password before anything else (H9, D3). */
+	@Column(name = "must_change_password", nullable = false)
+	private boolean mustChangePassword;
+
 	public static final String USER = "user";
 	public static final String ADMIN = "admin";
 
@@ -92,6 +96,10 @@ public class Account {
 
 	public boolean active() {
 		return active;
+	}
+
+	public boolean mustChangePassword() {
+		return mustChangePassword;
 	}
 
 	public Instant createdAt() {
