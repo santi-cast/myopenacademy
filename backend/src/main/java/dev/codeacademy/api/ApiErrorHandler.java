@@ -33,6 +33,12 @@ class ApiErrorHandler {
 		ApiErrorWriter.write(response, 406, "NOT_ACCEPTABLE", "Response must be acceptable as JSON.");
 	}
 
+	/** A path that no handler or file answers (H10: a missing file of the frontend, an unknown address): 404. */
+	@ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+	void notFound(Exception exception, HttpServletResponse response) throws IOException {
+		ApiErrorWriter.write(response, 404, "NOT_FOUND", "Not found.");
+	}
+
 	@ExceptionHandler(Exception.class)
 	void unexpected(Exception exception, HttpServletResponse response) throws IOException {
 		// Log the type only: messages may echo request content or credentials.

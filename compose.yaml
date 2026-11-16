@@ -4,11 +4,12 @@ services:
   db:
     image: postgres:18.6
     environment:
-      POSTGRES_DB: ${DB_NAME:-code_academy}
-      POSTGRES_USER: ${DB_USERNAME:-code_academy}
+      POSTGRES_DB: ${DB_NAME:-myopenacademy}
+      POSTGRES_USER: ${DB_USERNAME:-myopenacademy}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Set a nonempty DB_PASSWORD in your local environment}
     ports:
-      - "127.0.0.1:5433:5432"
+      # 5434 by default (DB_PORT), never the 5433 of the original Code Academy; only this machine.
+      - "127.0.0.1:${DB_PORT:-5434}:5432"
     volumes:
       # PostgreSQL 18 stores versioned PGDATA beneath /var/lib/postgresql.
       - postgres_data:/var/lib/postgresql
@@ -18,6 +19,42 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  # The academy itself (H10): built from the Dockerfile, it serves the frontend and the API on one port.
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-myopenacademy}
+      DB_USERNAME: ${DB_USERNAME:-myopenacademy}
+      DB_PASSWORD: ${DB_PASSWORD:?Set a nonempty DB_PASSWORD in your local environment}
+      PUBLIC_URL: ${PUBLIC_URL:-http://127.0.0.1:8080}
+    ports:
+      # 127.0.0.1 by default: only this machine. APP_BIND=0.0.0.0 opens it to the home network (see the guide).
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
+    volumes:
+      # The installed courses (by default ./content): install and update them with content-import and content-update.
+      - ${CONTENT_HOST_DIR:-./content}:/content
+    restart: unless-stopped
+
+  # The installation tools (H10), without Java on this machine: `docker compose run --rm herramientas content-import …`.
+  # Only on request (profile), never started with the academy. The academy folder is mounted whole, so content-update can
+  # replace content/ beside itself; the courses, read-only. It runs as the owner of these files (HOST_UID, HOST_GID).
+  herramientas:
+    build: .
+    profiles: ["herramientas"]
+    entrypoint: []
+    working_dir: /academia
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      HOME: /tmp
+    volumes:
+      - .:/academia
+      - ${CURSOS_DIR:-../Cursos}:/cursos:ro
 
 volumes:
   postgres_data:

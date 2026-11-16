@@ -7,7 +7,7 @@ Esta guía arranca la academia en local: cuentas, los cursos instalados en `cont
 - Java 25; Spring Boot está fijado en 4.1.2. El Maven Wrapper incluido descarga Maven 3.10.0: no necesitas Maven global.
 - Docker con Compose y el motor activo. La imagen de base de datos es `postgres:18.6`.
 - fnm con Node 24.22.1 y npm 11.19.1. La raíz fija Node en `.node-version`; con la integración `fnm --use-on-cd`, entrar en `frontend/` usa esa versión. Si hace falta, ejecuta allí `fnm use 24.22.1`.
-- Puertos locales libres: 5173 (frontend), 8080 (backend) y 5433 (PostgreSQL).
+- Puertos locales libres: 5173 (frontend), 8080 (backend) y 5434 (PostgreSQL; `APP_PORT` y `DB_PORT` en `.env` los cambian).
 
 ## Preparar la configuración privada una sola vez
 
@@ -39,7 +39,7 @@ docker compose up -d --wait db
 
 Cuando el comando termina correctamente y vuelve a aparecer el prompt, PostgreSQL queda funcionando en segundo plano (`-d`). No necesitas mantener esta terminal abierta: puedes usarla para el paso 2 o abrir otra.
 
-Compose usa el proyecto `myopenacademy` y su volumen persistente `myopenacademy_postgres_data`, separado de las prácticas del curso y del Code Academy original (proyecto `code-academy`), que no se usa nunca. PostgreSQL queda en `127.0.0.1:5433` (puerto interno 5432).
+Compose usa el proyecto `myopenacademy` y su volumen persistente `myopenacademy_postgres_data`, separado de las prácticas del curso y del Code Academy original (proyecto `code-academy`), que no se usa nunca. PostgreSQL queda en `127.0.0.1:5434` (o el `DB_PORT` de `.env`; puerto interno 5432), así que no choca con el `5433` del original.
 
 **2. Backend — desde `backend/`**
 

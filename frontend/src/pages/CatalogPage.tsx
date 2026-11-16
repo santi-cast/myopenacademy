@@ -84,7 +84,14 @@ export function CatalogPage() {
       <h1>Catálogo</h1>
       {loaded.status === 'loading' && <p className="page-status" role="status">Cargando…</p>}
       {loaded.status === 'failed' && <LoadFailure error={loaded.error} />}
-      {loaded.status === 'ready' && (
+      {loaded.status === 'ready' && loaded.data.courses.length === 0 && (
+        // An academy may start with no course (H10): say so, and who installs them.
+        <div className="empty">
+          <p>Todavía no hay ningún curso instalado en esta academia.</p>
+          <p>Quien la administra los instala por consola: ver «Instalar y actualizar cursos» en la guía de instalación (docs/instalacion.md).</p>
+        </div>
+      )}
+      {loaded.status === 'ready' && loaded.data.courses.length > 0 && (
         <ul className="course-list">
           {loaded.data.courses.map((course) => (
             <li key={course.id}>

@@ -48,7 +48,7 @@ public final class ContentLoader {
 	}
 
 	/** The courses installed in a content root, which may hold none yet: an academy starts with no course. */
-	static List<CourseContent> loadInstalled(Path contentRoot) {
+	public static List<CourseContent> loadInstalled(Path contentRoot) {
 		return loadAll(contentRoot, true);
 	}
 

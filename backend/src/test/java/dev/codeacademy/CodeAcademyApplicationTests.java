@@ -134,8 +134,9 @@ class CodeAcademyApplicationTest {
 		try (var input = context.getResource("classpath:application.properties").getInputStream()) {
 			defaults.load(input);
 		}
-		assertThat(defaults.getProperty("server.address")).isEqualTo("127.0.0.1");
-		assertThat(defaults.getProperty("server.port")).isEqualTo("8080");
+		// H10: from the environment, with only this machine on port 8080 when nothing is set.
+		assertThat(defaults.getProperty("server.address")).isEqualTo("${APP_ADDRESS:127.0.0.1}");
+		assertThat(defaults.getProperty("server.port")).isEqualTo("${APP_PORT:8080}");
 		assertThat(context.getEnvironment().getProperty("server.address")).isEqualTo("127.0.0.1");
 		assertThat(port).isPositive();
 		assertThat(request("GET", "/actuator/health", null).statusCode()).isEqualTo(200);

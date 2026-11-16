@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router'
+import brand from '../brand/brand.json'
 import { instanceName, useInstance } from '../instance/instance'
 import { ThemeToggle } from '../theme/ThemeToggle'
 import { useSession } from '../session/session'
@@ -11,7 +12,7 @@ function Brand() {
   useEffect(() => { document.title = name }, [name])
   return (
     <Link className="brand" to="/">
-      <span className="brand-mark" aria-hidden="true">{'{ }'}</span>
+      <img className="brand-mark" src={brand.logo} alt="" aria-hidden="true" />
       <span>{name}</span>
     </Link>
   )

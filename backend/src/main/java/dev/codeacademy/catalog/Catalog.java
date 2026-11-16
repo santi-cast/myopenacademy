@@ -52,9 +52,12 @@ public final class Catalog {
 		}
 	}
 
-	/** Loads and validates every course of the content root; nothing is kept if any of it is invalid. */
+	/**
+	 * Loads and validates every course of the content root; nothing is kept if any of it is invalid. An academy may
+	 * have no course yet (H10): it starts, says so, and the catalog is empty until one is installed.
+	 */
 	public static Catalog load(Path contentRoot) {
-		return new Catalog(contentRoot, ContentLoader.loadAll(contentRoot));
+		return new Catalog(contentRoot, ContentLoader.loadInstalled(contentRoot));
 	}
 
 	public List<Manifest> manifests() {

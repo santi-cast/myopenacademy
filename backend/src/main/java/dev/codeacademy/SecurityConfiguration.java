@@ -42,7 +42,10 @@ class SecurityConfiguration {
 	@Bean
 	@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 	SecurityFilterChain securityFilterChain(HttpSecurity http, CsrfTokenRepository csrfTokens,
-			SecurityContextRepository contexts, CurrentCredentials credentials) throws Exception {
+			SecurityContextRepository contexts, CurrentCredentials credentials,
+			@org.springframework.beans.factory.annotation.Value("${code-academy.frontend-dir:}") String frontendDir) throws Exception {
+		// Only when the backend serves the compiled frontend (H10) are the pages outside /api open to GET.
+		boolean servesFrontend = !frontendDir.isBlank();
 		AuthenticationEntryPoint authenticationRequired = (request, response, exception) ->
 				error(response, 401, "AUTHENTICATION_REQUIRED", "Authentication is required.");
 		return http
@@ -90,6 +93,9 @@ class SecurityConfiguration {
 						.requestMatchers(HttpMethod.PUT, "/api/me/courses/*", "/api/me/courses/*/continuation",
 								"/api/me/lessons/*/state", "/api/me/exercises/*/state", "/api/me/stages/*/state",
 								"/api/me/courses/*/stage-continuation", "/api/me/password").authenticated()
+						// The compiled frontend (H10): every page and file of the application, never an API path.
+						.requestMatchers(request -> servesFrontend && "GET".equals(request.getMethod()) && !path(request).startsWith("/api/")
+								&& !path(request).startsWith("/actuator/") && !path(request).equals("/error")).permitAll()
 						.anyRequest().denyAll())
 				.build();
 	}
@@ -122,6 +128,10 @@ class SecurityConfiguration {
 		String path = request.getContextPath().isEmpty() ? "/" : request.getContextPath();
 		return ResponseCookie.from("JSESSIONID", "").path(path).maxAge(0).httpOnly(true).sameSite("Lax")
 				.build().toString();
+	}
+
+	private static String path(jakarta.servlet.http.HttpServletRequest request) {
+		return request.getRequestURI().substring(request.getContextPath().length());
 	}
 
 	private static void error(HttpServletResponse response, int status, String code, String message)

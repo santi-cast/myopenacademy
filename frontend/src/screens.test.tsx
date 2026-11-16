@@ -88,6 +88,14 @@ describe('Mis cursos', () => {
 })
 
 describe('Catálogo', () => {
+  it('an academy with no course says so and who installs them (H10)', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    backend.route('GET /api/courses', { status: 200, body: { courses: [] } })
+    renderApp('/courses')
+    expect(await screen.findByText('Todavía no hay ningún curso instalado en esta academia.')).toBeVisible()
+    expect(screen.getByText(/los instala por consola/)).toBeVisible()
+  })
+
   it('lists courses with a link to the index', async () => {
     installFakeBackend({ loggedInAs: ana })
     renderApp('/courses')

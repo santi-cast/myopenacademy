@@ -21,3 +21,9 @@ backend/target/
 # Installed courses (H7): only the README of content/ is in Git
 content/*
 !content/README.md
+
+# Working folder of the course installation tools (docs/instalacion.md)
+trabajo/
+content.previous/
+content.staged/
+

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { apiGet } from '../api/client'
 import type { Instance } from '../api/types'
+import brand from '../brand/brand.json'
 
-/** The name the academy shows when its administrator has not set one (author's decision, H9; the logo comes in H10). */
-export const DEFAULT_NAME = 'MyOpenAcademy'
+/** The name the academy shows when its administrator has not set one: the brand's, from src/brand/brand.json (H10). */
+export const DEFAULT_NAME = brand.name
 
 let cached: Promise<Instance> | null = null
 const listeners = new Set<(instance: Instance) => void>()
