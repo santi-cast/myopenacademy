@@ -54,7 +54,10 @@ export type MyCourses = { courses: { course: Course; enrollment: Enrollment }[] 
 
 export type Courses = { courses: Course[] }
 
-export type Syllabus = { course: Course; phases: Phase[]; lessons: LessonEntry[] }
+// A document without progress (H8): the challenges of a phase ("retos", with its phaseId) or the glossary.
+export type DocumentEntry = { id: string; courseId: string; kind: 'retos' | 'glosario'; title: string; phaseId: string | null }
+export type DocumentView = { document: DocumentEntry; bodyHtml: string; resources: Resource[] }
+export type Syllabus = { course: Course; phases: Phase[]; lessons: LessonEntry[]; documents?: DocumentEntry[] }
 
 export type Exercise = {
   id: string

@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router'
 import { apiGet } from '../api/client'
-import type { LessonEntry, Progress, Syllabus } from '../api/types'
+import type { DocumentEntry, LessonEntry, Progress, Syllabus } from '../api/types'
 import { groupByPhase, type SyllabusRow } from '../syllabus'
 import { LoadFailure } from './LoadFailure'
 import { ProgressSummary } from './ProgressSummary'
@@ -27,11 +27,12 @@ function LessonState({ lesson, completed }: { lesson: LessonEntry; completed: bo
     : <span className="badge badge-todo">No completada</span>
 }
 
-function LessonTable({ caption, count, rows, completed }: {
+function LessonTable({ caption, count, rows, completed, challenges }: {
   caption: string
   count: string
   rows: SyllabusRow[]
   completed: Set<string>
+  challenges?: DocumentEntry
 }) {
   return (
     <table className="phase-table">
@@ -56,6 +57,16 @@ function LessonTable({ caption, count, rows, completed }: {
           </tr>
         ))}
       </tbody>
+      {challenges && (
+        // The challenges close their phase: optional, with no progress and outside the counts (FORMATO.md 6).
+        <tfoot>
+          <tr className="phase-challenges">
+            <td>Retos</td>
+            <td><Link to={`/documents/${encodeURIComponent(challenges.id)}`}>Retos de la fase</Link></td>
+            <td><span className="badge badge-optional">Opcionales</span></td>
+          </tr>
+        </tfoot>
+      )}
     </table>
   )
 }
@@ -71,6 +82,8 @@ export function CourseIndexPage() {
   const completed = new Set(progress.lessonStates.filter((state) => state.state === 'completed').map((state) => state.lessonId))
   const continuation = syllabus.lessons.find((lesson) => lesson.id === progress.continuation.lastOpenedLessonId)
   const phases = groupByPhase(syllabus.phases, syllabus.lessons)
+  const documents = syllabus.documents ?? []
+  const glossary = documents.find((document) => document.kind === 'glosario')
 
   return (
     <div className="index">
@@ -79,6 +92,7 @@ export function CourseIndexPage() {
           <p className="kicker">Curso</p>
           <h1>{syllabus.course.title} · Índice del curso</h1>
           <ProgressSummary counts={progress.progress} />
+          {glossary && <p className="index-glossary"><Link to={`/documents/${encodeURIComponent(glossary.id)}`}>Glosario del curso</Link></p>}
         </div>
         {continuation && (
           <Link className="btn btn-end" to={`/lessons/${encodeURIComponent(continuation.id)}`}>
@@ -96,6 +110,7 @@ export function CourseIndexPage() {
             count={`${phase.rows.filter(({ lesson }) => lesson.available).length} de ${phase.rows.length} ${phase.rows.length === 1 ? 'disponible' : 'disponibles'}`}
             rows={phase.rows}
             completed={completed}
+            challenges={documents.find((document) => document.kind === 'retos' && document.phaseId === phase.key)}
           />
         ))}
       </div>

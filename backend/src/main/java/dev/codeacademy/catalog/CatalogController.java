@@ -76,7 +76,17 @@ class CatalogController {
 	record CoursesView(List<CourseView> courses) {
 	}
 
-	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons) {
+	/** A document without progress (H8): {@code kind} "retos" (with its {@code phaseId}) or "glosario". */
+	record DocumentEntry(String id, String courseId, String kind, String title, String phaseId) {
+		static DocumentEntry of(String courseId, Manifest.Document document) {
+			return new DocumentEntry(document.id(), courseId, document.kind(), document.title(), document.phaseId());
+		}
+	}
+
+	record DocumentView(DocumentEntry document, String bodyHtml, List<ResourceView> resources) {
+	}
+
+	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons, List<DocumentEntry> documents) {
 	}
 
 	/** {@code improveUrl}: where to propose a change to the lesson, or null (H8, T2). */
@@ -134,7 +144,22 @@ class CatalogController {
 		CourseContent course = catalog.course(courseId).orElseThrow(CatalogController::notFound);
 		return new SyllabusView(view(course.manifest().course()),
 				Catalog.phases(course).stream().map(PhaseView::of).toList(), Catalog.syllabus(course).stream()
-					.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList());
+					.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList(),
+				Catalog.documents(course).stream().map(document -> DocumentEntry.of(courseId, document)).toList());
+	}
+
+	/** A document without progress: its body and its resources, like a stage but with no state (H8, T3). */
+	@GetMapping(path = "/api/documents/{documentId}", produces = MediaType.APPLICATION_JSON_VALUE)
+	DocumentView document(@PathVariable String documentId) {
+		var ref = catalog.document(documentId).orElseThrow(CatalogController::notFound);
+		String courseId = ref.course().manifest().course().id();
+		var content = ref.course().documents().get(documentId);
+		List<ResourceView> resources = ref.course().manifest().resources().stream()
+				.filter(resource -> documentId.equals(resource.documentId()))
+				.map(resource -> new ResourceView(resource.resourceId(), "/api/resources/" + resource.resourceId(),
+						resource.mediaType(), ref.course().resources().get(resource.resourceId()).originalFileName()))
+				.toList();
+		return new DocumentView(DocumentEntry.of(courseId, ref.document()), content.bodyHtml(), resources);
 	}
 
 	/** Pending lessons keep their syllabus entry but never open; neighbours skip them. */

@@ -306,7 +306,7 @@ export function LessonView({ data }: { data: LessonData }) {
       navigate({ pathname: location.pathname, search: location.search, hash: href })
       return
     }
-    if (href.startsWith('/lessons/') || href.startsWith('/courses/')) {
+    if (href.startsWith('/lessons/') || href.startsWith('/courses/') || href.startsWith('/documents/') || href.startsWith('/stages/')) {
       event.preventDefault()
       const lessonId = lessonIdOf(href)
       if (lessonId !== null && isPending(lessonId)) return

@@ -96,12 +96,14 @@ final class ManifestValidator {
 		Map<String, Lesson> lessons = lessons();
 		phaseOrder(phases, lessons);
 		Map<String, Manifest.Stage> stages = stages();
-		Map<String, Resource> resources = resources(lessons, stages);
-		sourceToId(lessons, stages, resources);
+		Map<String, Manifest.Document> courseDocuments = courseDocuments(phases);
+		Map<String, Resource> resources = resources(lessons, stages, courseDocuments);
+		sourceToId(lessons, stages, courseDocuments, resources);
 		if (Objects.equals(manifest.schemaVersion(), 2)) {
 			Map<String, String> documents = new HashMap<>();
 			lessons.values().forEach(lesson -> document(documents, lesson.sourcePath(), lesson.id()));
 			stages.values().forEach(stage -> document(documents, stage.sourcePath(), stage.id()));
+			courseDocuments.values().forEach(document -> document(documents, document.sourcePath(), document.id()));
 			// A lesson and a stage may own the same source path, so a file resource is unique per path and owner kind.
 			Set<String> owned = new HashSet<>();
 			Set<String> mapped = new HashSet<>();
@@ -129,7 +131,8 @@ final class ManifestValidator {
 		if (documents.putIfAbsent(path, id) != null) problems.add("duplicate sourcePath " + path);
 		boolean mapped = manifest.sourceToId().stream().filter(Objects::nonNull)
 			.anyMatch(link -> Objects.equals(path, link.sourcePath())
-				&& (id.equals(link.lessonId()) || id.equals(link.stageId()) || id.equals(link.resourceId())));
+				&& (id.equals(link.lessonId()) || id.equals(link.stageId()) || id.equals(link.documentId())
+					|| id.equals(link.resourceId())));
 		if (!mapped) problems.add("missing sourceToId for " + id);
 	}
 
@@ -257,7 +260,47 @@ final class ManifestValidator {
 		return stages;
 	}
 
-	private Map<String, Resource> resources(Map<String, Lesson> lessons, Map<String, Manifest.Stage> stages) {
+	/**
+	 * The documents of the course without progress (H8): the challenges of a phase, at most one per phase, and the
+	 * glossary, at most one. Optional in schema 2; schema 1 has none.
+	 */
+	private Map<String, Manifest.Document> courseDocuments(Map<String, Phase> phases) {
+		Map<String, Manifest.Document> documents = new HashMap<>();
+		if (manifest.documents() == null) return documents;
+		if (!Objects.equals(manifest.schemaVersion(), 2)) {
+			problems.add("schemaVersion 1 does not allow documents");
+			return documents;
+		}
+		Set<String> phasesWithChallenges = new HashSet<>();
+		boolean glossary = false;
+		for (Manifest.Document document : manifest.documents()) {
+			if (document == null || blank(document.id()) || blank(document.title()) || blank(document.sourcePath())
+					|| blank(document.bodyPath())) {
+				problems.add("document needs id, kind, title, sourcePath and bodyPath");
+				continue;
+			}
+			registerDeclared(document.id());
+			documents.put(document.id(), document);
+			if (Manifest.Document.CHALLENGES.equals(document.kind())) {
+				if (document.phaseId() == null || !phases.containsKey(document.phaseId())) {
+					problems.add("document " + document.id() + ": unknown phase " + document.phaseId());
+				}
+				else if (!phasesWithChallenges.add(document.phaseId())) {
+					problems.add("phase " + document.phaseId() + " has two challenge documents");
+				}
+			}
+			else if (Manifest.Document.GLOSSARY.equals(document.kind())) {
+				if (document.phaseId() != null) problems.add("document " + document.id() + ": a glossary has no phase");
+				if (glossary) problems.add("the course has two glossaries");
+				glossary = true;
+			}
+			else problems.add("document " + document.id() + ": unsupported kind " + document.kind());
+		}
+		return documents;
+	}
+
+	private Map<String, Resource> resources(Map<String, Lesson> lessons, Map<String, Manifest.Stage> stages,
+			Map<String, Manifest.Document> documents) {
 		Map<String, Resource> resources = new HashMap<>();
 		Set<String> sourcePaths = new HashSet<>();
 		// The entries that name each archive, in sourceToId order: a ZIP finds its folder without scanning every link.
@@ -308,8 +351,14 @@ final class ManifestValidator {
 					problems.add("file resource cannot have ZIP metadata: " + resource.resourceId());
 				}
 			}
-			if ((resource.lessonId() == null) == (resource.stageId() == null)) {
+			long owners = Stream.of(resource.lessonId(), resource.stageId(), resource.documentId()).filter(Objects::nonNull).count();
+			if (owners != 1) {
 				problems.add("resource " + resource.resourceId() + " must have exactly one owner");
+			}
+			else if (resource.documentId() != null) {
+				if (!documents.containsKey(resource.documentId())) {
+					problems.add("resource " + resource.resourceId() + ": unknown document " + resource.documentId());
+				}
 			}
 			else if (resource.stageId() != null) {
 				if (!stages.containsKey(resource.stageId())) {
@@ -319,7 +368,7 @@ final class ManifestValidator {
 			else if (!lessons.containsKey(resource.lessonId())) {
 				problems.add("resource " + resource.resourceId() + ": unknown lesson " + resource.lessonId());
 			}
-			// One path belongs to at most one lesson and one stage, never to two lessons or two stages.
+			// One path belongs to at most one owner of each kind (lesson, stage, document), never to two of the same kind.
 			if (!sourcePaths.add(resource.sourcePath() + "\u0000" + ownerKind(resource))) {
 				problems.add("duplicate resource sourcePath " + resource.sourcePath());
 			}
@@ -327,7 +376,8 @@ final class ManifestValidator {
 		return resources;
 	}
 
-	private void sourceToId(Map<String, Lesson> lessons, Map<String, Manifest.Stage> stages, Map<String, Resource> resources) {
+	private void sourceToId(Map<String, Lesson> lessons, Map<String, Manifest.Stage> stages,
+			Map<String, Manifest.Document> documents, Map<String, Resource> resources) {
 		Set<String> sourcePaths = new HashSet<>();
 		Map<String, Set<String>> folders = folderMembers(resources);
 		for (SourceLink link : manifest.sourceToId()) {
@@ -337,12 +387,13 @@ final class ManifestValidator {
 			}
 			String path = link.sourcePath();
 			if (!sourcePaths.add(path)) problems.add("duplicate sourceToId " + path);
-			long targets = Stream.of(link.lessonId(), link.stageId(), link.resourceId(), link.resourceIds(), link.courseId())
-				.filter(Objects::nonNull).count();
+			long targets = Stream.of(link.lessonId(), link.stageId(), link.documentId(), link.resourceId(), link.resourceIds(),
+				link.courseId()).filter(Objects::nonNull).count();
 			if (link.zipResourceId() != null && link.resourceIds() == null) {
 				problems.add("zipResourceId only decorates a folder: " + path);
 			}
-			if (targets != 1 || (link.fragments() != null && link.lessonId() == null && link.stageId() == null)) {
+			if (targets != 1 || (link.fragments() != null && link.lessonId() == null && link.stageId() == null
+					&& link.documentId() == null)) {
 				problems.add("sourceToId " + path + " must have exactly one target");
 				continue;
 			}
@@ -358,6 +409,13 @@ final class ManifestValidator {
 				if (stage == null) problems.add("sourceToId " + path + ": unknown stage " + link.stageId());
 				else if (!stage.sourcePath().equals(path)) {
 					problems.add("sourceToId " + path + " does not match the sourcePath of " + link.stageId());
+				}
+			}
+			else if (link.documentId() != null) {
+				Manifest.Document document = documents.get(link.documentId());
+				if (document == null) problems.add("sourceToId " + path + ": unknown document " + link.documentId());
+				else if (!document.sourcePath().equals(path)) {
+					problems.add("sourceToId " + path + " does not match the sourcePath of " + link.documentId());
 				}
 			}
 			else if (link.resourceId() != null) {
@@ -410,15 +468,17 @@ final class ManifestValidator {
 		Set<String> claims = new HashSet<>();
 		Set<String> lessons = new HashSet<>();
 		Set<String> stages = new HashSet<>();
+		Set<String> documents = new HashSet<>();
 		for (String id : link.resourceIds()) {
 			Resource member = resources.get(id);
 			if (member == null) continue;
 			claims.add(owner(member));
 			if (member.stageId() != null) stages.add(member.stageId());
+			else if (member.documentId() != null) documents.add(member.documentId());
 			else if (member.lessonId() != null) lessons.add(member.lessonId());
 		}
-		if (lessons.size() > 1 || stages.size() > 1) {
-			problems.add("folder " + folder + " cannot be claimed by two lessons or two stages");
+		if (lessons.size() > 1 || stages.size() > 1 || documents.size() > 1) {
+			problems.add("folder " + folder + " cannot be claimed by two lessons, two stages or two documents");
 		}
 		if (!folder.endsWith("/") || link.resourceIds().size() != new HashSet<>(link.resourceIds()).size()
 				|| !inside.equals(new HashSet<>(link.resourceIds()))) {
@@ -451,11 +511,13 @@ final class ManifestValidator {
 	}
 
 	private static String owner(Resource resource) {
-		return resource.lessonId() != null ? resource.lessonId() : resource.stageId();
+		if (resource.lessonId() != null) return resource.lessonId();
+		return resource.stageId() != null ? resource.stageId() : resource.documentId();
 	}
 
 	private static String ownerKind(Resource resource) {
-		return resource.lessonId() != null ? "lesson" : "stage";
+		if (resource.lessonId() != null) return "lesson";
+		return resource.stageId() != null ? "stage" : "document";
 	}
 
 	/** An ID that comes from curso.json: in the course namespace and with the form of FORMATO.md 3.3. */

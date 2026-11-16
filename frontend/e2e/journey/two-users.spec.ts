@@ -363,6 +363,15 @@ test('two learners keep separate progress across a backend restart, without cros
     await expect(pageA.getByRole('link', { name: 'Mejorar esta lección' })).toHaveAttribute('href',
       'https://github.com/myopenacademy/curso-ejemplo/edit/main/fase-01-primeros-pasos/01-ficheros-json.md')
 
+    // The challenges of the phase have their own page (H8, T3): the lesson's «Siguiente» leads to them, the way back too.
+    await pageA.locator('.lesson-body').getByRole('link', { name: 'Siguiente: Retos de la fase' }).click()
+    await expect(pageA).toHaveURL(/\/documents\/ejemplo\.fase\.primeros-pasos\.retos$/)
+    await expect(pageA.getByRole('heading', { level: 1 })).toContainText('Retos')
+    await expect(pageA.locator('.kicker')).toContainText('Fase 01 · Primeros pasos · Opcionales, sin seguimiento')
+    await shot(pageA, 'ana-challenges')
+    await pageA.goBack()
+    await expect(lessonTitle(pageA)).toContainText(LESSON_TITLE)
+
     // Resource link: downloads with the original file name (S14).
     const scriptLink = pageA.locator('.lesson-files a.resource-link').filter({ hasText: /^contar\.sh$/ }).first()
     await expect(scriptLink).toBeVisible()

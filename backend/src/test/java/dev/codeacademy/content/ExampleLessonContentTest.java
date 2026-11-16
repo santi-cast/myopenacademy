@@ -339,6 +339,10 @@ class ExampleLessonContentTest {
 				else if (value.startsWith("/api/resources/")) {
 					assertThat(content.resources()).containsKey(value.substring("/api/resources/".length()));
 				}
+				else if (value.startsWith("/documents/")) {
+					assertThat(value.substring("/documents/".length()).replaceFirst("#.*", "")).isIn(content.manifest().documents()
+						.stream().map(Manifest.Document::id).toList());
+				}
 				else if (!isExternal) {
 					assertThat(value).isEqualTo("/courses/ejemplo");
 				}
@@ -347,9 +351,9 @@ class ExampleLessonContentTest {
 		}
 		assertThat(checked).isEqualTo(25);
 		assertThat(external).isEqualTo(2);
-		// The navigation line: the index and, until H8 gives the challenges their page, the index for them too.
+		// The navigation line: the index, and the challenges of the phase on their own page (H8, T3).
 		assertThat(lesson.bodyHtml()).contains("<a href=\"/courses/ejemplo\">Índice</a>")
-			.contains("<a href=\"/courses/ejemplo\">Siguiente: Retos de la fase</a>");
+			.contains("<a href=\"/documents/ejemplo.fase.primeros-pasos.retos\">Siguiente: Retos de la fase</a>");
 	}
 
 	@Test

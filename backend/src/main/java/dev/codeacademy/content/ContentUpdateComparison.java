@@ -163,12 +163,19 @@ final class ContentUpdateComparison {
                 add(entities, stage.id(), "stage", stage.title(), owner, stage.sourcePath(), stage.available(), stage);
                 if (stage.available()) managed(managed, stage.bodyPath(), stage.sourcePath());
             }
+            // Documents without progress (H8): their removal or retitle touches no learner, but they are compared.
+            if (m.documents() != null) for (var document : m.documents()) {
+                safeSource(document.sourcePath());
+                add(entities, document.id(), "document", document.title(), owner, document.sourcePath(), true, document);
+                managed(managed, document.bodyPath(), document.sourcePath());
+            }
             for (var resource : m.resources()) {
                 String sourcePath = resource.sourcePath();
                 boolean zip = "zip".equals(resource.kind());
                 safeSource(zip ? sourcePath.substring(0, sourcePath.length() - 1) : sourcePath);
-                add(entities, resource.resourceId(), "resource", "", resource.lessonId() == null ? resource.stageId() : resource.lessonId(),
-                    sourcePath, true, resource);
+                String resourceOwner = resource.lessonId() != null ? resource.lessonId()
+                    : resource.stageId() != null ? resource.stageId() : resource.documentId();
+                add(entities, resource.resourceId(), "resource", "", resourceOwner, sourcePath, true, resource);
                 managed(managed, resource.localPath(), zip ? null : sourcePath);
             }
             for (var link : m.sourceToId()) {

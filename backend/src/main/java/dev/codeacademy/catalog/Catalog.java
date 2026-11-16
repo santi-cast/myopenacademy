@@ -23,7 +23,11 @@ public final class Catalog {
 	record StageRef(CourseContent course, Manifest.Stage stage) {
 	}
 
-	/** A registered resource with exactly one lesson or stage owner. */
+	/** A document without progress (challenges or glossary; H8). */
+	record DocumentRef(CourseContent course, Manifest.Document document) {
+	}
+
+	/** A registered resource with exactly one lesson, stage or document owner. */
 	record ResourceRef(CourseContent course, Manifest.Resource resource, ResourceFile file) {
 	}
 
@@ -33,6 +37,7 @@ public final class Catalog {
 	private final Map<String, LessonRef> lessons = new LinkedHashMap<>();
 	private final Map<String, ResourceRef> resources = new LinkedHashMap<>();
 	private final Map<String, StageRef> stages = new LinkedHashMap<>();
+	private final Map<String, DocumentRef> documents = new LinkedHashMap<>();
 
 	private Catalog(Path contentRoot, List<CourseContent> courses) {
 		this.contentRoot = contentRoot;
@@ -41,6 +46,7 @@ public final class Catalog {
 			coursesById.put(course.manifest().course().id(), course);
 			course.manifest().lessons().forEach(lesson -> lessons.put(lesson.id(), new LessonRef(course, lesson)));
 			project(course).forEach(stage -> stages.put(stage.id(), new StageRef(course, stage)));
+			documents(course).forEach(document -> documents.put(document.id(), new DocumentRef(course, document)));
 			course.manifest().resources().forEach(resource -> resources.put(resource.resourceId(),
 					new ResourceRef(course, resource, course.resources().get(resource.resourceId()))));
 		}
@@ -71,6 +77,20 @@ public final class Catalog {
 		return Optional.ofNullable(stages.get(stageId));
 	}
 
+	Optional<DocumentRef> document(String documentId) {
+		return Optional.ofNullable(documents.get(documentId));
+	}
+
+	/** The documents without progress of a course: the challenges in phase order, then the glossary. */
+	static List<Manifest.Document> documents(CourseContent course) {
+		if (course.manifest().documents() == null) return List.of();
+		List<String> phases = phases(course).stream().map(Manifest.Phase::id).toList();
+		return course.manifest().documents().stream()
+			.sorted(Comparator.comparing((Manifest.Document document) -> document.phaseId() == null ? Integer.MAX_VALUE
+				: phases.indexOf(document.phaseId())))
+			.toList();
+	}
+
 	/** V1 has no project; stages have their own independent position space. */
 	static List<Manifest.Stage> project(CourseContent course) {
 		List<Manifest.Stage> stages = course.manifest().projectStages();
@@ -84,6 +104,8 @@ public final class Catalog {
 	/** Availability is resolved only within the resource's validated course and exact declared owner. */
 	static boolean ownerAvailable(ResourceRef ref) {
 		Manifest.Resource resource = ref.resource();
+		// A document is always available: it is only installed when it is written (H8).
+		if (resource.documentId() != null) return true;
 		if (resource.lessonId() != null) {
 			return ref.course().manifest().lessons().stream()
 				.anyMatch(lesson -> lesson.id().equals(resource.lessonId()) && lesson.available());

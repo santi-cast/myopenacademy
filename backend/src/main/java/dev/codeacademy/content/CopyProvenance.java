@@ -33,6 +33,9 @@ final class CopyProvenance {
 			.forEach(lesson -> expect(expected, lesson.bodyPath(), lesson.sourcePath(), problems));
 		manifest.projectStages().stream().filter(Manifest.Stage::available)
 			.forEach(stage -> expect(expected, stage.bodyPath(), stage.sourcePath(), problems));
+		if (manifest.documents() != null) {
+			manifest.documents().forEach(document -> expect(expected, document.bodyPath(), document.sourcePath(), problems));
+		}
 		manifest.resources().forEach(resource -> {
 			if ("zip".equals(resource.kind())) {
 				if (generated.putIfAbsent(resource.localPath(), resource) != null) problems.add("duplicate managed localPath " + resource.localPath());

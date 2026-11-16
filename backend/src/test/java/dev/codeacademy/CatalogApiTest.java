@@ -122,13 +122,39 @@ class CatalogApiTest {
 	}
 
 	@Test
+	void aDocumentHasItsBodyAndResourcesAndNoState() throws Exception {
+		var response = browser.get("/api/documents/ejemplo.fase.primeros-pasos.retos");
+		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+		JsonNode body = json(response);
+		assertThat(body.propertyNames()).containsExactlyInAnyOrder("document", "bodyHtml", "resources");
+		assertThat(body.path("document").path("title").asString()).startsWith("Retos de la fase");
+		assertThat(body.path("bodyHtml").asString()).contains("<h1 ").contains("<details>");
+		assertThat(body.path("resources").size()).isGreaterThan(0);
+		for (JsonNode resource : body.path("resources")) {
+			var download = browser.get(resource.path("url").asString());
+			assertThat(download.statusCode()).as(resource.path("url").asString()).isEqualTo(200);
+		}
+		JsonNode glossary = json(browser.get("/api/documents/ejemplo-destino.glosario"));
+		assertThat(glossary.path("document").path("kind").asString()).isEqualTo("glosario");
+		assertThat(glossary.path("document").path("phaseId").isNull()).isTrue();
+		assertThat(browser.get("/api/documents/ejemplo.no-existe").statusCode()).isEqualTo(404);
+	}
+
+	@Test
 	void courseReturnsTheFullSyllabusInOrderWithThePendingModule() throws Exception {
 		var response = browser.get("/api/courses/" + COURSE);
 
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
 		var body = json(response);
-		assertThat(body.propertyNames()).containsExactlyInAnyOrder("course", "phases", "lessons");
+		assertThat(body.propertyNames()).containsExactlyInAnyOrder("course", "phases", "lessons", "documents");
 		assertThat(body.path("course").path("id").asString()).isEqualTo(COURSE);
+		// H8, T3: the challenges of the phase, a document without progress (the example course has no glossary).
+		JsonNode documents = body.path("documents");
+		assertThat(documents.size()).isEqualTo(1);
+		assertThat(documents.get(0).propertyNames()).containsExactlyInAnyOrder("id", "courseId", "kind", "title", "phaseId");
+		assertThat(documents.get(0).path("id").asString()).isEqualTo("ejemplo.fase.primeros-pasos.retos");
+		assertThat(documents.get(0).path("kind").asString()).isEqualTo("retos");
+		assertThat(documents.get(0).path("phaseId").asString()).isEqualTo("ejemplo.fase.primeros-pasos");
 		JsonNode phases = body.path("phases");
 		assertThat(phases.size()).isEqualTo(1);
 		assertThat(phases.get(0).propertyNames()).containsExactlyInAnyOrder("id", "title", "position");

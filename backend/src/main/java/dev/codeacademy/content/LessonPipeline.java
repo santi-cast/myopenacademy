@@ -75,6 +75,7 @@ final class LessonPipeline {
 			sourceToId.put(link.sourcePath(), link);
 			if (link.lessonId() != null) lessonLinks.put(link.lessonId(), link);
 			if (link.stageId() != null) lessonLinks.put(link.stageId(), link);
+			if (link.documentId() != null) lessonLinks.put(link.documentId(), link);
 		}
 	}
 
@@ -106,6 +107,8 @@ final class LessonPipeline {
 		final String sourcePath;
 		final List<Exercise> manifestExercises;
 		final boolean stage;
+		/** A document without progress (challenges, glossary): rendered like a stage, routed to /documents/. */
+		boolean document;
 		final Map<Heading, String> headingIds = new IdentityHashMap<>();
 		Document body;
 		final List<FoundExercise> found = new ArrayList<>();
@@ -135,6 +138,12 @@ final class LessonPipeline {
 
 	void parse(Manifest.Stage stage, String markdown) {
 		parse(new ParsedLesson(stage.id(), stage.sourcePath(), List.of(), true), markdown);
+	}
+
+	void parse(Manifest.Document document, String markdown) {
+		ParsedLesson parsed = new ParsedLesson(document.id(), document.sourcePath(), List.of(), true);
+		parsed.document = true;
+		parse(parsed, markdown);
 	}
 
 	private void parse(ParsedLesson result, String markdown) {
@@ -388,8 +397,14 @@ final class LessonPipeline {
 
 	private final Map<String, StageContent> renderedStages = new LinkedHashMap<>();
 
+	private final Map<String, StageContent> renderedDocuments = new LinkedHashMap<>();
+
 	Map<String, StageContent> stages() {
 		return Collections.unmodifiableMap(renderedStages);
+	}
+
+	Map<String, StageContent> documents() {
+		return Collections.unmodifiableMap(renderedDocuments);
 	}
 
 	Map<String, LessonContent> render() {
@@ -409,7 +424,8 @@ final class LessonPipeline {
 				exercises.add(new ExerciseContent(exerciseId, lessonId, manifest.course().id(), matched.exercise().title(),
 						statement, solution));
 			}
-			if (lesson.stage) renderedStages.put(lessonId, new StageContent(lessonId, body, List.copyOf(used)));
+			if (lesson.document) renderedDocuments.put(lessonId, new StageContent(lessonId, body, List.copyOf(used)));
+			else if (lesson.stage) renderedStages.put(lessonId, new StageContent(lessonId, body, List.copyOf(used)));
 			else rendered.put(lessonId, new LessonContent(lessonId, body, List.copyOf(exercises), List.copyOf(used)));
 		}
 		return Collections.unmodifiableMap(rendered);
@@ -541,7 +557,9 @@ final class LessonPipeline {
 		SourceLink target = sourceTarget(lesson, path);
 		if (target == null) return null;
 
-		if (target.lessonId() != null || target.stageId() != null) return lessonHref(lesson, target, fragment);
+		if (target.lessonId() != null || target.stageId() != null || target.documentId() != null) {
+			return lessonHref(lesson, target, fragment);
+		}
 		// The course index is not imported: its own entry answers every fragment, as with a pending document.
 		if (target.courseId() != null) return "/courses/" + target.courseId();
 		if (fragment != null) return null;
@@ -564,8 +582,9 @@ final class LessonPipeline {
 	}
 
 	private String lessonHref(ParsedLesson current, SourceLink target, String fragment) {
-		String lessonId = target.stageId() == null ? target.lessonId() : target.stageId();
-		String route = target.stageId() == null ? "/lessons/" : "/stages/";
+		String lessonId = target.documentId() != null ? target.documentId()
+			: target.stageId() != null ? target.stageId() : target.lessonId();
+		String route = target.documentId() != null ? "/documents/" : target.stageId() != null ? "/stages/" : "/lessons/";
 		ParsedLesson available = parsed.get(lessonId);
 		if (fragment == null) return route + lessonId;
 		// A pending document has no body to check: link to its entry, never a guessed fragment.
