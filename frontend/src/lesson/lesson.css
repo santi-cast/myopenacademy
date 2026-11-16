@@ -26,7 +26,8 @@
 .mix-side {
   position: sticky;
   top: 0;
-  max-height: var(--viewport-height);
+  /* The whole height of the window, even when the syllabus is shorter: its background reaches the bottom (H11). */
+  height: var(--viewport-height);
   overflow: auto;
   overflow-x: hidden;
   background: var(--surface);
@@ -983,7 +984,7 @@ fieldset.state legend {
 
   .mix-side {
     position: static;
-    max-height: none;
+    height: auto;
     border-right: 0;
     border-bottom: var(--border-width) solid var(--border);
     padding: var(--space-3) var(--space-4);
