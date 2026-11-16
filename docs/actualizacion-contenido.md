@@ -2,6 +2,20 @@
 
 `backend/content-update` compara una **copia candidata ya preparada** con la copia activa y aplica únicamente un informe sin conflictos. No genera candidatos ni importa contenido por sí solo, no arranca Spring y no escribe en PostgreSQL. La generación y el inventario del origen se hacen antes con `backend/content-import`; el [manifiesto](manifiesto.md#comparar-antes-de-aplicar-límite-del-importador) define la identidad y procedencia.
 
+## Lista de cursos instalados
+
+`cursos-instalados.json`, en la raíz del repositorio y **en Git**, dice qué cursos tiene instalados la academia: por curso, `id`, `repository` (el `repositorio` de su `curso.json`), `version`, `tag` (`null` si se instaló por commit) y `commit` (H7, T7). Sale de la copia instalada, nunca se escribe a mano:
+
+```sh
+sh backend/content-courses --help
+sh backend/content-courses list --active content --output cursos-instalados.json
+sh backend/content-courses reinstall --list cursos-instalados.json --sources ../Cursos --output /tmp/copia --report /tmp/reinstalacion.json
+```
+
+- `list` escribe la lista de una copia instalada (ordenada por `id`), sustituyendo el fichero entero. Se ejecuta después de cada `content-update apply` y se hace commit del cambio.
+- `reinstall` instala **exactamente** esa lista en una copia nueva (`--output`, que no debe existir), un curso encima del otro, con el mismo importador. Cada curso sale de `--sources/<nombre de su repositorio>` (el final de su dirección, sin `.git`: `curso-inicial`); `--sources` puede ser relativo y con `..`. Si el curso tiene etiqueta, tiene que seguir apuntando al commit anotado: si se movió o ya no existe, se para. Al final comprueba que la copia tiene los mismos cursos, versiones, etiquetas y commits que la lista. Si algo falla no escribe la copia (salida 3) y el informe dice qué curso y por qué.
+- Como `content-import`, funciona sin conexión, no arranca Spring ni toca la base; la copia nueva se compara y se aplica con `content-update`.
+
 ## Generar el candidato desde el commit fijado
 
 `backend/content-import` es el paso que **genera** una raíz candidata nueva a partir de un commit inmutable del repositorio de origen. No aplica nada, no arranca Spring y no escribe en PostgreSQL. Requiere el JAR empaquetado, igual que el comando anterior, y funciona sin conexión.

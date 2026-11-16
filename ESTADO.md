@@ -18,7 +18,7 @@ Lo que ya existe en los otros proyectos:
 
 **9 de noviembre de 2026:** prueba de importación hecha y **`PLAN.md` reescrito con el autor** para MyOpenAcademy, con los hitos H6 a H11 hasta el pack base 1.0 (unos 20 días de trabajo). **Siguiente: H7, cursos como DLC** (`PLAN.md`, apartado 4): rama `feat/h7-…`, tareas en `odd/tasks/` y, como primer paso, el curso de ejemplo pequeño. H6 (uso real) va en paralelo.
 
-**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 hecha salvo la etiqueta (A5): el generador lee `curso.json` y genera el curso de ejemplo, `ejemplo-destino` y el curso inicial completo. **T4b hecha:** la comparación verifica cada curso contra su origen, los de otros repositorios tienen que llegar idénticos byte a byte, y los retítulos son un cambio, no un conflicto. Cursos de ejemplo del kit (`bueno` y `ejemplo-destino`) traídos de `3c07a76`. **T3 hecha:** ninguna prueba usa ya el curso de Java ni lee `content/` (las pruebas instalan los cursos de ejemplo con el importador real), y `content/` está fuera de Git salvo su README. **T3b hecha:** «Mis cursos» se ordena por identificador byte a byte (`collate "C"`), igual con cualquier intercalación de la base. **T2 hecha** (16 de noviembre de 2026): solo identificadores `<curso>.` y números de fase y de módulo por el orden de `curso.json`. Cursos de ejemplo renovados desde el kit en `27893e8`: la carpeta 2.4 (ejemplo de `curl`, con `servidor.json`) llega entera al ZIP, comprobado en el E2E (L17). Detalle en `odd/tasks/h7-cursos-dlc.md` (L1 a L20).
+**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 hecha salvo la etiqueta (A5): el generador lee `curso.json` y genera el curso de ejemplo, `ejemplo-destino` y el curso inicial completo. **T4b hecha:** la comparación verifica cada curso contra su origen, los de otros repositorios tienen que llegar idénticos byte a byte, y los retítulos son un cambio, no un conflicto. Cursos de ejemplo del kit (`bueno` y `ejemplo-destino`) traídos de `3c07a76`. **T3 hecha:** ninguna prueba usa ya el curso de Java ni lee `content/` (las pruebas instalan los cursos de ejemplo con el importador real), y `content/` está fuera de Git salvo su README. **T3b hecha:** «Mis cursos» se ordena por identificador byte a byte (`collate "C"`), igual con cualquier intercalación de la base. **T2 hecha** (16 de noviembre de 2026): solo identificadores `<curso>.` y números de fase y de módulo por el orden de `curso.json`. Cursos de ejemplo renovados desde el kit en `27893e8`: la carpeta 2.4 (ejemplo de `curl`, con `servidor.json`) llega entera al ZIP, comprobado en el E2E (L17). Detalle en `odd/tasks/h7-cursos-dlc.md` (L1 a L21).
 
 **Siguiente, en este orden:**
 
@@ -28,7 +28,8 @@ Lo que ya existe en los otros proyectos:
 4. ~~La etiqueta (A5)~~ **Hecho** (16 de noviembre de 2026, L18): `content-import generate --tag vX.Y.Z`; el manifiesto guarda commit, etiqueta y versión de `curso.json`. Probado con una copia desechable del curso inicial; falta que los cursos etiqueten sus versiones.
 5. ~~T5~~ **Hecho** (L19): `--source ../Cursos/curso-inicial` funciona.
 6. ~~T6~~ **Hecho** (L20): catálogo con descripción y «Conviene saber antes».
-7. T7, T8 y la revisión del autor.
+7. ~~T7~~ **Hecho** (L21): `cursos-instalados.json` y `content-courses list|reinstall`.
+8. T8 y la revisión del autor.
 
 **Preguntas abiertas para el autor:**
 
@@ -173,6 +174,7 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-09 | `PLAN.md` reescrito con el autor: hitos H6 a H11 hasta el pack base 1.0, con la lista de cambios de la prueba de importación y lo que faltaba del plan común. |
 | 2026-11-09 | H7, T1, T4 (salvo la etiqueta) y T4b: cursos de ejemplo del kit, importador por `curso.json` y comparación por curso con retítulos permitidos. |
 | 2026-11-09 | H7, T3 y T3b: pruebas con los cursos de ejemplo instalados por el importador real, `content/` fuera de Git y orden de «Mis cursos» igual con cualquier intercalación. |
+| 2026-11-16 | H7, T7: lista de cursos instalados (`cursos-instalados.json`) y `content-courses list|reinstall`. |
 | 2026-11-16 | H7, T6: catálogo con la descripción y las recomendaciones de `curso.json` (API y pantalla). |
 | 2026-11-16 | H7, T5: `--source` relativo y con `..` (solo el origen, que solo se lee). |
 | 2026-11-16 | H7, A5: instalar desde una etiqueta de versión (`--tag`), con commit, etiqueta y versión en el manifiesto. |

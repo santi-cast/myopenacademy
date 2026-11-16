@@ -1,0 +1,18 @@
+#!/bin/sh
+# Offline only: do not route through the normal Spring Boot application main.
+set -eu
+if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
+    printf '%s\n' 'Usage: content-courses list --active DIR --output FILE' \
+        '       content-courses reinstall --list FILE --sources DIR --output DIR --report FILE' \
+        'list writes the installed courses (repository, version, tag, commit) of a copy.' \
+        'reinstall installs exactly that list into a new copy; each course comes from DIR/<repository name>.'
+    exit 0
+fi
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+jar="$script_dir/target/backend-0.0.1-SNAPSHOT.jar"
+if [ ! -f "$jar" ]; then
+    printf '%s\n' 'content-courses: packaged backend jar missing; build first: cd backend && ./mvnw -DskipTests package' >&2
+    exit 2
+fi
+exec java -Dloader.main=dev.codeacademy.content.ContentCoursesCli -cp "$jar" \
+    org.springframework.boot.loader.launch.PropertiesLauncher "$@"
