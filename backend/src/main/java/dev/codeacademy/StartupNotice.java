@@ -25,14 +25,16 @@ class StartupNotice {
 		+ "Úsala solo en una red de confianza, como la de casa, y nunca así en internet (ver la guía de instalación).";
 
 	private final String publicUrl;
+	private final String name;
 
-	StartupNotice(@Value("${code-academy.public-url:}") String publicUrl) {
+	StartupNotice(@Value("${code-academy.public-url:}") String publicUrl, @Value("${spring.application.name}") String name) {
 		this.publicUrl = publicUrl;
+		this.name = name;
 	}
 
 	@EventListener(ApplicationReadyEvent.class)
 	void started() {
-		if (!publicUrl.isBlank()) log.info("MyOpenAcademy, en {}", publicUrl);
+		if (!publicUrl.isBlank()) log.info("{}, en {}", name, publicUrl);
 		if (plainHttpOnTheNetwork(publicUrl)) log.warn(PLAIN_HTTP);
 	}
 

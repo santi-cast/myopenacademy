@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react'
+import brand from './src/brand/brand.json' with { type: 'json' }
 import { defineConfig } from 'vitest/config'
 
 // Backend behind the dev proxy. The journey E2E points it at its own disposable backend; the
@@ -6,7 +7,11 @@ import { defineConfig } from 'vitest/config'
 const backendUrl = process.env.CODE_ACADEMY_BACKEND_URL ?? `http://127.0.0.1:${process.env.APP_PORT ?? '8080'}`
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // The name and the logo in one place (H10): src/brand/brand.json fills the title and the icon of the page.
+    { name: 'brand', transformIndexHtml: (html) => html.replaceAll('%BRAND_NAME%', brand.name).replaceAll('%BRAND_LOGO%', brand.logo) },
+  ],
   server: {
     host: '127.0.0.1',
     port: 5173,
