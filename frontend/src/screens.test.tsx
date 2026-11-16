@@ -342,7 +342,8 @@ describe('Documentos del curso (H8, T3)', () => {
     expect(link).toHaveAttribute('href', '/lessons/java-02.01')
     const row = screen.getByRole('link', { name: 'Tu primer programa' }).closest('tr')!
     expect(within(row).getByText('Proyecto del curso')).toBeVisible()
-    expect(screen.queryByRole('link', { name: /Proyecto evolutivo/ })).not.toBeInTheDocument()
+    // A module project has no project page of stages.
+    expect(screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.endsWith('/project'))).toHaveLength(0)
   })
 
   it('the challenges sit between the last module of their phase and the first of the next', async () => {

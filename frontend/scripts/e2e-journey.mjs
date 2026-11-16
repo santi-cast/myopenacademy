@@ -238,7 +238,7 @@ function controlServer(backend) {
 
 function playwright(env) {
   return new Promise((done) => {
-    const child = spawn(join(frontendDir, 'node_modules', '.bin', 'playwright'), ['test', '--config', 'e2e/journey.config.ts'], {
+    const child = spawn(join(frontendDir, 'node_modules', '.bin', 'playwright'), ['test', '--config', 'playwright.config.ts'], {
       cwd: frontendDir, env, stdio: 'inherit',
     })
     child.once('exit', (code, signal) => done(code ?? (signal ? 1 : 0)))

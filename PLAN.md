@@ -107,7 +107,7 @@ Se mantiene la de Code Academy, salvo que el autor diga otra cosa:
 
 - **Una rama por hito** (`feat/h7-…`), con commits pequeños y revisables; **el autor revisa antes de integrar** en `main` con `--no-ff`. Los cambios sueltos de documentación o mantenimiento pueden ir directos a `main`.
 - **Tareas y evidencias** de cada hito en `odd/tasks/`; las pruebas acompañan al comportamiento.
-- **Pruebas:** `./mvnw -B verify` (Testcontainers, base aislada), `npm run test -- --run`, `npm run lint`, `npm run build` y el recorrido `npm run test:e2e:journey`. Las pruebas de importación y de navegador con contenido provisional, siempre contra una **base desechable**, nunca contra la de `myopenacademy`: el backend no arranca si desaparece un identificador ya guardado.
+- **Pruebas:** `./mvnw -B verify` (Testcontainers, base aislada), `npm run test -- --run`, `npm run lint`, `npm run build` y las pruebas de navegador `npm run test:e2e`. Las pruebas de importación y de navegador con contenido provisional, siempre contra una **base desechable**, nunca contra la de `myopenacademy`: el backend no arranca si desaparece un identificador ya guardado.
 - **Nunca** se usan el `.env`, los contenedores ni el volumen del Code Academy original. No se borran volúmenes (`down -v`).
 - **Coordinación** con las sesiones del kit y del curso inicial a través del autor, como dice `CLAUDE.md`.
 - **Sin remotos ni `push`** hasta H11.

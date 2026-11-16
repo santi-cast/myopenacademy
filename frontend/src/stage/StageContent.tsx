@@ -90,10 +90,10 @@ export function StageContent({ view, progress: initial, index, courseTitle }: {
 
   const firstIsTitle = new DOMParser().parseFromString(view.bodyHtml, 'text/html').body.firstElementChild?.localName === 'h1'
   return <div className="page">
-    <p><Link to={`/courses/${encodeURIComponent(stage.courseId)}/project`}>Proyecto evolutivo</Link> · <Link to={`/courses/${encodeURIComponent(stage.courseId)}`}>Índice del curso</Link></p>
+    <p><Link to={`/courses/${encodeURIComponent(stage.courseId)}/project`}>Proyecto del curso</Link> · <Link to={`/courses/${encodeURIComponent(stage.courseId)}`}>Índice del curso</Link></p>
     <article className="reading" ref={root} aria-label={stage.title} onClick={onContentClick}>
       <header className="lesson-head">
-        <p className="kicker">{courseTitle} · Proyecto evolutivo · Etapa {stage.position}</p>
+        <p className="kicker">{courseTitle} · Proyecto del curso · Etapa {stage.position}</p>
         {!firstIsTitle && <h1>{stage.title}</h1>}
         <StageSummary counts={progress.progress} />
         <StateControl legend="Estado de la etapa" options={options} saved={saved} save={save} onChange={change} />

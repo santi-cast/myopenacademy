@@ -29,7 +29,7 @@ Para cambiar una contraseña olvidada se usa la [herramienta de consola](docs/de
 
 - En `backend/`, con Docker activo: `./mvnw -B verify` (Testcontainers usa una base aislada).
 - En `frontend/`: `npm run test -- --run`, `npm run lint` y `npm run build`.
-- Recorrido de dos usuarios en navegador, en un entorno propio y desechable: `npm run test:e2e:journey` desde `frontend/` ([requisitos](docs/desarrollo-local.md#ejecutar-pruebas)).
+- Recorrido de dos usuarios en navegador, en un entorno propio y desechable: `npm run test:e2e` desde `frontend/` ([requisitos](docs/desarrollo-local.md#ejecutar-pruebas)).
 
 ## Documentación
 

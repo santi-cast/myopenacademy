@@ -24,7 +24,7 @@ export function ProjectPage() {
   const last = index.stages.find((stage) => stage.available && stage.id === progress.continuation.lastOpenedStageId)
   return <div className="index">
     <div className="index-head">
-      <div><p className="kicker">Proyecto evolutivo</p><h1>{syllabus.course.title} · Proyecto evolutivo</h1><StageSummary counts={progress.progress} /></div>
+      <div><p className="kicker">Proyecto del curso</p><h1>{syllabus.course.title} · {syllabus.project?.title || 'Proyecto del curso'}</h1><StageSummary counts={progress.progress} /></div>
       {last && <Link className="btn btn-end" to={`/stages/${encodeURIComponent(last.id)}`}>Retomar proyecto</Link>}
     </div>
     <p><Link to={`/courses/${encodeURIComponent(courseId)}`}>Índice del curso</Link></p>

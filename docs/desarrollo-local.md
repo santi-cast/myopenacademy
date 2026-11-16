@@ -91,20 +91,21 @@ npm run lint
 npm run build
 ```
 
-Para las pruebas de navegador, mantén la base y el backend sanos. Playwright puede iniciar Vite o reutilizar el servidor de `127.0.0.1:5173`. Desde `frontend/`:
+**Pruebas de navegador.** Todas se lanzan con una orden y en un entorno propio (la prueba mínima, el proyecto por etapas del curso de ejemplo y el recorrido de dos usuarios). Instala antes Chromium de Playwright, desde `frontend/`:
 
 ```sh
 npx --no-install playwright install chromium
-npm run test:e2e
 ```
 
 Si Chromium necesita bibliotecas del sistema, **detente y pide aprobación explícita**. No uses `--with-deps`, instalaciones globales ni paquetes del sistema como arreglo automático.
 
-**Recorrido de dos usuarios.** No necesita la base ni el backend de las tres terminales, ni toca `.env` ni el volumen `myopenacademy_postgres_data`. Requiere Docker activo con la imagen `postgres:18.6` ya descargada y el jar del backend construido (`./mvnw -B package -DskipTests` desde `backend/`). Desde `frontend/`:
+No necesitan la base ni el backend de las tres terminales, ni toca `.env` ni el volumen `myopenacademy_postgres_data`. Requiere Docker activo con la imagen `postgres:18.6` ya descargada y el jar del backend construido (`./mvnw -B package -DskipTests` desde `backend/`). Desde `frontend/`:
 
 ```sh
-npm run test:e2e:journey
+npm run test:e2e
 ```
+
+(`npm run test:e2e:journey` es el nombre antiguo de la misma orden; `npx playwright test` suelto no las lanza.)
 
 El script crea un contenedor `code-academy-e2e-<aleatorio>` con datos en memoria y una contraseña generada que no se muestra, instala los cursos de ejemplo del kit (`cursos-ejemplo/`) por su etiqueta con el importador real, arranca el jar con el perfil por defecto y Vite apuntando a ese backend (variable `CODE_ACADEMY_BACKEND_URL`, que por defecto sigue siendo `http://127.0.0.1:8080`), todo en puertos libres de `127.0.0.1`. Al terminar, también ante un fallo o Ctrl+C, detiene el backend y el contenedor, que se borra solo. Los resultados quedan en `frontend/test-results/journey/<fecha>/`: capturas, registros del backend y `summary.json` con tiempos y el reinicio.
 

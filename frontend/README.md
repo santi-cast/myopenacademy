@@ -14,14 +14,14 @@ Desde `frontend/`, con Node 24.22.1 y npm 11.19.1:
 | `npm run build` | Comprobar TypeScript y construir con Vite. |
 | `npm run dev` | Servidor local en `127.0.0.1:5173`, sin cambiar de puerto si está ocupado. |
 | `npm run preview` | Previsualización del build, solo loopback. |
-| `npm run test:e2e` | Smoke Chromium con backend real ya iniciado en `127.0.0.1:8080` y recorrido de etapas sintético; se pueden filtrar por archivo. |
-| `npm run test:e2e:journey` | Recorrido de dos usuarios con reinicio del backend, en un entorno propio y desechable. |
+| `npm run test:e2e` | Todas las pruebas de navegador (`e2e/journey/`), en un entorno propio y desechable: base, backend y cursos de ejemplo instalados. `npx playwright test` suelto no las lanza: dice que se usa esta orden. |
+| `npm run test:e2e:journey` | Lo mismo que `test:e2e` (nombre antiguo). |
 
 Los resultados y pendientes se registran en [las tareas de H4](../odd/tasks/h4-first-journey.md).
 
-El smoke técnico (`e2e/technical-smoke.spec.ts`) comprueba que una visita anónima llega al backend real por el proxy (`GET /api/me` → 401 `AUTHENTICATION_REQUIRED`) y termina en la pantalla de acceso; el recorrido completo es `test:e2e:journey`. Requiere Chromium de Playwright previamente instalado; no instala navegadores, no inicia el backend ni usa respuestas simuladas. Puede reutilizar el servidor Vite local existente. Detenerse si el navegador requiere paquetes del sistema.
+Las pruebas de navegador son tres, todas contra el backend real y los cursos de ejemplo del kit: la prueba mínima (`technical-smoke.spec.ts`: una visita anónima llega al backend por el proxy, `GET /api/me` → 401 `AUTHENTICATION_REQUIRED`, y termina en la pantalla de acceso), el proyecto por etapas del curso de ejemplo (`stages.spec.ts`) y el recorrido de dos usuarios (`two-users.spec.ts`). Requieren Chromium de Playwright ya instalado; detente si el navegador pide paquetes del sistema.
 
-El recorrido (`e2e/journey/two-users.spec.ts`, lanzado por `scripts/e2e-journey.mjs`) no usa la base ni el backend de desarrollo: crea su propio contenedor PostgreSQL, arranca el jar del backend con el perfil por defecto (sin `.env`) y Vite con `CODE_ACADEMY_BACKEND_URL` apuntando a ese backend, todo en puertos loopback libres, y lo retira al terminar, también si falla. Ana y Bruno se registran, marcan estados distintos, se comprueba que ninguno accede a los datos del otro, se reinicia el backend (las sesiones caducan, el progreso queda) y se revisan en Chromium real Mermaid, resaltado, descarga, portapapeles, enlaces, modo enfoque, anchos e impresión. Sin respuestas simuladas: solo se retiene una petición real para ver la interfaz antes de la confirmación. Capturas, registros y `summary.json` quedan en `test-results/journey/<fecha>/`, ignorado por Git.
+El entorno (`scripts/e2e-journey.mjs`, con `playwright.config.ts`) no usa la base ni el backend de desarrollo: crea su propio contenedor PostgreSQL, arranca el jar del backend con el perfil por defecto (sin `.env`) y Vite con `CODE_ACADEMY_BACKEND_URL` apuntando a ese backend, todo en puertos loopback libres, y lo retira al terminar, también si falla. Ana y Bruno se registran, marcan estados distintos, se comprueba que ninguno accede a los datos del otro, se reinicia el backend (las sesiones caducan, el progreso queda) y se revisan en Chromium real Mermaid, resaltado, descarga, portapapeles, enlaces, modo enfoque, anchos e impresión. Sin respuestas simuladas: solo se retiene una petición real para ver la interfaz antes de la confirmación. Capturas, registros y `summary.json` quedan en `test-results/journey/<fecha>/`, ignorado por Git.
 
 ## Pantallas y rutas
 
@@ -58,7 +58,7 @@ Desde el índice de Java, «Proyecto evolutivo» abre su sección propia. Las et
 - Abrir una etapa cargada envía `stage-continuation` una sola vez si `added: true`. Explorar sin inscripción o abrir el índice no escribe. «Retomar proyecto» usa la última etapa; «Continuar» conserva la última lección.
 - HTML saneado por el backend; resaltado y Mermaid reutilizan la política estricta existente. Los recursos mantienen enlaces autenticados `/api/resources/…`.
 
-`src/stage.test.tsx` verifica esta interfaz con fetch simulado. `e2e/stages.spec.ts` prepara el recorrido Chromium exclusivamente sintético: intercepta todas las rutas de API/health, sin backend ni base. Para ejecutarlo de forma aislada con Chromium ya instalado: `npm run test:e2e -- e2e/stages.spec.ts --workers=1 --reporter=list --output=/tmp/code-academy-stage-results` (usar un directorio temporal nuevo). No ejecutar el smoke técnico ni el journey real para esta comprobación. La presencia del test no afirma que se haya ejecutado ni sustituye las pruebas del backend.
+`src/stage.test.tsx` verifica esta interfaz con fetch simulado (etapa pendiente, varias etapas, continuación). `e2e/journey/stages.spec.ts` la recorre en Chromium con el backend real y el proyecto «Mi catálogo» del curso de ejemplo: leer la etapa no escribe, marcarla es una confirmación manual (se ve «Guardando…» antes de la respuesta), el curso se añade a Mis cursos, «Retomar proyecto» lleva a la etapa y el progreso de lecciones no cambia.
 
 ## Cliente de la API
 
