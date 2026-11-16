@@ -1,6 +1,6 @@
 # Desarrollo local
 
-Esta guía arranca la academia en local: cuentas, los cursos instalados en `content/` y el progreso de cada usuario. Cómo se instalan los cursos está en [instalar y actualizar cursos](actualizacion-contenido.md). Estado: H7 (16 de noviembre de 2026).
+Esta guía arranca la academia en local: cuentas, los cursos instalados en `content/` y el progreso de cada usuario. Cómo se instalan los cursos está en [instalar y actualizar cursos](actualizacion-contenido.md). Estado: H9 (16 de noviembre de 2026).
 
 ## Requisitos
 
@@ -108,9 +108,19 @@ npm run test:e2e:journey
 
 El script crea un contenedor `code-academy-e2e-<aleatorio>` con datos en memoria y una contraseña generada que no se muestra, instala los cursos de ejemplo del kit (`cursos-ejemplo/`) por su etiqueta con el importador real, arranca el jar con el perfil por defecto y Vite apuntando a ese backend (variable `CODE_ACADEMY_BACKEND_URL`, que por defecto sigue siendo `http://127.0.0.1:8080`), todo en puertos libres de `127.0.0.1`. Al terminar, también ante un fallo o Ctrl+C, detiene el backend y el contenedor, que se borra solo. Los resultados quedan en `frontend/test-results/journey/<fecha>/`: capturas, registros del backend y `summary.json` con tiempos y el reinicio.
 
+## Crear el administrador
+
+La academia no trae ningún usuario ni contraseña por defecto. El administrador (que ve «Administración»: registro abierto o cerrado, nombre de la academia, usuarios y cursos instalados) se crea desde una consola local, igual que se recupera una contraseña: con la base sana y el jar construido, **en una terminal real** y desde `backend/`:
+
+```sh
+java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --create-admin=<usuario>
+```
+
+Si el usuario no existe, se crea como administrador y la herramienta pide su contraseña dos veces, sin mostrarla (la misma regla que el registro). Si ya existe, pasa a ser administrador y conserva su contraseña; sus sesiones abiertas se cierran y la próxima vez que entre ya lo será. Sin una terminal interactiva no hace nada, y nunca arranca el servidor web.
+
 ## Recuperar una contraseña
 
-No hay recuperación por la web ni cuenta de administración: se cambia desde una consola local. Con la base sana, compila el jar desde `backend/` (o reutiliza uno ya construido):
+No hay recuperación por la web (un administrador puede poner una contraseña nueva desde «Administración»); sin administrador, se cambia desde una consola local. Con la base sana, compila el jar desde `backend/` (o reutiliza uno ya construido):
 
 ```sh
 cd backend

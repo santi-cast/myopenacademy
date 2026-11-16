@@ -65,9 +65,10 @@ export function LoginPage() {
         {failure && <p className="form-error" role="alert">{failure}</p>}
         <button type="submit" className="btn" disabled={busy}>Iniciar sesión</button>
       </form>
-      {instance?.registrationOpen !== false
+      {/* Only once the academy says whether registration is open (H9): no link that then disappears. */}
+      {instance && (instance.registrationOpen
         ? <p className="auth-alt">¿No tienes cuenta? <Link to="/register">Crear una cuenta</Link></p>
-        : <p className="auth-alt">El registro está cerrado. Pide una cuenta a quien administra la academia.</p>}
+        : <p className="auth-alt">El registro está cerrado. Pide una cuenta a quien administra la academia.</p>)}
       <p className="auth-help">
         ¿Olvidaste la contraseña? No hay recuperación por la web: se restablece desde una consola local con la herramienta --reset-password del backend (ver «Recuperar una contraseña» en docs/desarrollo-local.md).
       </p>

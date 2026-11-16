@@ -141,7 +141,7 @@ export function AdminPage() {
       <SettingsForm initial={settings} />
       <section aria-labelledby="admin-users">
         <h2 id="admin-users">Usuarios</h2>
-        <table className="phase-table">
+        <table className="phase-table admin-table">
           <caption>{users.length} {users.length === 1 ? 'cuenta' : 'cuentas'}</caption>
           <thead><tr><th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
           <tbody>
@@ -155,7 +155,7 @@ export function AdminPage() {
       <section aria-labelledby="admin-courses">
         <h2 id="admin-courses">Cursos instalados</h2>
         <p className="field-hint">Se instalan y actualizan por consola (content-import y content-update), no desde aquí.</p>
-        <table className="phase-table">
+        <table className="phase-table admin-table">
           <caption>{courses.length} {courses.length === 1 ? 'curso' : 'cursos'}</caption>
           <thead><tr><th scope="col">Curso</th><th scope="col">Versión</th><th scope="col">Commit</th></tr></thead>
           <tbody>

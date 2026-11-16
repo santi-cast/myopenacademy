@@ -212,6 +212,19 @@
   margin: 0 0 var(--space-2);
 }
 
+/* The administration's tables: the first column is a name, not a code (H9). */
+.phase-table.admin-table td:first-child {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+  white-space: normal;
+  width: auto;
+}
+
+.phase-table.admin-table td:last-child {
+  text-align: left;
+}
+
 .admin section {
   margin-top: var(--space-7);
 }
