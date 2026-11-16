@@ -61,7 +61,10 @@ export type MyCourses = { courses: { course: Course; enrollment: Enrollment }[] 
 export type Courses = { courses: Course[] }
 
 // A document without progress (H8): the challenges of a phase ("retos", with its phaseId) or the glossary.
-export type DocumentEntry = { id: string; courseId: string; kind: 'retos' | 'glosario'; title: string; phaseId: string | null }
+// ruta (ROADMAP.md), ruta-minima (RUTA-MINIMA.md) and chuleta (99-chuleta-global.md): FORMATO.md 4.
+export type DocumentEntry = {
+  id: string; courseId: string; kind: 'retos' | 'glosario' | 'ruta' | 'ruta-minima' | 'chuleta'; title: string; phaseId: string | null
+}
 // For challenges, the last module of their phase and the first module of the next one (H8).
 export type DocumentView = {
   document: DocumentEntry; bodyHtml: string; resources: Resource[]; previousLessonId?: string | null; nextLessonId?: string | null

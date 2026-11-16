@@ -2,6 +2,8 @@
 
 > Actualízalo al terminar cada tarea. Es la memoria entre sesiones: lo que no esté aquí o en `PLAN.md` no lo sabrá la sesión siguiente.
 
+> **⚠️ Historial reescrito el 16 de noviembre de 2026 (H11, T2):** se quitó `content/java` de todo el historial. **Los identificadores de commit citados en este fichero, en `PLAN.md` y en `odd/tasks/` con fecha anterior a ese día son los de antes de la reescritura**: no existen en el repositorio actual. La tabla de equivalencias (antiguo → nuevo) y el repositorio de antes, entero, están en una copia local, fuera del repositorio.
+
 ## Dónde estamos
 
 **8 de noviembre de 2026:** repositorio creado desde la sesión de la raíz **clonando Code Academy con su historial** (82 commits, hitos H1 a H5 cerrados; ver `PLAN.md`) y sin remoto. Añadidos `CLAUDE.md` y este `ESTADO.md`. El código y el resto de la documentación son, de momento, los de Code Academy.
@@ -11,7 +13,7 @@
 Lo que ya existe en los otros proyectos:
 
 - **Contrato de formato:** `../Cursos/kit-cursos/FORMATO.md`, versión 1 (identidad en `curso.json`, enlaces entre cursos, retos, preguntas de repaso, versiones y equivalencias…).
-- **Kit:** `formato_academia.py`, `generar_indice.py`, `generar_chuleta_global.py`, `comprobar_mermaid.py` (Mermaid 12.2.0, la misma biblioteca que usa este frontend) y el verificador de código.
+- **Kit:** `formato_academia.py`, `generar_indice.py`, `generar_chuleta_global.py`, `comprobar_mermaid.py` (Mermaid 12.2.0; el frontend usa la 12.3.0 desde el 16 de noviembre de 2026 y el kit tiene que pasarse a la misma) y el verificador de código.
 - **Curso inicial:** fase 1 escrita, revisada y **aprobada por el autor** (4 módulos y sus retos), con su `curso.json`.
 
 ## Siguiente paso
@@ -38,7 +40,9 @@ Lo que ya existe en los otros proyectos:
 
 **H10 aprobada por el autor e integrada en `main`** (`7c719a6`, 16 de noviembre de 2026): variables de entorno, un solo comando con Compose, herramientas de instalación de cursos en Docker, arranque sin cursos, aviso de HTTP en la red, marca en un solo sitio y guía `docs/instalacion.md`. Detalle en `odd/tasks/h10-instalacion.md`.
 
-**Siguiente: H11, pack base 1.0.** El autor pide ver antes la lista de tareas (apartado 8.6 del `PLAN.md` común, con la reescritura del historial sin el curso de Java y su copia previa) para aprobarla. Ni `push` ni remoto sin su permiso.
+**H11, pack base 1.0, cerrada en local** (16 de noviembre de 2026): historial sin `content/java`, `gitleaks` limpio, licencias y vulnerabilidades revisadas, Mermaid 12.3.0, ruta y chuleta global como documentos, todas las pruebas de navegador contra el backend real, `README.md` nuevo con capturas, `CONTRIBUTING.md`, `CHANGELOG.md`, nota de la versión (`docs/notas-de-version/1.0.0.md`), el curso inicial instalado desde su etiqueta `v1.0.0` y la versión 1.0.0 integrada en `main` con su **etiqueta local `v1.0.0`**. Detalle en `odd/tasks/h11-pack-base.md` (L1 a L15).
+
+**Siguiente, solo con la orden del autor:** crear el remoto `santi-cast/myopenacademy`, el primer `push` (con la etiqueta), el *release* con la nota de la versión y activar «Report a vulnerability» en GitHub. Cuando se publiquen el kit y el curso, convertir en enlaces sus direcciones del `README.md` y de `CONTRIBUTING.md`. Al terminar, borrar `git-filter-repo` (`rm -rf ~/.local/share/venvs/git-filter-repo`).
 
 **Preguntas abiertas para el autor:**
 
@@ -152,7 +156,7 @@ Total de la parte B: unos **11 días**. Con la parte A, unos **20 días de traba
 Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 
 - **H6, uso real:** el autor usa la academia para estudiar y anota lo que encuentra. Tiene prioridad sobre funciones nuevas (`../PLAN.md`, apartado 8.5).
-- **Antes de publicar** (H11; `../PLAN.md`, apartado 8.6): rutas absolutas en `odd/tasks/` (las de `PLAN.md` se quitaron al reescribirlo); README desactualizado y con voseo; `gitleaks` sobre todo el historial; licencias de las dependencias (elkjs, dompurify); el nombre MyOpenAcademy en un solo sitio (hoy «Code Academy» está en `index.html`, `src/layout/Layouts.tsx` y `e2e/stages.spec.ts`).
+- ~~**Antes de publicar**~~ **Hecho en H11** (`../PLAN.md`, apartado 8.6): rutas absolutas en `odd/tasks/` (las de `PLAN.md` se quitaron al reescribirlo); README desactualizado y con voseo; `gitleaks` sobre todo el historial; licencias de las dependencias (elkjs, dompurify); el nombre MyOpenAcademy en un solo sitio (hoy «Code Academy» está en `index.html`, `src/layout/Layouts.tsx` y `e2e/stages.spec.ts`).
 - ~~**`content/` fuera de Git**~~ **Hecho** en H7, T3 (9 de noviembre de 2026). El historial sigue guardando la copia de Java: el autor decide antes de H11 si se reescribe (ver «Preguntas abiertas»).
 
 ## Dependencias con el kit y el curso inicial
@@ -172,7 +176,9 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 | Otros esperan de la academia | Qué | Para | Estado |
 |---|---|---|---|
 | Kit y curso inicial | La lista de lo que no encaje del formato | Ajustar `FORMATO.md` antes de publicar | **Hecho** (9 de noviembre de 2026): nada que cambiar; la academia aceptará los identificadores con punto tal cual |
-| Curso inicial | Un importador que lea `curso.json` | Instalarse en la academia (pack base 1.0) | Pendiente: cambios 2 a 8 y 10 de la lista de la prueba de importación |
+| Curso inicial | Un importador que lea `curso.json` | Instalarse en la academia (pack base 1.0) | **Hecho** (H7 y H8). Prueba del curso entero desde `06d4d03` (16 de noviembre de 2026, H11 L5 y L6): se instala tal cual, sin hallazgos ni avisos, tras importar `ROADMAP.md` y `99-chuleta-global.md` como documentos. **Versión 1.0.0** desde `1ab0f22` (H11 L12): limpia. **Instalado desde la etiqueta `v1.0.0`** (`2928b0a`, H11 L14), limpio; en `cursos-instalados.json` |
+| Kit | La versión de Mermaid de la academia, para `comprobar_mermaid.py` | Que el kit compruebe los diagramas con la misma biblioteca | **Mermaid 12.3.0** desde `4b688f0` (16 de noviembre de 2026, H11 T5); avisado |
+| Kit y curso inicial | Que la academia importe `ROADMAP.md`, `RUTA-MINIMA.md` y `99-chuleta-global.md` (`FORMATO.md` 4) | Que 07.01 y otros enlaces del curso funcionen | **Hecho** en `4be1b6b` (16 de noviembre de 2026): documentos de todo el curso, con página, anclas y enlace en el índice. Nada que cambiar en el formato ni en el curso |
 | Kit | Que la academia dibuje las listas de tareas de Markdown, para quitar su aviso | Después del pack base 1.0 (`PLAN.md`, apartado 5) | Pendiente: cuando esté, avisar al kit |
 
 Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
@@ -201,3 +207,4 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-16 | Cursos de ejemplo del kit en `27893e8`: la carpeta 2.4 (`servidor.json` y `sesion.txt`) llega entera al ZIP, comprobado en el E2E. |
 | 2026-11-16 | Prueba de instalación del curso inicial desde `ed6c0b7`; `.env.example` admitido y `charset` de los CSV desde `codificacion.txt` (decisiones del autor). |
 | 2026-11-16 | H7, T2: solo identificadores `<curso>.` (forma de `FORMATO.md` 3.3) y números de fase y de módulo por el orden del curso («Fase 01», «01.01»). |
+| 2026-11-16 | H11: pack base 1.0 cerrado en local, con la etiqueta `v1.0.0` sobre `main`; el curso inicial instalado desde su `v1.0.0`. Sin remoto ni `push`. |

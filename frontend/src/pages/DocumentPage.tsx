@@ -77,7 +77,7 @@ function DocumentContent({ view, syllabus }: Loaded) {
   const firstIsTitle = new DOMParser().parseFromString(view.bodyHtml, 'text/html').body.firstElementChild?.localName === 'h1'
   const kicker = entry.kind === 'retos'
     ? `${course.title} · ${phase ? phase.label : challengesLabel(syllabus.phases, entry.phaseId)} · Opcionales, sin seguimiento`
-    : `${course.title} · Glosario`
+    : `${course.title} · ${({ glosario: 'Glosario', ruta: 'Ruta de aprendizaje', 'ruta-minima': 'Ruta mínima', chuleta: 'Chuleta global' } as const)[entry.kind]}`
   return <div className="page">
     <p><Link to={`/courses/${encodeURIComponent(course.id)}`}>Índice del curso</Link></p>
     <article className="reading" ref={root} aria-label={entry.title} onClick={onContentClick}>

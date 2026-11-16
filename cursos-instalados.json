@@ -1,4 +1,10 @@
 {
   "format" : 1,
-  "courses" : [ ]
+  "courses" : [ {
+    "id" : "inicial",
+    "repository" : "https://github.com/myopenacademy/curso-inicial",
+    "version" : "1.0.0",
+    "tag" : "v1.0.0",
+    "commit" : "2928b0a30eee8b11e4d35a6dadfaa8767c61fb84"
+  } ]
 }

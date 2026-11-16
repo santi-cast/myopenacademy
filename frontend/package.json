@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "packageManager": "npm@11.19.1",
   "engines": {
@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "vite",
     "test": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/e2e-journey.mjs",
     "test:e2e:journey": "node scripts/e2e-journey.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "highlight.js": "11.12.0",
-    "mermaid": "12.2.0",
+    "mermaid": "12.3.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-router": "8.5.1"

@@ -107,7 +107,7 @@ Se mantiene la de Code Academy, salvo que el autor diga otra cosa:
 
 - **Una rama por hito** (`feat/h7-…`), con commits pequeños y revisables; **el autor revisa antes de integrar** en `main` con `--no-ff`. Los cambios sueltos de documentación o mantenimiento pueden ir directos a `main`.
 - **Tareas y evidencias** de cada hito en `odd/tasks/`; las pruebas acompañan al comportamiento.
-- **Pruebas:** `./mvnw -B verify` (Testcontainers, base aislada), `npm run test -- --run`, `npm run lint`, `npm run build` y el recorrido `npm run test:e2e:journey`. Las pruebas de importación y de navegador con contenido provisional, siempre contra una **base desechable**, nunca contra la de `myopenacademy`: el backend no arranca si desaparece un identificador ya guardado.
+- **Pruebas:** `./mvnw -B verify` (Testcontainers, base aislada), `npm run test -- --run`, `npm run lint`, `npm run build` y las pruebas de navegador `npm run test:e2e`. Las pruebas de importación y de navegador con contenido provisional, siempre contra una **base desechable**, nunca contra la de `myopenacademy`: el backend no arranca si desaparece un identificador ya guardado.
 - **Nunca** se usan el `.env`, los contenedores ni el volumen del Code Academy original. No se borran volúmenes (`down -v`).
 - **Coordinación** con las sesiones del kit y del curso inicial a través del autor, como dice `CLAUDE.md`.
 - **Sin remotos ni `push`** hasta H11.
@@ -153,7 +153,7 @@ H1 quedó cerrado con estas reglas, H2 definió su seguridad, H3 validó la base
 
 | Responsabilidad | Decisión o estado |
 |---|---|
-| Frontend | React + Vite + TypeScript; no Next.js. `react-router` 8.5.1; `mermaid` 12.2.0 y `highlight.js` 11.12.0 cargados solo en la vista de lección. |
+| Frontend | React + Vite + TypeScript; no Next.js. `react-router` 8.5.1; `mermaid` 12.3.0 y `highlight.js` 11.12.0 cargados solo en la vista de lección. |
 | Componentes y estilos | CSS propio, sin Tailwind, shadcn/ui ni librería de componentes. Colores, fuentes y espaciados salen solo de `frontend/src/styles/tokens.css`, según el diseño aprobado [`04-mezcla.html`](design/h4-visual-style/04-mezcla.html); un test lo comprueba. |
 | Backend | Java 25 + Spring Boot 4.1.2, Maven 3.10.0 mediante Wrapper; base compatible y validada. Una aplicación modular, no microservicios. |
 | Comunicación | API REST; contrato documental aprobado. |

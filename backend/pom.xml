@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>dev.codeacademy</groupId>
 	<artifactId>backend</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>CodeAcademy</name>
 	<description/>
 	<url/>
@@ -137,6 +137,8 @@
 	</dependencies>
 
 	<build>
+		<!-- A fixed name, whatever the version: the tools, the Dockerfile and the E2E script use target/backend.jar. -->
+		<finalName>backend</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

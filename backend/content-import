@@ -8,7 +8,7 @@ if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
     exit 0
 fi
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-jar="$script_dir/target/backend-0.0.1-SNAPSHOT.jar"
+jar="$script_dir/target/backend.jar"
 if [ ! -f "$jar" ]; then
     printf '%s\n' 'content-import: packaged backend jar missing; build first: cd backend && ./mvnw -DskipTests package' >&2
     exit 2

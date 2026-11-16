@@ -97,7 +97,7 @@ describe('verifier probes', () => {
     const backend = installFakeBackend({ loggedInAs: ana })
     stageFixture(backend, true)
     renderApp('/courses/java/project')
-    expect(await screen.findByRole('heading', { level: 1, name: /Proyecto evolutivo/ })).toBeVisible()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Java · / })).toBeVisible()
     expect(screen.queryByRole('link', { name: 'Etapa pendiente' })).not.toBeInTheDocument()
     expect(screen.getByText('Todavía no disponible')).toBeVisible()
     const beforeCalls = backend.calls.length

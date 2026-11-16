@@ -162,7 +162,7 @@ const REAL_LABELS = 'flowchart LR\n    service["<b>service</b><br/>LibraryServic
 const REAL_STEREOTYPES =
   'classDiagram\n    class Shape {\n        <<interface>>\n        +area() double\n    }\n    class Point {\n        <<record>>\n    }\n' +
   '    class Base {\n        <<abstract>>\n    }\n    class Color {\n        <<enumeration>>\n        RED\n    }\n    Shape <|.. Point\n'
-// Elements and attributes real Mermaid 12.2.0 produced for those shapes in Chromium (strict, no HTML labels).
+// Elements and attributes real Mermaid produced (12.2.0; 12.3.0 draws the 81 diagrams of the base course with this policy) for those shapes in Chromium (strict, no HTML labels).
 const MERMAID_LIKE_SVG = `<svg ${SVG_NS} id="m" data-testid="diagram" width="100%" viewBox="0 0 200 100" style="max-width: 200px;" role="graphics-document document" aria-roledescription="class">` +
   '<style>#m{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}#m .node rect{fill:#ECECFF;stroke:#9370DB;}</style>' +
   '<g><defs><filter id="m-drop-shadow"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06"/></filter></defs>' +

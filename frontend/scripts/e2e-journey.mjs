@@ -19,7 +19,7 @@ const run = promisify(execFile)
 const frontendDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repoDir = resolve(frontendDir, '..')
 const backendDir = join(repoDir, 'backend')
-const jar = join(backendDir, 'target', 'backend-0.0.1-SNAPSHOT.jar')
+const jar = join(backendDir, 'target', 'backend.jar')
 // The kit's two example courses, installed for this run by the real offline importer (content-import),
 // in install order: «bueno» links to «ejemplo-destino». The academy's own content/ is never read.
 const exampleCourses = join(repoDir, 'cursos-ejemplo')
@@ -238,7 +238,7 @@ function controlServer(backend) {
 
 function playwright(env) {
   return new Promise((done) => {
-    const child = spawn(join(frontendDir, 'node_modules', '.bin', 'playwright'), ['test', '--config', 'e2e/journey.config.ts'], {
+    const child = spawn(join(frontendDir, 'node_modules', '.bin', 'playwright'), ['test', '--config', 'playwright.config.ts'], {
       cwd: frontendDir, env, stdio: 'inherit',
     })
     child.once('exit', (code, signal) => done(code ?? (signal ? 1 : 0)))

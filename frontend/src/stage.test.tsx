@@ -16,13 +16,13 @@ const snapshot = () => Promise.all([
 
 const writes = (backend: ReturnType<typeof installFakeBackend>) => backend.calls.filter((call) => call.method === 'PUT')
 
-describe('Proyecto evolutivo', () => {
+describe('Proyecto del curso', () => {
   it('separates the project index and body from the unchanged lesson index', async () => {
     const backend = installFakeBackend({ loggedInAs: ana })
     stageFixture(backend)
     renderApp('/courses/java')
     fireEvent.click(await screen.findByRole('link', { name: 'Proyecto del curso: Mi Biblioteca' }))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Java · Proyecto evolutivo' })).toBeVisible()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Java · Mi Biblioteca' })).toBeVisible()
     expect(screen.getByText(/0 de 2 etapas disponibles completadas/)).toHaveTextContent('3 previstas')
     expect(screen.queryByRole('link', { name: 'Etapa pendiente' })).not.toBeInTheDocument()
     expect(screen.getByText('Etapa pendiente')).toHaveAccessibleDescription('Etapa pendiente: todavía no disponible, no se puede abrir.')
@@ -71,7 +71,7 @@ describe('Proyecto evolutivo', () => {
     await waitFor(() => expect(writes(backend)).toHaveLength(1))
     expect(writes(backend)[0].path).toBe('/api/me/courses/java/stage-continuation')
     expect(writes(backend)[0].body).toBe('{"stageId":"java-stage-2"}')
-    fireEvent.click(screen.getByRole('link', { name: 'Proyecto evolutivo' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Proyecto del curso' }))
     expect(await screen.findByRole('link', { name: 'Retomar proyecto' })).toHaveAttribute('href', '/stages/java-stage-2')
     const [project, lesson] = await snapshot()
     expect(lesson.continuation.lastOpenedLessonId).toBe('java-02.01')

@@ -17,7 +17,7 @@ Los nombres de formas siguientes son abreviaturas documentales, no envoltorios a
 | User | `id`, `username` (nombre visible conservado), `role` (`user` o `admin`; H9) y `mustChangePassword` (H9: la contraseña la puso un administrador y es temporal). |
 | Counts | `completedLessons`, `availableLessons`, `plannedLessons`, `percentage`: cifras calculadas dinámicamente desde el catálogo y los estados, nunca constantes. Porcentaje 0–100 sin redondeo contractual; null si no hay disponibles. |
 | Course | `id`, `title`. En el catálogo (`GET /api/courses` y `GET /api/courses/{courseId}`), además `description` (la `descripcion` de `curso.json`, o `null`) y `recommended`: los cursos de su `conviene_saber_antes`, en orden, como `{ "id", "title" }`, con `title` solo si ese curso está instalado (si no, `null`). Son recomendaciones: nada se bloquea (H7, T6). |
-| Phase | `id`, `title`, `position` (campos añadidos en H4): fase del curso con ID permanente y título literal del índice del curso de origen. `position` empieza en 1 y ordena las fases. |
+| Phase | `id`, `title`, `position` (campos añadidos en H4): fase del curso con su ID permanente y su título, los de `curso.json`. `position` empieza en 1 y ordena las fases. |
 | LessonEntry | `id`, `courseId`, `title`, `position`, `phaseId`, `available` (disponibilidad importada, no promesa de que todo lo escrito en origen ya se importó). `phaseId` (campo añadido en H4) es el ID de la fase del mismo curso a la que pertenece la lección; el cliente agrupa por él y nunca deduce la fase del ID de la lección. |
 | Exercise | `id`, `lessonId`, `courseId`, `title`, `statementHtml`, `solutionHtml` (campos saneados por separado; solución libremente desplegable). |
 | Resource | `resourceId`, `url`, `mediaType`, `fileName`; URL controlada `/api/resources/{resourceId}`, sin ruta física. `fileName` (campo añadido en H4) es el nombre original del archivo, por ejemplo `Hello.java`: el que se muestra y con el que se descarga, nunca el nombre interno basado en el ID. |
@@ -143,11 +143,9 @@ Formato único de error:
 }
 ```
 
-## H5: contrato aditivo de etapas pendiente de implementar
+## Etapas del proyecto
 
-Las cinco rutas y su persistencia ya están implementadas en el backend: 57 pruebas aisladas verifican catálogo, estados, rechazos sin cambios, migración poblada V5→V6, reinicio y concurrencia. El encabezado conserva el ancla existente; la interfaz consume esas rutas y la copia activa ya trae las 14 etapas reales disponibles. La migración V6 es aditiva: crea catálogo y estados de etapas y añade una continuación nullable a la inscripción existente. Las pruebas usan PostgreSQL desechable, no la base del propietario.
-
-Proyecto evolutivo tiene una sección propia dentro de Java, con un inventario aprobado de 14 etapas escritas en `c8e29163d59f41830eff2d449bf8b02a19905f61`. Las 14 están importadas y disponibles en la copia activa; la UI sigue mostrando la disponibilidad efectiva que devuelve la API, no la deduce del inventario. No es una fase ni amplía las 199 lecciones previstas. Las 14 rutas H4, sus respuestas y los enums de lecciones/ejercicios conservan su significado; las etapas se consultan por rutas nuevas. No se añade progreso de etapas a `Counts` ni se cambia el denominador de lecciones.
+Un curso con proyecto por etapas (`FORMATO.md` 8; `project.kind` `etapas` en el temario) tiene su propia sección, con seguimiento propio: cada etapa se marca como completada o no, y tiene su continuación. Las etapas no son una fase ni cuentan en las lecciones previstas: no entran en `Counts` ni cambian el denominador de lecciones. La migración V6 creó su catálogo y sus estados y añadió una continuación de etapa a la inscripción.
 
 ### Formas y rutas nuevas
 
@@ -168,7 +166,7 @@ Proyecto evolutivo tiene una sección propia dentro de Java, con un inventario a
 | PUT /api/me/stages/{stageId}/state | `{ "state": "completed" }` | 200, StageStateResult; admite también `not_completed`. |
 | PUT /api/me/courses/{courseId}/stage-continuation | `{ "stageId": "java-stage-initial" }` | 200, StageProgress confirmada; no crea inscripción. |
 
-La interfaz ofrece la sección desde el índice de Java en `/courses/{courseId}/project` y navega a `/stages/{stageId}`, separada de `/lessons/{lessonId}`. Tras cargar correctamente una etapa, solo si `added: true`, llama al PUT de continuación de etapas; no al de lecciones ni durante precarga/exploración. «Retomar proyecto» usa la última etapa; la continuación H4 sigue retomando la última lección. Pendientes visibles, sin apertura.
+La interfaz ofrece la sección desde el índice del curso («Proyecto del curso») en `/courses/{courseId}/project` y navega a `/stages/{stageId}`, separada de `/lessons/{lessonId}`. Tras cargar correctamente una etapa, solo si `added: true`, llama al PUT de continuación de etapas; no al de lecciones ni durante precarga/exploración. «Retomar proyecto» usa la última etapa; la continuación H4 sigue retomando la última lección. Pendientes visibles, sin apertura.
 
 ### Inscripción, estados y aislamiento
 
@@ -196,15 +194,11 @@ Ejemplo ilustrativo de StageProgress sin inscripción y con una etapa disponible
 }
 ```
 
-## H5: extensión de recursos pendiente de implementar
+## Recursos, imágenes y ZIP
 
-La entrega de ZIP y recursos de etapas de esta sección ya está implementada; se conserva el ancla documental para enlaces existentes. Las rutas nuevas de etapas están implementadas en el backend y consumidas por la interfaz; el contenido real (199 lecciones y 14 etapas, con sus recursos y ZIP) ya está importado.
+Se reutiliza `GET /api/resources/{resourceId}`, no se acepta una ruta de archivo ni una URL del cliente. `Resource` conserva sus cuatro campos; ZIP añade un recurso de `mediaType: "application/zip"` con nombre original de carpeta más `.zip`. En v2, el propietario registrado puede ser una lección o una etapa disponibles, o un documento del curso (retos, glosario, ruta, chuleta global); 404 para propietario pendiente, recurso desconocido o archivo que falla contención. No se exige inscripción para explorar, sí sesión para cada descarga o imagen.
 
-Estado de T2: imágenes Markdown y tachado implementados sobre v1/v2; ZIP v2 y recursos de etapas disponibles implementados con pruebas aisladas de carga y HTTP para dos sesiones sin inscripción. La carga rechaza ZIP no canónicos aunque su hash declarado coincida, sin descomprimirlos ni consultar el origen. La verificación independiente comprobó en Chromium la carga de PNG/JPEG y SVG desde el backend real con PostgreSQL desechable, para dos usuarios autenticados, sin interceptar ni relajar encabezados. Las solicitudes anónimas devolvieron 401 y las imágenes no cargaron. Esto verifica la entrega de recursos, no el recorrido completo de lección en React ni otros navegadores.
-
-Se reutiliza `GET /api/resources/{resourceId}`, no se acepta una ruta de archivo ni una URL del cliente. `Resource` conserva sus cuatro campos; ZIP añade un recurso de `mediaType: "application/zip"` con nombre original de carpeta más `.zip`. En v2, el propietario registrado puede ser lección o etapa disponible; 404 para propietario pendiente, recurso desconocido o archivo que falla contención. No se exige inscripción para explorar, sí sesión para cada descarga o imagen.
-
-La resolución parte del documento fuente y de `sourceToId`, como en H4; imágenes y ZIP amplían ese resolutor, no incorporan uno paralelo. El [manifiesto v2](manifiesto.md#recursos-zip-y-procedencia) fija miembros explícitos, procedencia y reescritura de carpetas. Se validan enlaces/fragmentos e imágenes en todos los campos HTML antes de ofrecer el contenido. Se conserva la política de saneamiento y Mermaid; el tachado GFM ya genera el elemento permitido `<del>`.
+La resolución parte del documento fuente y de `sourceToId`; imágenes y ZIP amplían ese resolutor, no incorporan uno paralelo. El [manifiesto v2](manifiesto.md#recursos-zip-y-procedencia) fija miembros explícitos, procedencia y reescritura de carpetas. Se validan enlaces/fragmentos e imágenes en todos los campos HTML antes de ofrecer el contenido. Se conserva la política de saneamiento y Mermaid; el tachado GFM ya genera el elemento permitido `<del>`.
 
 PNG/JPEG registrados para imagen admiten `Content-Disposition: inline` con nombres seguros y tipo validado; los demás recursos mantienen `attachment`, incluidos ZIP y SVG con CSP `sandbox`. Las imágenes SVG solo se usan en contexto `img`, nunca como HTML/SVG insertado en el DOM ni `object`/`iframe`; su visualización autenticada se comprobó en Chromium sin relajar el sandbox. Sin imágenes externas, `data:`, scripts ni manejadores. Todos conservan `nosniff`, `Cache-Control: private, no-store`, comprobación canónica de archivo sin symlinks al servir y acceso por ID. Los ZIP se entregan como `application/zip`, `attachment`, con el nombre original de carpeta más `.zip` codificado por el mismo helper seguro de los otros archivos. Se entregan ya generados y validados desde la copia controlada, nunca desde el origen ni por recorrido dinámico de directorios.
 
