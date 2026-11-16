@@ -153,7 +153,7 @@ H1 quedó cerrado con estas reglas, H2 definió su seguridad, H3 validó la base
 
 | Responsabilidad | Decisión o estado |
 |---|---|
-| Frontend | React + Vite + TypeScript; no Next.js. `react-router` 8.5.1; `mermaid` 12.2.0 y `highlight.js` 11.12.0 cargados solo en la vista de lección. |
+| Frontend | React + Vite + TypeScript; no Next.js. `react-router` 8.5.1; `mermaid` 12.3.0 y `highlight.js` 11.12.0 cargados solo en la vista de lección. |
 | Componentes y estilos | CSS propio, sin Tailwind, shadcn/ui ni librería de componentes. Colores, fuentes y espaciados salen solo de `frontend/src/styles/tokens.css`, según el diseño aprobado [`04-mezcla.html`](design/h4-visual-style/04-mezcla.html); un test lo comprueba. |
 | Backend | Java 25 + Spring Boot 4.1.2, Maven 3.10.0 mediante Wrapper; base compatible y validada. Una aplicación modular, no microservicios. |
 | Comunicación | API REST; contrato documental aprobado. |
