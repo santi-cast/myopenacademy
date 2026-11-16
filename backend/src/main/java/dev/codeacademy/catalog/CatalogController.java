@@ -79,8 +79,23 @@ class CatalogController {
 	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons) {
 	}
 
+	/** {@code improveUrl}: where to propose a change to the lesson, or null (H8, T2). */
 	record LessonView(LessonEntry lesson, String bodyHtml, List<ExerciseView> exercises, List<ResourceView> resources,
-			String previousLessonId, String nextLessonId) {
+			String previousLessonId, String nextLessonId, String improveUrl) {
+	}
+
+	/**
+	 * «Mejorar esta lección»: the GitHub page that edits the file in the course repository (curso.json
+	 * {@code repositorio}, branch main as in FORMATO.md 10.2), each path segment encoded. Only an https address
+	 * gives a link; without one there is no button.
+	 */
+	static String improveUrl(String repository, String sourcePath) {
+		if (repository == null || !repository.matches("https://[^\\s?#\"'<>]+")) return null;
+		StringBuilder url = new StringBuilder(repository.replaceAll("/+$", "").replaceAll("\\.git$", "")).append("/edit/main");
+		for (String segment : sourcePath.split("/")) {
+			url.append('/').append(java.net.URLEncoder.encode(segment, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20"));
+		}
+		return url.toString();
 	}
 
 	record StageEntry(String id, String courseId, String title, int position, boolean available) {
@@ -140,7 +155,8 @@ class CatalogController {
 		return new LessonView(LessonEntry.of(ref), content.bodyHtml(),
 				content.exercises().stream().map(ExerciseView::of).toList(), resources,
 				index > 0 ? available.get(index - 1).id() : null,
-				index < available.size() - 1 ? available.get(index + 1).id() : null);
+				index < available.size() - 1 ? available.get(index + 1).id() : null,
+				improveUrl(ref.course().manifest().source().repository(), ref.lesson().sourcePath()));
 	}
 
 	@GetMapping(path = "/api/courses/{courseId}/stages", produces = MediaType.APPLICATION_JSON_VALUE)

@@ -450,6 +450,13 @@ export function LessonView({ data }: { data: LessonData }) {
                   <h2 id={`${END_ID}-title`}>Al terminar la lección</h2>
                   {total > 0 && <p>Ejercicios: {counts.solved} resueltos, {counts.in_progress} en curso, {counts.pending} pendientes.</p>}
                   <StateControl legend="Estado de la lección" options={LESSON_OPTIONS} saved={savedLesson} save={lessonSave} onChange={saveLesson} />
+                  {view.improveUrl && (
+                    <p className="lesson-improve">
+                      ¿Has visto una errata o algo que se puede explicar mejor?{' '}
+                      <a href={view.improveUrl} target="_blank" rel="noopener noreferrer">Mejorar esta lección</a>{' '}
+                      (en GitHub, se abre en otra pestaña).
+                    </p>
+                  )}
                 </section>
                 <nav className="pager" aria-label="Lecciones anterior y siguiente">
                   <Pager label="anterior" direction="← Anterior" lessonId={view.previousLessonId} titles={titles} />

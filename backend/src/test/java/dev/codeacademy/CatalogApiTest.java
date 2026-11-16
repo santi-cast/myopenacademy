@@ -159,7 +159,7 @@ class CatalogApiTest {
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
 		var body = json(response);
 		assertThat(body.propertyNames()).containsExactlyInAnyOrder("lesson", "bodyHtml", "exercises", "resources",
-				"previousLessonId", "nextLessonId");
+				"previousLessonId", "nextLessonId", "improveUrl");
 		assertThat(body.path("lesson").propertyNames()).containsExactlyInAnyOrder("id", "courseId", "title", "position",
 				"phaseId", "available");
 		assertThat(body.path("lesson").path("id").asString()).isEqualTo(LESSON);
@@ -169,6 +169,9 @@ class CatalogApiTest {
 		// The first module has no previous one, and the next one is pending: neighbours are available lessons only.
 		assertThat(body.path("previousLessonId").isNull()).isTrue();
 		assertThat(body.path("nextLessonId").isNull()).isTrue();
+		// «Mejorar esta lección» (H8, T2): the edit page of the module in the course repository.
+		assertThat(body.path("improveUrl").asString()).isEqualTo(
+			"https://github.com/myopenacademy/curso-ejemplo/edit/main/fase-01-primeros-pasos/01-ficheros-json.md");
 
 		String bodyHtml = body.path("bodyHtml").asString();
 		assertThat(bodyHtml).contains("<a href=\"#12-objetos-y-listas\">")

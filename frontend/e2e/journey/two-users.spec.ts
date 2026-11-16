@@ -359,6 +359,10 @@ test('two learners keep separate progress across a backend restart, without cros
     await pageA.locator('figure.diagram').first().scrollIntoViewIfNeeded()
     await shot(pageA, 'ana-lesson-mermaid')
 
+    // «Mejorar esta lección» (H8, T2): the edit page of the module in the course repository, in a new tab.
+    await expect(pageA.getByRole('link', { name: 'Mejorar esta lección' })).toHaveAttribute('href',
+      'https://github.com/myopenacademy/curso-ejemplo/edit/main/fase-01-primeros-pasos/01-ficheros-json.md')
+
     // Resource link: downloads with the original file name (S14).
     const scriptLink = pageA.locator('.lesson-files a.resource-link').filter({ hasText: /^contar\.sh$/ }).first()
     await expect(scriptLink).toBeVisible()

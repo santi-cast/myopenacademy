@@ -115,6 +115,27 @@ describe('lesson HTML as delivered', () => {
   })
 })
 
+describe('«Mejorar esta lección» (H8, T2)', () => {
+  it('links to the edit page of the module in a new tab, and is absent without a repository', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    const url = 'https://github.com/myopenacademy/curso-java/edit/main/fase-02/01-tu-primer-programa.md'
+    routeLesson(backend, lessonView({ improveUrl: url }))
+    renderApp('/lessons/java-02.01')
+    const link = await screen.findByRole('link', { name: 'Mejorar esta lección' })
+    expect(link).toHaveAttribute('href', url)
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('shows no link when the course has no repository', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    routeLesson(backend, lessonView({ improveUrl: null }))
+    renderApp('/lessons/java-02.01')
+    await screen.findByRole('heading', { name: 'Al terminar la lección' })
+    expect(screen.queryByRole('link', { name: 'Mejorar esta lección' })).not.toBeInTheDocument()
+  })
+})
+
 describe('links inside the lesson (L19)', () => {
   it('a fragment link scrolls with getElementById, also for IDs that start with a digit', async () => {
     await openLesson()

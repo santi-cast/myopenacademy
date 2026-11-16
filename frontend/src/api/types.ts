@@ -74,6 +74,8 @@ export type LessonView = {
   resources: Resource[]
   previousLessonId: string | null
   nextLessonId: string | null
+  // «Mejorar esta lección»: the page that edits the file in the course repository, or null (H8, T2).
+  improveUrl?: string | null
 }
 
 type StateResultBase = {

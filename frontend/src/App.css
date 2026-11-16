@@ -350,6 +350,12 @@
   font-size: var(--text-xl);
 }
 
+.lesson-improve {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 .course-description {
   margin: 0 0 var(--space-2);
 }

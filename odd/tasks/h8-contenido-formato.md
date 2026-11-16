@@ -16,7 +16,7 @@ Pruebas: `./mvnw -B verify` en `backend/`; `npm run test -- --run`, `npm run lin
 ## Tareas
 
 T1 | A6 | Cabecera del módulo: cada campo de la cita de cabecera en su propia línea | hecho: L2.
-T2 | A5 | «Mejorar esta lección» | pendiente.
+T2 | A5 | «Mejorar esta lección» | hecho: L3.
 T3 | A1, A2 | Documentos del curso sin seguimiento (retos de fase y glosario): manifiesto, carga, API, páginas y enlaces | pendiente.
 T4 | A4 | Proyecto de tipo «modulo» en el índice | pendiente.
 T5 | A3 | Enlaces entre cursos | pendiente.
@@ -26,3 +26,4 @@ T6 | todos | Documentación, prueba con el curso inicial en el navegador (base d
 
 L1. 16 de noviembre de 2026: H7 integrada en `main` (`140c9ba`) y rama borrada; el autor pide seguir con H8. Rama `feat/h8-contenido-formato` desde `51cff9e`. Decisión del autor del mismo día: el nombre y el logo («Code Academy» en la cabecera y el título) van en H10, como dice `PLAN.md`.
 L2. 16 de noviembre de 2026, T1. `Markdown.parse` separa los campos de la cabecera (`separateHeaderFields`): si el documento empieza por un título de nivel 1 seguido de una cita, en esa cita cada salto de línea suave que va justo antes de un campo (`**Nombre:**`, negrita que acaba en dos puntos) pasa a salto duro (`<br />`). Vale para los módulos y para los retos (los dos llevan cabecera); una línea que no empieza por un campo sigue unida a la anterior, y cualquier otra cita no cambia. El formato de los cursos no cambia. Pruebas: `ExampleLessonContentTest.eachHeaderFieldStartsItsOwnLine` (los cuatro campos del curso de ejemplo) y `aQuoteThatIsNotTheHeaderKeepsItsLinesTogether`. Las demás pruebas no cambian.
+L3. 16 de noviembre de 2026, T2. La API de la lección devuelve `improveUrl`: la página de GitHub que edita el fichero del módulo en el `repositorio` de `curso.json` (rama `main`, como `FORMATO.md` 10.2; sin `.git` ni barra final; cada parte de la ruta codificada, también espacios y letras no ASCII). Solo una dirección `https://` sin espacios ni comillas da enlace; si no, `null` y no hay botón. Al final de la lección, en «Al terminar la lección»: «¿Has visto una errata o algo que se puede explicar mejor? Mejorar esta lección (en GitHub, se abre en otra pestaña)», con `target="_blank"` y `rel="noopener noreferrer"`. Pruebas: `ImproveUrlTest` (codificación y direcciones que no valen), `CatalogApiTest` (la del curso de ejemplo), dos pruebas de pantalla y el recorrido E2E. 214 pruebas del frontend, lint, compilación y E2E en verde.
