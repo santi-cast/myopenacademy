@@ -32,4 +32,22 @@ interface AccountRepository extends JpaRepository<Account, UUID> {
 			update Account a set a.role = 'admin', a.credentialsVersion = a.credentialsVersion + 1
 			where a.usernameCanonical = :usernameCanonical""")
 	int promoteToAdmin(String usernameCanonical);
+
+	/** Every account for the administration, by username (H9). */
+	java.util.List<Account> findAllByOrderByUsernameCanonicalAsc();
+
+	@Query("select count(a) from Account a where a.role = 'admin' and a.active = true")
+	long countActiveAdmins();
+
+	/** Deactivating closes the sessions: the change comes with the next credentials version (H9). */
+	@Transactional
+	@Modifying(clearAutomatically = true)
+	@Query("update Account a set a.active = :active, a.credentialsVersion = a.credentialsVersion + 1 where a.id = :id")
+	int setActive(UUID id, boolean active);
+
+	/** The administrator's reset (H9): the new hash with the next credentials version, as the console reset. */
+	@Transactional
+	@Modifying(clearAutomatically = true)
+	@Query("update Account a set a.passwordHash = :passwordHash, a.credentialsVersion = a.credentialsVersion + 1 where a.id = :id")
+	int replacePasswordById(UUID id, String passwordHash);
 }

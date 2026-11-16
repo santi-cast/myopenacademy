@@ -72,7 +72,12 @@ class SecurityConfiguration {
 				.authorizeHttpRequests(requests -> requests
 						// Only the container's error forward; a direct request to /error is still denied.
 						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-						.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+						.requestMatchers(HttpMethod.GET, "/actuator/health", "/api/instance").permitAll()
+						// The administration (H9): only an administrator's session.
+						.requestMatchers(HttpMethod.GET, "/api/admin/settings", "/api/admin/users", "/api/admin/courses")
+								.hasRole("ADMIN")
+						.requestMatchers(HttpMethod.PUT, "/api/admin/settings", "/api/admin/users/*/active",
+								"/api/admin/users/*/password").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/logout")
 								.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/me").authenticated()

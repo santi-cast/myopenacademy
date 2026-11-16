@@ -12,13 +12,19 @@ class RegistrationService {
 
 	private final AccountRepository accounts;
 	private final PasswordEncoder passwordEncoder;
+	private final dev.codeacademy.admin.InstanceSettings settings;
 
-	RegistrationService(AccountRepository accounts, PasswordEncoder passwordEncoder) {
+	RegistrationService(AccountRepository accounts, PasswordEncoder passwordEncoder, dev.codeacademy.admin.InstanceSettings settings) {
 		this.accounts = accounts;
 		this.passwordEncoder = passwordEncoder;
+		this.settings = settings;
 	}
 
 	Account register(String username, String password) {
+		// The administrator may close registration (H9): nothing is checked or created then.
+		if (!settings.registrationOpen()) {
+			throw new ApiException(HttpStatus.FORBIDDEN, "REGISTRATION_CLOSED", "Registration is closed.");
+		}
 		if (!CredentialsPolicy.validUsername(username)) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_USERNAME", "Username is invalid.");
 		}
