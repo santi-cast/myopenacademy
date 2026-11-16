@@ -17,8 +17,11 @@ Los cinco necesitan el JAR empaquetado (`cd backend && ./mvnw -DskipTests packag
 Desde la raíz de la academia, con los cursos al lado en `../Cursos/` (el plan común). Las rutas de trabajo son de ejemplo; tienen que ser distintas y no estar unas dentro de otras.
 
 ```sh
+# 0. La carpeta de trabajo tiene que existir.
+mkdir -p ../trabajo
+
 # 1. Generar la candidata: la copia activa más el curso, en la versión de su etiqueta.
-sh backend/content-import generate --active content --source ../Cursos/curso-inicial --tag v0.1.0 \
+sh backend/content-import generate --active content --source ../Cursos/curso-inicial --tag v1.0.0 \
     --output ../trabajo/candidata --report ../trabajo/generacion.json
 
 # 2. Comparar y revisar el informe.

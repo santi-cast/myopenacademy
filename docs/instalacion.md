@@ -58,9 +58,12 @@ Pide la contraseña dos veces, sin mostrarla. Si el usuario ya existía, pasa a 
 Los cursos se instalan por consola, nunca desde la web, con las herramientas de la academia, que van en su imagen: no hace falta Java en el equipo. Se ejecutan con `docker compose run --rm herramientas …`, que ve la carpeta de la academia (con `content/`) y, en `/cursos`, la de los repositorios de los cursos. El recorrido completo y lo que comprueba cada paso está en [instalar y actualizar cursos](actualizacion-contenido.md). En resumen, para instalar o actualizar un curso desde **la etiqueta o el commit que quieras instalar**:
 
 ```sh
-# 1. Preparar la copia nueva (no toca la que está en uso). --tag vX.Y.Z para una versión publicada, o --commit con el commit completo.
+# 0. La carpeta de trabajo, la primera vez (no va a Git).
+mkdir -p trabajo
+
+# 1. Preparar la copia nueva (no toca la que está en uso): la versión publicada, por su etiqueta (o --commit con el commit completo).
 docker compose run --rm herramientas content-import generate --active content --source /cursos/curso-inicial \
-    --commit <commit completo> --output trabajo/candidata --report trabajo/generacion.json
+    --tag v1.0.0 --output trabajo/candidata --report trabajo/generacion.json
 
 # 2. Compararla con la que está en uso y revisar el informe (trabajo/comparacion.json).
 docker compose run --rm herramientas content-update compare --active content --candidate trabajo/candidata \
