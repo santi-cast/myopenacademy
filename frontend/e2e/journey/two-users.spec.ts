@@ -227,7 +227,7 @@ async function expectSessionRejected(page: Page, navigation: Locator) {
   const response = await rejected
   expect(await response.json()).toMatchObject({ code: 'AUTHENTICATION_REQUIRED' })
   await expect(page).toHaveURL(/\/login$/)
-  await expect(page.getByRole('status').filter({ hasText: 'Tu sesión terminó. Iniciá sesión de nuevo.' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'Tu sesión terminó. Inicia sesión de nuevo.' })).toBeVisible()
   await expect(page.locator('.user-btn')).toHaveCount(0)
 }
 

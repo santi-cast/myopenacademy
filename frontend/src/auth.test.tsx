@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { ana, apiCalls, beto, counts, error, installFakeBackend, javaCourse, type FakeBackend } from './test/fakeBackend'
 import { renderApp } from './test/renderApp'
 
-const GENERIC = 'Algo salió mal. Intentá de nuevo en unos minutos.'
-const CSRF = 'La sesión cambió. Recargá la página e intentá de nuevo.'
+const GENERIC = 'Algo salió mal. Inténtalo de nuevo en unos minutos.'
+const CSRF = 'La sesión cambió. Recarga la página e inténtalo de nuevo.'
 
 async function fillLogin(username: string, password: string) {
   fireEvent.change(await screen.findByLabelText('Usuario'), { target: { value: username } })
@@ -106,14 +106,14 @@ describe('registration', () => {
     await fillRegister('Nueva_1', ' quince puntos y más ')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Iniciar sesión' })).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent('Cuenta creada. Iniciá sesión con tu usuario y contraseña.')
+    expect(screen.getByRole('status')).toHaveTextContent('Cuenta creada. Inicia sesión con tu usuario y contraseña.')
     expect(sentBodies(backend, 'POST /api/auth/register')).toEqual(['{"username":"Nueva_1","password":" quince puntos y más "}'])
     expect(backend.user).toBeNull()
     expect(screen.queryByRole('button', { name: /Menú de usuario/ })).not.toBeInTheDocument()
   })
 
   it.each([
-    ['USERNAME_TAKEN', error(409, 'USERNAME_TAKEN'), 'Ese nombre de usuario ya está en uso. Elegí otro.'],
+    ['USERNAME_TAKEN', error(409, 'USERNAME_TAKEN'), 'Ese nombre de usuario ya está en uso. Elige otro.'],
     ['INVALID_USERNAME', error(400, 'INVALID_USERNAME'), 'El usuario debe tener entre 3 y 32 caracteres: letras sin acentos, números o guion bajo.'],
     ['INVALID_PASSWORD', error(400, 'INVALID_PASSWORD'), 'La contraseña debe tener entre 15 y 128 caracteres. Podés usar espacios y frases.'],
     ['CSRF_REJECTED', error(403, 'CSRF_REJECTED'), CSRF],
@@ -252,7 +252,7 @@ describe('session and CSRF across login and logout', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Añadir Java a Mis cursos' }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Iniciar sesión' })).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent('Tu sesión terminó. Iniciá sesión de nuevo.')
+    expect(screen.getByRole('status')).toHaveTextContent('Tu sesión terminó. Inicia sesión de nuevo.')
     expect(document.body).not.toHaveTextContent('Ana')
     expect(document.body).not.toHaveTextContent('Java')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -292,7 +292,7 @@ describe('session and CSRF across login and logout', () => {
     renderApp('/courses')
     fireEvent.click(await screen.findByRole('button', { name: 'Añadir Java a Mis cursos' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('No tenés permiso para esta acción.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('No tienes permiso para esta acción.')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Añadir Java a Mis cursos' })).toBeEnabled())
   })
 

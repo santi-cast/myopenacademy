@@ -16,8 +16,8 @@ export function LoginPage() {
   const registered = (location.state as { registered?: boolean } | null)?.registered === true
   const expired = state.status === 'anonymous' && state.expired
   const notice = failure === null && registered
-    ? 'Cuenta creada. Iniciá sesión con tu usuario y contraseña.'
-    : failure === null && expired ? 'Tu sesión terminó. Iniciá sesión de nuevo.' : null
+    ? 'Cuenta creada. Inicia sesión con tu usuario y contraseña.'
+    : failure === null && expired ? 'Tu sesión terminó. Inicia sesión de nuevo.' : null
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -63,7 +63,7 @@ export function LoginPage() {
         {failure && <p className="form-error" role="alert">{failure}</p>}
         <button type="submit" className="btn" disabled={busy}>Iniciar sesión</button>
       </form>
-      <p className="auth-alt">¿No tenés cuenta? <Link to="/register">Crear una cuenta</Link></p>
+      <p className="auth-alt">¿No tienes cuenta? <Link to="/register">Crear una cuenta</Link></p>
       <p className="auth-help">
         ¿Olvidaste la contraseña? No hay recuperación por la web: se restablece desde una consola local con la herramienta --reset-password del backend (ver «Recuperar una contraseña» en docs/desarrollo-local.md).
       </p>

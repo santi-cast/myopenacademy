@@ -10,7 +10,7 @@ import { renderDiagrams } from './diagrams'
 export const HIGHLIGHTED_LANGUAGES = new Set(['java', 'xml', 'html', 'sql', 'properties', 'bash', 'yaml', 'javascript', 'css', 'powershell', 'json', 'kotlin'])
 
 export const PENDING_LINK_DESCRIPTION_ID = 'pending-link-description'
-export const RETRIEVAL_HINT = 'Antes de abrirla, intentá explicar la solución con tus palabras.'
+export const RETRIEVAL_HINT = 'Antes de abrirla, intenta explicar la solución con tus palabras.'
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag)
