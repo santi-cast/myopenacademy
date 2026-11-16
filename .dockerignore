@@ -1,0 +1,18 @@
+# Only the sources the image builds from; never secrets, installed courses or build output.
+.env
+.env.*
+.git
+.claude
+content
+cursos-ejemplo
+cursos-instalados.json
+design
+docs
+odd
+tools
+frontend/node_modules
+frontend/dist
+frontend/coverage
+frontend/playwright-report
+frontend/test-results
+backend/target

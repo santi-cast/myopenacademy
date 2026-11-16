@@ -20,5 +20,26 @@ services:
       retries: 10
       start_period: 10s
 
+  # The academy itself (H10): built from the Dockerfile, it serves the frontend and the API on one port.
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-code_academy}
+      DB_USERNAME: ${DB_USERNAME:-code_academy}
+      DB_PASSWORD: ${DB_PASSWORD:?Set a nonempty DB_PASSWORD in your local environment}
+      PUBLIC_URL: ${PUBLIC_URL:-http://127.0.0.1:8080}
+    ports:
+      # 127.0.0.1 by default: only this machine. APP_BIND=0.0.0.0 opens it to the home network (see the guide).
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
+    volumes:
+      # The installed courses (by default ./content): install and update them with content-import and content-update.
+      - ${CONTENT_HOST_DIR:-./content}:/content
+    restart: unless-stopped
+
 volumes:
   postgres_data:
