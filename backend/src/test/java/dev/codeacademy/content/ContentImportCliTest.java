@@ -93,7 +93,7 @@ class ContentImportCliTest {
 	 * again in H7, when its identity started to come from curso.json (source.name is now the course's own title).
 	 */
 	static final String SHARED_MANIFEST_SHA =
-		"227d87a5cd115dda0c81c458e7741d4391122ee6db51405c5b2526b28ece0c0a";
+		"efc70ec1a14134f2ae06a689aa71d5a32f9e018dbc02281a3dffe7cd4dc6e1a5";
 	static final List<String> SHARED_ARCHIVE_SHA = List.of(
 		"a253f8f587fd349a355352d11015051ae223261e97e9b37734d837711b068eac",
 		"5a38b4b35047d1d7604d2e0dccf3d45f0b3372b465573e1098ee7b19af6cb2e5",

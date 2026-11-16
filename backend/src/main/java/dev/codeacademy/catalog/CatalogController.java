@@ -86,7 +86,15 @@ class CatalogController {
 	record DocumentView(DocumentEntry document, String bodyHtml, List<ResourceView> resources) {
 	}
 
-	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons, List<DocumentEntry> documents) {
+	/** The course project (H8, T4): "etapas" (its own page) or "modulo" (the lesson that is the project), or null. */
+	record ProjectView(String kind, String title, String lessonId) {
+		static ProjectView of(Manifest.Project project) {
+			return project == null ? null : new ProjectView(project.kind(), project.title(), project.lessonId());
+		}
+	}
+
+	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons, List<DocumentEntry> documents,
+			ProjectView project) {
 	}
 
 	/** {@code improveUrl}: where to propose a change to the lesson, or null (H8, T2). */
@@ -145,7 +153,8 @@ class CatalogController {
 		return new SyllabusView(view(course.manifest().course()),
 				Catalog.phases(course).stream().map(PhaseView::of).toList(), Catalog.syllabus(course).stream()
 					.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList(),
-				Catalog.documents(course).stream().map(document -> DocumentEntry.of(courseId, document)).toList());
+				Catalog.documents(course).stream().map(document -> DocumentEntry.of(courseId, document)).toList(),
+				ProjectView.of(course.manifest().course().project()));
 	}
 
 	/** A document without progress: its body and its resources, like a stage but with no state (H8, T3). */

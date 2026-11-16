@@ -21,7 +21,7 @@ describe('Proyecto evolutivo', () => {
     const backend = installFakeBackend({ loggedInAs: ana })
     stageFixture(backend)
     renderApp('/courses/java')
-    fireEvent.click(await screen.findByRole('link', { name: 'Proyecto evolutivo' }))
+    fireEvent.click(await screen.findByRole('link', { name: 'Proyecto del curso: Mi Biblioteca' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Java · Proyecto evolutivo' })).toBeVisible()
     expect(screen.getByText(/0 de 2 etapas disponibles completadas/)).toHaveTextContent('3 previstas')
     expect(screen.queryByRole('link', { name: 'Etapa pendiente' })).not.toBeInTheDocument()

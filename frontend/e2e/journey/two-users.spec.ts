@@ -327,6 +327,9 @@ test('two learners keep separate progress across a backend restart, without cros
     await expect(codes.nth(0)).toContainText(LESSON_TITLE)
     await expect(codes.nth(1).getByRole('cell').first()).toHaveText('01.02')
     await expect(codes.nth(1)).toContainText('Ficheros YAML')
+    // The course project, from curso.json (H8, T4): by stages here, with its own page.
+    await expect(pageA.locator('.index-project').getByRole('link')).toHaveText('Proyecto del curso: Mi catálogo')
+    await expect(phaseTable.getByRole('link', { name: 'Retos de la fase' })).toBeVisible()
     await shot(pageA, 'ana-course-index')
     const continuation = pageA.waitForResponse((r) => r.url().endsWith(`/api/me/courses/${COURSE_ID}/continuation`) && r.request().method() === 'PUT')
     await pageA.locator('.phase-grid').getByRole('link', { name: LESSON_TITLE }).click()

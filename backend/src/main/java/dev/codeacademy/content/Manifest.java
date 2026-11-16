@@ -59,10 +59,24 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 	 * The course as the catalog shows it: {@code description} and {@code recommended} (the course IDs it is worth doing
 	 * first, never a requirement) come from curso.json ({@code descripcion}, {@code conviene_saber_antes}; H7, T6).
 	 */
-	public record Course(String id, String namespace, String title, String description, List<String> recommended) {
+	public record Course(String id, String namespace, String title, String description, List<String> recommended,
+			Project project) {
 		public Course(String id, String namespace, String title) {
-			this(id, namespace, title, null, null);
+			this(id, namespace, title, null, null, null);
 		}
+
+		public Course(String id, String namespace, String title, String description, List<String> recommended) {
+			this(id, namespace, title, description, recommended, null);
+		}
+	}
+
+	/**
+	 * The course project for the learner's portfolio (FORMATO.md 8; H8, T4): {@code kind} "etapas" (its stages are
+	 * {@code projectStages}) or "modulo" ({@code lessonId}, the module that is the project). Null: no project declared.
+	 */
+	public record Project(String kind, String title, String lessonId) {
+		public static final String STAGES = "etapas";
+		public static final String MODULE = "modulo";
 	}
 
 	/** A permanent group of lessons; its title is taken verbatim from the source course index. */

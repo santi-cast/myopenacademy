@@ -322,5 +322,18 @@ describe('Documentos del curso (H8, T3)', () => {
     expect(fireEvent.click(screen.getByRole('link', { name: 'el primer programa' }))).toBe(false)
     await waitFor(() => expect(apiCalls(backend)).toContain('GET /api/lessons/java-02.01'))
   })
+
+  it('marks the module that is the course project and links it; a course without project shows nothing', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons,
+      project: { kind: 'modulo', title: 'Mi primer programa', lessonId: 'java-02.01' } } })
+    renderApp('/courses/java')
+
+    const link = await screen.findByRole('link', { name: 'Proyecto del curso: Mi primer programa (Tu primer programa)' })
+    expect(link).toHaveAttribute('href', '/lessons/java-02.01')
+    const row = screen.getByRole('link', { name: 'Tu primer programa' }).closest('tr')!
+    expect(within(row).getByText('Proyecto del curso')).toBeVisible()
+    expect(screen.queryByRole('link', { name: /Proyecto evolutivo/ })).not.toBeInTheDocument()
+  })
 })
 

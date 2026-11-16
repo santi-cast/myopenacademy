@@ -146,8 +146,14 @@ class CatalogApiTest {
 
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
 		var body = json(response);
-		assertThat(body.propertyNames()).containsExactlyInAnyOrder("course", "phases", "lessons", "documents");
+		assertThat(body.propertyNames()).containsExactlyInAnyOrder("course", "phases", "lessons", "documents", "project");
 		assertThat(body.path("course").path("id").asString()).isEqualTo(COURSE);
+		// H8, T4: the course project, by stages here (its own page).
+		assertThat(body.path("project").path("kind").asString()).isEqualTo("etapas");
+		assertThat(body.path("project").path("lessonId").isNull()).isTrue();
+		JsonNode destino = json(browser.get("/api/courses/ejemplo-destino")).path("project");
+		assertThat(destino.path("kind").asString()).isEqualTo("modulo");
+		assertThat(destino.path("lessonId").asString()).isEqualTo("ejemplo-destino.mi-primer-repositorio");
 		// H8, T3: the challenges of the phase, a document without progress (the example course has no glossary).
 		JsonNode documents = body.path("documents");
 		assertThat(documents.size()).isEqualTo(1);

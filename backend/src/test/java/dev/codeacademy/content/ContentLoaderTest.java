@@ -125,6 +125,15 @@ class ContentLoaderTest {
 	}
 
 	@Test
+	void rejectsAProjectModuleThatIsNotALessonOrAnUnknownKind() {
+		fixture.editManifest(m -> ((ObjectNode) m.get("course")).putObject("project").put("kind", "modulo")
+			.put("title", "Proyecto").put("lessonId", "demo.no-existe"));
+		fixture.rejected("project: unknown module demo.no-existe");
+		fixture.editManifest(m -> ((ObjectNode) m.get("course")).putObject("project").put("kind", "otro").put("title", "Proyecto"));
+		fixture.rejected("project: unsupported kind otro");
+	}
+
+	@Test
 	void rejectsTheLegacyHyphenPrefix() {
 		// FORMATO.md 3.3: <course>.<name>; <course>-<name> was the form the old importer invented (H7, T2).
 		fixture.editManifest(m -> {

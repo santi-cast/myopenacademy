@@ -358,6 +358,14 @@
   color: var(--text-muted);
 }
 
+.index-project {
+  margin: 0 0 var(--space-4);
+}
+
+.badge-project {
+  color: var(--text-muted);
+}
+
 .index-glossary {
   margin: var(--space-2) 0 0;
 }

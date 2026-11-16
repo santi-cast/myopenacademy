@@ -754,7 +754,9 @@ final class ContentImportGenerator {
 			return new Manifest(2, new Manifest.Source(descriptor.title(), source.commit(), tag, descriptor.version(),
 				descriptor.repository()),
 				new Manifest.Course(descriptor.id(), descriptor.id(), descriptor.title(), descriptor.description(),
-					descriptor.recommended()),
+					descriptor.recommended(), descriptor.project() == null || descriptor.project().type() == null ? null
+						: new Manifest.Project(descriptor.project().type(), descriptor.project().title(),
+							descriptor.project().module())),
 				List.copyOf(phases), List.copyOf(lessons), List.copyOf(resourceEntries), List.copyOf(links),
 				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()), List.copyOf(courseDocuments));
 		}

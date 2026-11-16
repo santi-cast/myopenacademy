@@ -95,6 +95,7 @@ final class ManifestValidator {
 		Map<String, Phase> phases = phases();
 		Map<String, Lesson> lessons = lessons();
 		phaseOrder(phases, lessons);
+		project(lessons);
 		Map<String, Manifest.Stage> stages = stages();
 		Map<String, Manifest.Document> courseDocuments = courseDocuments(phases);
 		Map<String, Resource> resources = resources(lessons, stages, courseDocuments);
@@ -229,6 +230,21 @@ final class ManifestValidator {
 			problems.add("lesson positions must be 1.." + positions.size() + " without gaps or repeats");
 		}
 		return lessons;
+	}
+
+	/** The course project (FORMATO.md 8): its kind, and for a module project a module of the course. */
+	private void project(Map<String, Lesson> lessons) {
+		Manifest.Project project = manifest.course().project();
+		if (project == null) return;
+		if (Manifest.Project.MODULE.equals(project.kind())) {
+			if (project.lessonId() == null || !lessons.containsKey(project.lessonId())) {
+				problems.add("project: unknown module " + project.lessonId());
+			}
+		}
+		else if (Manifest.Project.STAGES.equals(project.kind())) {
+			if (project.lessonId() != null) problems.add("project: a project by stages has no module");
+		}
+		else problems.add("project: unsupported kind " + project.kind());
 	}
 
 	private Map<String, Manifest.Stage> stages() {
