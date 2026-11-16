@@ -58,6 +58,26 @@ class ExampleLessonContentTest {
 	}
 
 	/** The phase and the modules exactly as curso.json declares them, the pending one included. */
+	/** H8, T1: each field of the header quote (FORMATO.md 5.2) on its own line; the course keeps its format. */
+	@Test
+	void eachHeaderFieldStartsItsOwnLine() {
+		String quote = lesson.bodyHtml().substring(lesson.bodyHtml().indexOf("<blockquote>"),
+			lesson.bodyHtml().indexOf("</blockquote>"));
+		assertThat(quote).startsWith("<blockquote>\n<p><strong>Versiones:</strong>")
+			.contains("<br />\n<strong>Conviene saber antes:</strong>", "<br />\n<strong>Tiempo estimado:</strong>",
+				"<br />\n<strong>Nivel:</strong>");
+		assertThat(quote.split("<br />", -1)).hasSize(4);
+	}
+
+	@Test
+	void aQuoteThatIsNotTheHeaderKeepsItsLinesTogether() {
+		var document = Markdown.parse("# Título\n\nTexto.\n\n> **Nota:** una\n> **Otra:** dos\n");
+		assertThat(Markdown.render(document, java.util.Map.of())).doesNotContain("<br />");
+		var wrapped = Markdown.parse("# Título\n\n> **Versiones:** una línea\n> que sigue\n> **Nivel:** Básico\n");
+		assertThat(Markdown.render(wrapped, java.util.Map.of()))
+			.contains("<strong>Versiones:</strong> una línea\nque sigue<br />\n<strong>Nivel:</strong>");
+	}
+
 	@Test
 	void theManifestHasThePhaseAndModulesOfCursoJson() {
 		assertThat(content.manifest().phases())

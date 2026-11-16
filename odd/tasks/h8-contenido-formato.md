@@ -15,7 +15,7 @@ Pruebas: `./mvnw -B verify` en `backend/`; `npm run test -- --run`, `npm run lin
 
 ## Tareas
 
-T1 | A6 | Cabecera del módulo: cada campo de la cita de cabecera en su propia línea | pendiente.
+T1 | A6 | Cabecera del módulo: cada campo de la cita de cabecera en su propia línea | hecho: L2.
 T2 | A5 | «Mejorar esta lección» | pendiente.
 T3 | A1, A2 | Documentos del curso sin seguimiento (retos de fase y glosario): manifiesto, carga, API, páginas y enlaces | pendiente.
 T4 | A4 | Proyecto de tipo «modulo» en el índice | pendiente.
@@ -25,3 +25,4 @@ T6 | todos | Documentación, prueba con el curso inicial en el navegador (base d
 ## Registro
 
 L1. 16 de noviembre de 2026: H7 integrada en `main` (`140c9ba`) y rama borrada; el autor pide seguir con H8. Rama `feat/h8-contenido-formato` desde `51cff9e`. Decisión del autor del mismo día: el nombre y el logo («Code Academy» en la cabecera y el título) van en H10, como dice `PLAN.md`.
+L2. 16 de noviembre de 2026, T1. `Markdown.parse` separa los campos de la cabecera (`separateHeaderFields`): si el documento empieza por un título de nivel 1 seguido de una cita, en esa cita cada salto de línea suave que va justo antes de un campo (`**Nombre:**`, negrita que acaba en dos puntos) pasa a salto duro (`<br />`). Vale para los módulos y para los retos (los dos llevan cabecera); una línea que no empieza por un campo sigue unida a la anterior, y cualquier otra cita no cambia. El formato de los cursos no cambia. Pruebas: `ExampleLessonContentTest.eachHeaderFieldStartsItsOwnLine` (los cuatro campos del curso de ejemplo) y `aQuoteThatIsNotTheHeaderKeepsItsLinesTogether`. Las demás pruebas no cambian.
