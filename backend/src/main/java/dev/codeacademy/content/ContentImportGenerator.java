@@ -692,7 +692,8 @@ final class ContentImportGenerator {
 				phases.add(new Manifest.Phase(phase.id(), phase.title(), phases.size() + 1));
 			}
 			return new Manifest(2, new Manifest.Source(descriptor.title(), source.commit(), tag, descriptor.version()),
-				new Manifest.Course(descriptor.id(), descriptor.id(), descriptor.title()),
+				new Manifest.Course(descriptor.id(), descriptor.id(), descriptor.title(), descriptor.description(),
+					descriptor.recommended()),
 				List.copyOf(phases), List.copyOf(lessons), List.copyOf(resourceEntries), List.copyOf(links),
 				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()));
 		}

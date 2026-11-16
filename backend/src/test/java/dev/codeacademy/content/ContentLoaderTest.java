@@ -118,6 +118,13 @@ class ContentLoaderTest {
 	}
 
 	@Test
+	void rejectsARecommendationOfItselfOrThatIsNotACourseId() {
+		fixture.editManifest(m -> ((ObjectNode) m.get("course")).putArray("recommended").add("demo").add("Inicial"));
+		fixture.rejected("course.recommended demo must be the id of another course");
+		fixture.rejected("course.recommended Inicial must be the id of another course");
+	}
+
+	@Test
 	void rejectsTheLegacyHyphenPrefix() {
 		// FORMATO.md 3.3: <course>.<name>; <course>-<name> was the form the old importer invented (H7, T2).
 		fixture.editManifest(m -> {

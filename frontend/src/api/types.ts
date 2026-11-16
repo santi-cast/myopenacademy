@@ -9,7 +9,9 @@ export type Counts = {
   percentage: number | null
 }
 
-export type Course = { id: string; title: string }
+// The catalog adds what curso.json says (H7, T6): a recommended course has a title only when it is installed.
+export type RecommendedCourse = { id: string; title: string | null }
+export type Course = { id: string; title: string; description?: string | null; recommended?: RecommendedCourse[] }
 
 export type Phase = { id: string; title: string; position: number }
 

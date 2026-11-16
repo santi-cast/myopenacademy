@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { apiGet, apiSend } from '../api/client'
 import { errorMessage, isAuthRequired } from '../api/errors'
-import type { Course, Courses, Enrollment, MyCourses } from '../api/types'
+import type { Course, Courses, Enrollment, MyCourses, RecommendedCourse } from '../api/types'
 import { LoadFailure } from './LoadFailure'
 import { useLoad } from './useApi'
 
@@ -14,6 +14,24 @@ async function loadCatalog(): Promise<Catalog> {
     courses: catalog.courses,
     added: new Set(mine.courses.filter(({ enrollment }) => enrollment.added).map(({ course }) => course.id)),
   }
+}
+
+// «Conviene saber antes» is a recommendation, never a lock: an installed course is a link to its index; one that is
+// not installed in this academy is named by its ID.
+function Recommendations({ courses }: { courses: RecommendedCourse[] }) {
+  return (
+    <p className="course-recommended">
+      Conviene saber antes:{' '}
+      {courses.map((course, index) => (
+        <span key={course.id}>
+          {index > 0 && ', '}
+          {course.title
+            ? <Link to={`/courses/${encodeURIComponent(course.id)}`}>{course.title}</Link>
+            : <>{course.id} <span className="course-missing">(no está instalado en esta academia)</span></>}
+        </span>
+      ))}
+    </p>
+  )
 }
 
 function CatalogEntry({ course, added, onAdded }: { course: Course; added: boolean; onAdded: () => void }) {
@@ -40,6 +58,8 @@ function CatalogEntry({ course, added, onAdded }: { course: Course; added: boole
       <h2 id={titleId}>
         <Link to={`/courses/${encodeURIComponent(course.id)}`}>{course.title}</Link>
       </h2>
+      {course.description && <p className="course-description">{course.description}</p>}
+      {course.recommended && course.recommended.length > 0 && <Recommendations courses={course.recommended} />}
       {added
         ? (
             <p className="saved" role="status">

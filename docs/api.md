@@ -16,7 +16,7 @@ Los nombres de formas siguientes son abreviaturas documentales, no envoltorios a
 |---|---|
 | User | `id`, `username` (nombre visible conservado). |
 | Counts | `completedLessons`, `availableLessons`, `plannedLessons`, `percentage`: cifras calculadas dinámicamente desde el catálogo y los estados, nunca constantes. Porcentaje 0–100 sin redondeo contractual; null si no hay disponibles. |
-| Course | `id`, `title`. |
+| Course | `id`, `title`. En el catálogo (`GET /api/courses` y `GET /api/courses/{courseId}`), además `description` (la `descripcion` de `curso.json`, o `null`) y `recommended`: los cursos de su `conviene_saber_antes`, en orden, como `{ "id", "title" }`, con `title` solo si ese curso está instalado (si no, `null`). Son recomendaciones: nada se bloquea (H7, T6). |
 | Phase | `id`, `title`, `position` (campos añadidos en H4): fase del curso con ID permanente y título literal del índice del curso de origen. `position` empieza en 1 y ordena las fases. |
 | LessonEntry | `id`, `courseId`, `title`, `position`, `phaseId`, `available` (disponibilidad importada, no promesa de que todo lo escrito en origen ya se importó). `phaseId` (campo añadido en H4) es el ID de la fase del mismo curso a la que pertenece la lección; el cliente agrupa por él y nunca deduce la fase del ID de la lección. |
 | Exercise | `id`, `lessonId`, `courseId`, `title`, `statementHtml`, `solutionHtml` (campos saneados por separado; solución libremente desplegable). |

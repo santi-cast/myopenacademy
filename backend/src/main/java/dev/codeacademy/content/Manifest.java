@@ -37,7 +37,14 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 		}
 	}
 
-	public record Course(String id, String namespace, String title) {
+	/**
+	 * The course as the catalog shows it: {@code description} and {@code recommended} (the course IDs it is worth doing
+	 * first, never a requirement) come from curso.json ({@code descripcion}, {@code conviene_saber_antes}; H7, T6).
+	 */
+	public record Course(String id, String namespace, String title, String description, List<String> recommended) {
+		public Course(String id, String namespace, String title) {
+			this(id, namespace, title, null, null);
+		}
 	}
 
 	/** A permanent group of lessons; its title is taken verbatim from the source course index. */

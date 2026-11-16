@@ -106,11 +106,19 @@ class CatalogApiTest {
 		assertThat(body.propertyNames()).containsExactly("courses");
 		List<String> courses = new ArrayList<>();
 		for (JsonNode course : body.path("courses")) {
-			assertThat(course.propertyNames()).containsExactlyInAnyOrder("id", "title");
+			assertThat(course.propertyNames()).containsExactlyInAnyOrder("id", "title", "description", "recommended");
 			courses.add(course.path("id").asString() + " " + course.path("title").asString());
 		}
 		assertThat(courses).containsExactlyInAnyOrder("ejemplo Curso de ejemplo",
 				"ejemplo-destino Curso de destino de ejemplo");
+		// From curso.json (H7, T6): descripcion and conviene_saber_antes. «inicial» is not installed: no title.
+		JsonNode ejemplo = null;
+		for (JsonNode course : body.path("courses")) if (course.path("id").asString().equals("ejemplo")) ejemplo = course;
+		assertThat(ejemplo.path("description").asString())
+			.isEqualTo("Un curso pequeño que cumple FORMATO.md, para las pruebas del kit.");
+		assertThat(ejemplo.path("recommended")).hasSize(1);
+		assertThat(ejemplo.path("recommended").get(0).path("id").asString()).isEqualTo("inicial");
+		assertThat(ejemplo.path("recommended").get(0).path("title").isNull()).isTrue();
 	}
 
 	@Test

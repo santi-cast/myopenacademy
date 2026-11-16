@@ -76,6 +76,13 @@ final class ManifestValidator {
 			return;
 		}
 		prefix = manifest.course().namespace() + ".";
+		if (manifest.course().recommended() != null) {
+			for (String recommended : manifest.course().recommended()) {
+				if (recommended == null || !NAMESPACE.matcher(recommended).matches() || recommended.equals(manifest.course().id())) {
+					problems.add("course.recommended " + recommended + " must be the id of another course");
+				}
+			}
+		}
 		ids.add(manifest.course().id());
 		if (manifest.phases() == null) {
 			problems.add("manifest needs phases");

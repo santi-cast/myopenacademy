@@ -96,6 +96,29 @@ describe('Catálogo', () => {
     expect(within(course).getByRole('link', { name: 'Java' })).toHaveAttribute('href', '/courses/java')
   })
 
+  it('shows the description and the recommended courses, linked only when installed', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    const inicial = { id: 'inicial', title: 'Fundamentos para programar', description: 'Lo que conviene saber antes.', recommended: [] }
+    const java = {
+      ...javaCourse,
+      description: 'De no saber programar a trabajar con Java.',
+      recommended: [{ id: 'inicial', title: 'Fundamentos para programar' }, { id: 'sql', title: null }],
+    }
+    backend.route('GET /api/courses', { status: 200, body: { courses: [inicial, java] } })
+    renderApp('/courses')
+
+    const course = await screen.findByRole('article', { name: 'Java' })
+    expect(within(course).getByText('De no saber programar a trabajar con Java.')).toBeVisible()
+    const recommended = within(course).getByText(/Conviene saber antes/)
+    expect(recommended).toHaveTextContent('Conviene saber antes: Fundamentos para programar, sql (no está instalado en esta academia)')
+    expect(within(recommended).getByRole('link', { name: 'Fundamentos para programar' })).toHaveAttribute('href', '/courses/inicial')
+    expect(within(recommended).queryByRole('link', { name: /sql/ })).not.toBeInTheDocument()
+    // Only a recommendation: Java can be added all the same.
+    expect(within(course).getByRole('button', { name: 'Añadir Java a Mis cursos' })).toBeEnabled()
+    const first = await screen.findByRole('article', { name: 'Fundamentos para programar' })
+    expect(within(first).queryByText(/Conviene saber antes/)).not.toBeInTheDocument()
+  })
+
   it('shows the course as added only after the server confirms with 200', async () => {
     const backend = installFakeBackend({ loggedInAs: ana })
     const pending = deferred()

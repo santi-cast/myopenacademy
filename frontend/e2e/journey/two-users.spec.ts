@@ -286,6 +286,11 @@ test('two learners keep separate progress across a backend restart, without cros
     })
     await mainNav(pageA, 'Catálogo').click()
     await expect(pageA.getByRole('button', { name: `Añadir ${COURSE_TITLE} a Mis cursos` })).toBeVisible()
+    // Description and «Conviene saber antes» from curso.json (H7, T6); «inicial» is not installed in this run.
+    const card = pageA.getByRole('article', { name: COURSE_TITLE, exact: true })
+    await expect(card.locator('.course-description')).toHaveText('Un curso pequeño que cumple FORMATO.md, para las pruebas del kit.')
+    await expect(card.locator('.course-recommended')).toHaveText('Conviene saber antes: inicial (no está instalado en esta academia)')
+    await expect(pageA.getByRole('article', { name: 'Curso de destino de ejemplo' }).locator('.course-recommended')).toHaveCount(0)
     await pageA.getByRole('link', { name: COURSE_TITLE, exact: true }).click()
     await expect(pageA.getByRole('heading', { level: 1, name: `${COURSE_TITLE} · Índice del curso` })).toBeVisible()
     await expect(pageA.locator('.index-head .summary')).toHaveText(progressLine(0, 0))
