@@ -13,7 +13,7 @@ Objetivo: dejar la academia lista para publicarse en GitHub como pack base 1.0 (
 ## Tareas
 
 T1 | Copia de seguridad (espejo de Git y `.tar.gz` de la carpeta, con sumas, comprobada) | hecho: L1.
-T2 | Historial sin `content/java` (`git filter-repo` sobre un clon; comprobar; sustituir solo con el visto bueno del autor) | pendiente.
+T2 | Historial sin `content/java` (`git filter-repo` sobre un clon; comprobar; sustituir solo con el visto bueno del autor) | reescrito y comprobado en un clon (L2); falta el visto bueno del autor para sustituir.
 T3 | `gitleaks` sobre el historial reescrito y la carpeta de trabajo | pendiente.
 T4 | Rutas absolutas, textos desactualizados y voseo de la documentación | pendiente.
 T5 | `LICENSE` (MIT), licencias de las dependencias y vulnerabilidades conocidas (`npm audit` y Maven) | pendiente.
@@ -25,3 +25,5 @@ T9 | Etiqueta `v1.0.0` de la academia y nota de la release; primer `push`, remot
 ## Registro
 
 L1. 16 de noviembre de 2026, T1. Copias en `../../copias-myopenacademy/` (fuera de `Proyecto Academia/` y de cualquier repositorio; carpeta con permisos `700`), del estado `a3ef84e` (152 commits): `academia-2026-11-16-a3ef84e.git` (`git clone --mirror`, 50 MB) y `academia-2026-11-16-a3ef84e.tar.gz` (la carpeta entera, con `.git`, `.env` y lo regenerable; 273 MB; permisos `600`), con `SHA256SUMS`. Comprobado: la suma del `.tar.gz` cuadra; el espejo se clona con los 152 commits y deja el mismo árbol de `main`; `git fsck` termina con 0 (solo objetos sueltos, «actualizando» en la traducción al español de *dangling*, igual que en el original); el `.tar.gz` lleva `.env`, `.git` y el código.
+L2. 16 de noviembre de 2026, T2. `git-filter-repo` instalado sin `sudo` en un entorno de Python propio, **`~/.local/share/venvs/git-filter-repo`** (decisión del autor: opción B; se borra al terminar H11 con `rm -rf ~/.local/share/venvs/git-filter-repo`). Reescritura con `git filter-repo --path content/java --invert-paths` sobre un **clon espejo** (`--mirror --no-local`) en la carpeta de trabajo temporal; el repositorio de verdad no se ha tocado. Comprobado: ningún commit lleva `content/java` (antes, 5) ni ningún objeto suyo; **los 153 commits siguen** (ninguno se queda vacío); en los 153, el árbol es exactamente el del original menos `content/java` (comparando las rutas sin comillas, también las de letras no ASCII), y el autor, las fechas y el mensaje son los mismos, salvo 5 mensajes que citaban un commit («H9 closed at f042a55»), que `git filter-repo` actualiza al identificador nuevo; los árboles finales de `main` y `feat/h11-pack-base` son idénticos; `git fsck` termina con 0; un solo autor, el correo `noreply` del autor. **El paquete de Git pasa de 40,5 MiB a 1,0 MiB.** Equivalencias de los identificadores (antiguo → nuevo), en `../../copias-myopenacademy/equivalencias-commits.txt`: los que citan `PLAN.md`, `ESTADO.md` y `odd/tasks/` son los antiguos (siguen valiendo en la copia).
+
