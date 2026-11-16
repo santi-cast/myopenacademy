@@ -22,11 +22,11 @@ class ProgressAtomicityTest extends ProgressTestSupport {
 
 		whileFailing("lesson_states", "create trigger " + TRIGGER + """
 				 before insert on code_academy.lesson_states for each row
-				when (new.lesson_id = 'demo-01.02') execute function code_academy.progress_test_fail()
+				when (new.lesson_id = 'demo.01.02') execute function code_academy.progress_test_fail()
 				""", () -> assertError(lessonState(browser, NEXT, "completed"), 500, "INTERNAL_ERROR"));
 		whileFailing("exercise_states", "create trigger " + TRIGGER + """
 				 before insert on code_academy.exercise_states for each row
-				when (new.exercise_id = 'demo-01.01-e02') execute function code_academy.progress_test_fail()
+				when (new.exercise_id = 'demo.01.01.e02') execute function code_academy.progress_test_fail()
 				""", () -> assertError(exerciseState(browser, E02, "solved"), 500, "INTERNAL_ERROR"));
 
 		assertThat(snapshot()).isEqualTo(before);
@@ -42,11 +42,11 @@ class ProgressAtomicityTest extends ProgressTestSupport {
 
 		whileFailing("lesson_states", "create constraint trigger " + TRIGGER + """
 				 after insert on code_academy.lesson_states deferrable initially deferred for each row
-				when (new.lesson_id = 'demo-01.02') execute function code_academy.progress_test_fail()
+				when (new.lesson_id = 'demo.01.02') execute function code_academy.progress_test_fail()
 				""", () -> assertError(lessonState(browser, NEXT, "completed"), 500, "INTERNAL_ERROR"));
 		whileFailing("exercise_states", "create constraint trigger " + TRIGGER + """
 				 after insert on code_academy.exercise_states deferrable initially deferred for each row
-				when (new.exercise_id = 'demo-01.01-e02') execute function code_academy.progress_test_fail()
+				when (new.exercise_id = 'demo.01.01.e02') execute function code_academy.progress_test_fail()
 				""", () -> assertError(exerciseState(browser, E02, "solved"), 500, "INTERNAL_ERROR"));
 
 		assertThat(snapshot()).isEqualTo(before);

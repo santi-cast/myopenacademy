@@ -30,23 +30,23 @@ class ProjectStageContentTest {
 		fixture.write("demo/lessons/stage.md", "# Inicio\n\n## Ejercicios prácticos resueltos\n\n"
 				+ "### Ejercicio sin extracción\n\n~~Manual~~ [lesson](../fase-01/01-intro.md#ejercicio-2--segundo-ejercicio)\n\n"
 				+ "[pending](next.md#unknown) [self](#inicio)\n\n![image](image.png)\n");
-		fixture.addResource("demo-stage-image", "project/image.png", "image/png", new byte[] { 1, 2, 3 });
+		fixture.addResource("demo.stage-image", "project/image.png", "image/png", new byte[] { 1, 2, 3 });
 		fixture.editManifest(m -> {
 			m.put("schemaVersion", 2);
 			ArrayNode stages = m.putArray("projectStages");
-			stages.addObject().put("id", "demo-stage-first").put("title", "First").put("position", 1)
+			stages.addObject().put("id", "demo.stage-first").put("title", "First").put("position", 1)
 				.put("sourcePath", "project/first.md").put("sourceAvailable", true).put("available", true)
 				.put("bodyPath", "demo/lessons/stage.md");
-			stages.addObject().put("id", "demo-stage-next").put("title", "Next").put("position", 2)
+			stages.addObject().put("id", "demo.stage-next").put("title", "Next").put("position", 2)
 				.put("sourcePath", "project/next.md").put("sourceAvailable", false).put("available", false).putNull("bodyPath");
-			ObjectNode image = ContentFixture.resource(m, "demo-stage-image");
+			ObjectNode image = ContentFixture.resource(m, "demo.stage-image");
 			image.remove("lessonId");
-			image.put("stageId", "demo-stage-first");
+			image.put("stageId", "demo.stage-first");
 			m.get("resources").forEach(r -> ((ObjectNode) r).put("kind", "file"));
 			ArrayNode links = (ArrayNode) m.get("sourceToId");
-			links.addObject().put("sourcePath", "project/first.md").put("stageId", "demo-stage-first")
+			links.addObject().put("sourcePath", "project/first.md").put("stageId", "demo.stage-first")
 				.putObject("fragments").put("inicio", "inicio");
-			links.addObject().put("sourcePath", "project/next.md").put("stageId", "demo-stage-next");
+			links.addObject().put("sourcePath", "project/next.md").put("stageId", "demo.stage-next");
 		});
 		refreshProvenance();
 	}
@@ -79,15 +79,15 @@ class ProjectStageContentTest {
 		CourseContent loaded = fixture.load();
 		assertThat(loaded.lessons()).isEqualTo(baseline.lessons());
 		assertThat(loaded.manifest().lessons()).hasSize(3);
-		assertThat(loaded.stages()).containsOnlyKeys("demo-stage-first");
-		StageContent stage = loaded.stages().get("demo-stage-first");
-		assertThat(stage.stageId()).isEqualTo("demo-stage-first");
+		assertThat(loaded.stages()).containsOnlyKeys("demo.stage-first");
+		StageContent stage = loaded.stages().get("demo.stage-first");
+		assertThat(stage.stageId()).isEqualTo("demo.stage-first");
 		assertThat(stage.bodyHtml()).contains("Ejercicios prácticos resueltos", "Ejercicio sin extracción", "<del>Manual</del>",
-			"href=\"/lessons/demo-01.01#demo-01.01-e02\"", "href=\"/stages/demo-stage-next\"", "href=\"#inicio\"",
-			"<img src=\"/api/resources/demo-stage-image\" alt=\"image\"");
-		assertThat(stage.resourceIds()).containsExactly("demo-stage-image");
-		assertThat(loaded.manifest().resources().stream().filter(r -> r.resourceId().equals("demo-stage-image"))
-			.findFirst().orElseThrow().stageId()).isEqualTo("demo-stage-first");
+			"href=\"/lessons/demo.01.01#demo.01.01.e02\"", "href=\"/stages/demo.stage-next\"", "href=\"#inicio\"",
+			"<img src=\"/api/resources/demo.stage-image\" alt=\"image\"");
+		assertThat(stage.resourceIds()).containsExactly("demo.stage-image");
+		assertThat(loaded.manifest().resources().stream().filter(r -> r.resourceId().equals("demo.stage-image"))
+			.findFirst().orElseThrow().stageId()).isEqualTo("demo.stage-first");
 	}
 
 	@Test
@@ -96,15 +96,15 @@ class ProjectStageContentTest {
 		fixture.replace(ContentFixture.INTRO, "Enunciado dos.", "[stage](../project/first.md#inicio)");
 		fixture.replace(ContentFixture.INTRO, "Solución dos.", "[pending](../project/next.md#missing)");
 		refreshProvenance();
-		LessonContent intro = fixture.load().lessons().get("demo-01.01");
-		assertThat(intro.bodyHtml()).contains("href=\"/stages/demo-stage-first#inicio\"");
-		assertThat(intro.exercises().get(1).statementHtml()).contains("href=\"/stages/demo-stage-first#inicio\"");
-		assertThat(intro.exercises().get(1).solutionHtml()).contains("href=\"/stages/demo-stage-next\"");
+		LessonContent intro = fixture.load().lessons().get("demo.01.01");
+		assertThat(intro.bodyHtml()).contains("href=\"/stages/demo.stage-first#inicio\"");
+		assertThat(intro.exercises().get(1).statementHtml()).contains("href=\"/stages/demo.stage-first#inicio\"");
+		assertThat(intro.exercises().get(1).solutionHtml()).contains("href=\"/stages/demo.stage-next\"");
 	}
 
 	@ParameterizedTest
 	@ValueSource(strings = { "[broken](#missing)", "![remote](https://example.org/x.png)",
-		"<img src=\"/api/resources/demo-stage-image\">", "[escape](../../outside.md)",
+		"<img src=\"/api/resources/demo.stage-image\">", "[escape](../../outside.md)",
 		"[query](first.md?x=1)", "[script](javascript:alert(1))" })
 	void stageUsesExistingSanitizerAndResolver(String markdown) throws Exception {
 		fixture.write("demo/lessons/stage.md", "# Inicio\n\n" + markdown + "\n");
@@ -165,7 +165,7 @@ class ProjectStageContentTest {
 	void rejectsInvalidV2WithoutChangingControlledFiles(String rule) throws Exception {
 		fixture.editManifest(m -> {
 			ObjectNode stage = (ObjectNode) m.get("projectStages").get(0);
-			ObjectNode resource = ContentFixture.resource(m, "demo-stage-image");
+			ObjectNode resource = ContentFixture.resource(m, "demo.stage-image");
 			ObjectNode provenance = (ObjectNode) m.get("provenance");
 			ArrayNode files = (ArrayNode) provenance.get("files");
 			ObjectNode file = (ObjectNode) files.get(0);
@@ -174,11 +174,11 @@ class ProjectStageContentTest {
 				case "missingProvenance" -> m.remove("provenance");
 				case "missingGenerated" -> provenance.remove("generated");
 				case "stageGap" -> stage.put("position", 3);
-				case "duplicateId" -> stage.put("id", "demo-01.01");
+				case "duplicateId" -> stage.put("id", "demo.01.01");
 				case "pendingBody" -> stage.put("available", false);
 				case "unwrittenBody" -> stage.put("sourceAvailable", false);
-				case "twoOwners" -> resource.put("lessonId", "demo-01.01");
-				case "unknownOwner" -> resource.put("stageId", "demo-stage-unknown");
+				case "twoOwners" -> resource.put("lessonId", "demo.01.01");
+				case "unknownOwner" -> resource.put("stageId", "demo.stage-unknown");
 				case "missingKind" -> resource.remove("kind");
 				case "zip" -> resource.put("kind", "zip");
 				case "unknownKind" -> resource.put("kind", "unknown");
@@ -206,11 +206,11 @@ class ProjectStageContentTest {
 			case "missingStages" -> "needs projectStages";
 			case "missingProvenance", "missingGenerated" -> "needs provenance.files and provenance.generated";
 			case "stageGap", "stageZero", "repeatedStagePosition" -> "stage positions must be 1..2";
-			case "duplicateId" -> "duplicate id demo-01.01";
-			case "pendingBody" -> "demo-stage-first is pending but has bodyPath";
-			case "unwrittenBody" -> "demo-stage-first is available but not sourceAvailable";
+			case "duplicateId" -> "duplicate id demo.01.01";
+			case "pendingBody" -> "demo.stage-first is pending but has bodyPath";
+			case "unwrittenBody" -> "demo.stage-first is available but not sourceAvailable";
 			case "twoOwners", "noOwner" -> "must have exactly one owner";
-			case "unknownOwner" -> "unknown stage demo-stage-unknown";
+			case "unknownOwner" -> "unknown stage demo.stage-unknown";
 			case "missingKind", "unknownKind" -> "unsupported kind";
 			case "zip" -> "invalid ZIP metadata";
 			case "badCopyHash", "literalMismatch" -> "literal copy has different source and copy hashes";
@@ -221,10 +221,10 @@ class ProjectStageContentTest {
 			case "unknownTransformation" -> "unsupported transformation invented-v1";
 			case "v1Stages" -> "schemaVersion 1 does not allow";
 			case "unknownField" -> "Unrecognized property \"exercises\"";
-			case "missingStageMapping" -> "missing sourceToId for demo-stage-first";
+			case "missingStageMapping" -> "missing sourceToId for demo.stage-first";
 			case "duplicateSource" -> "duplicate sourcePath fase-01/01-intro.md";
 			case "generated" -> "generated provenance must match ZIP inputs and SHA-256";
-			case "missingLocalPath" -> "localPath of demo-stage-image: is missing";
+			case "missingLocalPath" -> "localPath of demo.stage-image: is missing";
 			default -> throw new AssertionError(rule);
 		};
 		Map<String, String> before = snapshot();

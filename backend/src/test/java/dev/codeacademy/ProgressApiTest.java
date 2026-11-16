@@ -409,7 +409,7 @@ class ProgressApiTest extends ProgressTestSupport {
 		ok(add(browser, "demo"));
 		var before = snapshot();
 
-		assertError(continuation(browser, "demo", "demo-09.09"), 404, "NOT_FOUND");
+		assertError(continuation(browser, "demo", "demo.09.09"), 404, "NOT_FOUND");
 		assertError(continuation(browser, "python", INTRO), 404, "NOT_FOUND");
 
 		assertThat(snapshot()).isEqualTo(before);
@@ -451,8 +451,8 @@ class ProgressApiTest extends ProgressTestSupport {
 		var browser = learner();
 		var before = snapshot();
 
-		assertError(lessonState(browser, "demo-09.09", "completed"), 404, "NOT_FOUND");
-		assertError(exerciseState(browser, "demo-01.01-e99", "solved"), 404, "NOT_FOUND");
+		assertError(lessonState(browser, "demo.09.09", "completed"), 404, "NOT_FOUND");
+		assertError(exerciseState(browser, "demo.01.01.e99", "solved"), 404, "NOT_FOUND");
 
 		assertThat(snapshot()).isEqualTo(before);
 	}

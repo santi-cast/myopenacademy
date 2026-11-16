@@ -29,7 +29,7 @@ export type FakeBackend = {
 
 export const javaCourse: Course = { id: 'java', title: 'Java' }
 
-// An excerpt of the real syllabus: phase positions keep their gaps (Fase 01 is left out).
+// An excerpt of an old syllabus with gaps in the phase positions: the numbers shown still follow the order.
 export const javaPhases: Phase[] = [
   { id: 'java-phase-00', title: 'Lógica de programación', position: 1 },
   { id: 'java-phase-02', title: 'Fundamentos de Java', position: 3 },

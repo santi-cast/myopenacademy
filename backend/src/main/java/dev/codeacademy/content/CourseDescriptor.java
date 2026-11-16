@@ -83,8 +83,7 @@ record CourseDescriptor(int format, String id, String title, String description,
 				List<Exercise> exercises = new ArrayList<>();
 				for (JsonNode exercise : module.path("ejercicios")) {
 					String exerciseId = ids.add(text(exercise, "id"), "ejercicio");
-					if (moduleId != null && exerciseId != null && !exerciseId.startsWith(moduleId + ".")
-							&& !exerciseId.startsWith(moduleId + "-")) {
+					if (moduleId != null && exerciseId != null && !exerciseId.startsWith(moduleId + ".")) {
 						found.add(PATH + ": ejercicio " + exerciseId + " does not belong to " + moduleId);
 					}
 					exercises.add(new Exercise(exerciseId, required(exercise, "titulo", found)));
@@ -131,8 +130,6 @@ record CourseDescriptor(int format, String id, String title, String description,
 
 	/**
 	 * Every identifier is unique in the course and carries the course prefix: {@code <id>.<name>} (FORMATO.md 3.3).
-	 * The legacy {@code <id>-<name>} form is accepted only while the academy still holds content imported before
-	 * curso.json (H7, task T2 removes it).
 	 */
 	private static final class Ids {
 		private final String course;
@@ -149,7 +146,7 @@ record CourseDescriptor(int format, String id, String title, String description,
 				problems.add(PATH + ": " + what + " id must be lower-case letters, digits, hyphens and dots: " + id);
 				return id;
 			}
-			if (course != null && !id.startsWith(course + ".") && !id.startsWith(course + "-")) {
+			if (course != null && !id.startsWith(course + ".")) {
 				problems.add(PATH + ": " + what + " id " + id + " does not start with " + course + ".");
 			}
 			if (!seen.add(id)) problems.add(PATH + ": id " + id + " is declared twice");

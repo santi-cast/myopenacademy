@@ -20,7 +20,7 @@ public final class ContentFixture {
 
 	static final Path VALID = Path.of("src/test/resources/content/valid");
 	static final String MANIFEST = "demo/manifest.json";
-	public static final String INTRO = "demo/lessons/demo-01.01.md";
+	public static final String INTRO = "demo/lessons/demo.01.01.md";
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -109,7 +109,7 @@ public final class ContentFixture {
 		}
 		editManifest(m -> {
 			var resource = ((tools.jackson.databind.node.ArrayNode) m.get("resources")).addObject();
-			resource.put("resourceId", id).put("lessonId", "demo-01.01").put("sourcePath", sourcePath)
+			resource.put("resourceId", id).put("lessonId", "demo.01.01").put("sourcePath", sourcePath)
 				.put("localPath", localPath).put("mediaType", mediaType);
 			((tools.jackson.databind.node.ArrayNode) m.get("sourceToId")).addObject()
 				.put("sourcePath", sourcePath).put("resourceId", id);

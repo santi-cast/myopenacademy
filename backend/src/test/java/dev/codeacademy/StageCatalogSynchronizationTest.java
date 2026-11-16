@@ -48,7 +48,7 @@ class StageCatalogSynchronizationTest extends StageTestSupport {
 		Manifest demo = manifests.stream().filter(m -> m.course().id().equals("demo")).findFirst().orElseThrow();
 		Manifest other = manifests.stream().filter(m -> m.course().id().equals("other")).findFirst().orElseThrow();
 		var stages = new ArrayList<>(demo.projectStages());
-		stages.add(new Stage("demo-stage-added", "Added", 4, "project/added.md", false, false, null));
+		stages.add(new Stage("demo.stage-added", "Added", 4, "project/added.md", false, false, null));
 		Manifest added = withStages(demo, stages);
 		synchronizer.synchronize(List.of(added, other));
 		for (ApiClient browser : List.of(first, second)) {
@@ -80,7 +80,7 @@ class StageCatalogSynchronizationTest extends StageTestSupport {
 		before = TestDatabase.snapshot(jdbc);
 		Manifest removed = withStages(reordered, reordered.projectStages().stream().filter(s -> !s.id().equals(FIRST)).toList());
 		Manifest renamed = mapStages(reordered, s -> s.id().equals(FIRST)
-			? new Stage("demo-stage-renamed", s.title(), s.position(), s.sourcePath(), s.sourceAvailable(), s.available(), s.bodyPath()) : s);
+			? new Stage("demo.stage-renamed", s.title(), s.position(), s.sourcePath(), s.sourceAvailable(), s.available(), s.bodyPath()) : s);
 		Manifest moved = withStages(other, List.of(reordered.projectStages().stream().filter(s -> s.id().equals(FIRST)).findFirst().orElseThrow()));
 		Manifest duplicatePosition = mapStages(reordered, s -> new Stage(s.id(), s.title(), 1, s.sourcePath(),
 			s.sourceAvailable(), s.available(), s.bodyPath()));

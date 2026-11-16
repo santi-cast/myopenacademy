@@ -287,6 +287,15 @@ test('two learners keep separate progress across a backend restart, without cros
     await login(pageA, ana)
     await pageA.getByRole('link', { name: 'Ver el índice del curso' }).click()
     await expect(pageA.getByRole('heading', { level: 1, name: `${COURSE_TITLE} · Índice del curso` })).toBeVisible()
+    // Numbers come from the order of curso.json, never from the IDs (ejemplo.ficheros-json has none): the first
+    // phase is «Fase 01» and its modules «01.01» and «01.02», the pending one included (H7, T2).
+    const phaseTable = pageA.locator('.phase-grid').getByRole('table').first()
+    await expect(phaseTable.locator('caption')).toContainText('Fase 01 · Primeros pasos')
+    const codes = phaseTable.getByRole('row').filter({ has: pageA.getByRole('cell') })
+    await expect(codes.nth(0).getByRole('cell').first()).toHaveText('01.01')
+    await expect(codes.nth(0)).toContainText(LESSON_TITLE)
+    await expect(codes.nth(1).getByRole('cell').first()).toHaveText('01.02')
+    await expect(codes.nth(1)).toContainText('Ficheros YAML')
     await shot(pageA, 'ana-course-index')
     const continuation = pageA.waitForResponse((r) => r.url().endsWith(`/api/me/courses/${COURSE_ID}/continuation`) && r.request().method() === 'PUT')
     await pageA.locator('.phase-grid').getByRole('link', { name: LESSON_TITLE }).click()

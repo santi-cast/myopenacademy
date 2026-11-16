@@ -31,7 +31,7 @@ public final class ImageFixture {
 	}
 
 	public static void register(ContentFixture fixture, String type) {
-		fixture.addResource("demo-image-" + type, "fase-01/images/diagram." + type,
+		fixture.addResource("demo.image-" + type, "fase-01/images/diagram." + type,
 				type.equals("svg") ? "image/svg+xml" : "image/" + type, bytes(type));
 	}
 }

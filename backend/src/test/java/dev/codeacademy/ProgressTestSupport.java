@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * One server for the progress tests, synchronized from a copy of the kit's example course plus the synthetic demo
  * course: ejemplo has ejemplo.ficheros-json available (2 exercises) and ejemplo.ficheros-yaml pending; demo has
- * demo-01.01 (2 exercises) and demo-01.02 available and demo-02.01 pending. Subclasses share this context and its
+ * demo.01.01 (2 exercises) and demo.01.02 available and demo.02.01 pending. Subclasses share this context and its
  * database.
  */
 @Import(TestcontainersConfiguration.class)
@@ -51,11 +51,11 @@ abstract class ProgressTestSupport {
 	static final String EJEMPLO_PENDING = ExampleContent.PENDING;
 	static final String EJEMPLO_E01 = ExampleContent.E01;
 	static final String EJEMPLO_E02 = ExampleContent.E02;
-	static final String INTRO = "demo-01.01";
-	static final String NEXT = "demo-01.02";
-	static final String PENDING = "demo-02.01";
-	static final String E01 = "demo-01.01-e01";
-	static final String E02 = "demo-01.01-e02";
+	static final String INTRO = "demo.01.01";
+	static final String NEXT = "demo.01.02";
+	static final String PENDING = "demo.02.01";
+	static final String E01 = "demo.01.01.e01";
+	static final String E02 = "demo.01.01.e02";
 
 	/** ejemplo and demo side by side, removed when the test JVM exits. */
 	static final Path CONTENT_ROOT = copyContent();

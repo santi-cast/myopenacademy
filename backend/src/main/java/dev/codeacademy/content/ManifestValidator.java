@@ -29,6 +29,8 @@ final class ManifestValidator {
 	private static final Pattern COMMIT = Pattern.compile("[0-9a-f]{40}");
 	private static final Pattern COMBINING_MARK = Pattern.compile("\\p{M}");
 	private static final Pattern NAMESPACE = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*");
+	/** FORMATO.md 3.3: lower-case letters without accents, digits, hyphens and dots. */
+	private static final Pattern DECLARED_ID = Pattern.compile("[a-z0-9]+([.-][a-z0-9]+)*");
 
 	private final Manifest manifest;
 	private final List<String> problems = new ArrayList<>();
@@ -67,7 +69,7 @@ final class ManifestValidator {
 			problems.add("course needs id, title and a lower-case namespace");
 			return;
 		}
-		prefix = manifest.course().namespace() + "-";
+		prefix = manifest.course().namespace() + ".";
 		ids.add(manifest.course().id());
 		if (manifest.phases() == null) {
 			problems.add("manifest needs phases");
@@ -126,7 +128,7 @@ final class ManifestValidator {
 				problems.add("phase " + (phase == null ? null : phase.id()) + " needs id, title and position");
 				continue;
 			}
-			register(phase.id());
+			registerDeclared(phase.id());
 			phases.put(phase.id(), phase);
 			positions.add(phase.position());
 		}
@@ -178,7 +180,7 @@ final class ManifestValidator {
 						+ " needs id, title, position, sourcePath, sourceAvailable, available and exercises");
 				continue;
 			}
-			register(lesson.id());
+			registerDeclared(lesson.id());
 			lessons.put(lesson.id(), lesson);
 			positions.add(lesson.position());
 			if (!sourcePaths.add(lesson.sourcePath())) problems.add("duplicate lesson sourcePath " + lesson.sourcePath());
@@ -195,7 +197,7 @@ final class ManifestValidator {
 					problems.add("an exercise of " + lesson.id() + " needs id and title");
 					continue;
 				}
-				register(exercise.id());
+				registerDeclared(exercise.id());
 				// The title is what associates the exercise with its heading in the lesson.
 				if (!exerciseTitles.add(exercise.title())) {
 					problems.add("exercise " + exercise.id() + " of " + lesson.id() + " repeats the title «"
@@ -227,7 +229,7 @@ final class ManifestValidator {
 				problems.add("stage needs id, title, position, sourcePath, sourceAvailable and available");
 				continue;
 			}
-			register(stage.id());
+			registerDeclared(stage.id());
 			stages.put(stage.id(), stage);
 			positions.add(stage.position());
 			if (stage.available()) {
@@ -443,15 +445,23 @@ final class ManifestValidator {
 		return resource.lessonId() != null ? "lesson" : "stage";
 	}
 
+	/** An ID that comes from curso.json: in the course namespace and with the form of FORMATO.md 3.3. */
+	private void registerDeclared(String id) {
+		register(id);
+		if (id != null && !DECLARED_ID.matcher(id).matches()) {
+			problems.add("id " + id + " must be lower-case letters without accents, digits, hyphens and dots");
+		}
+	}
+
+	/** Every ID is unique and starts with {@code <course>.} (FORMATO.md 3.3); resource IDs are the academy's own. */
 	private void register(String id) {
+		if (id == null) {
+			problems.add("missing id in namespace " + manifest.course().namespace());
+			return;
+		}
 		if (!ids.add(id)) problems.add("duplicate id " + id);
-		// FORMATO.md 3.3 names IDs <course>.<name>. The legacy <course>-<name> form stays accepted only while content
-		// imported before curso.json is still installed (H7, task T2 removes it).
-		String dotted = manifest.course().namespace() + ".";
-		boolean inNamespace = (id.startsWith(dotted) && id.length() > dotted.length())
-			|| (id.startsWith(prefix) && id.length() > prefix.length());
-		if (!inNamespace) {
-			problems.add("id " + id + " is not in namespace " + manifest.course().namespace());
+		if (!id.startsWith(prefix) || id.length() == prefix.length()) {
+			problems.add("id " + id + " is not in namespace " + manifest.course().namespace() + " (expected " + prefix + "…)");
 		}
 	}
 

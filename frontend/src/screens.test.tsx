@@ -156,7 +156,7 @@ describe('Índice del curso', () => {
     expect(screen.getByText(/lecciones disponibles completadas/)).toHaveTextContent('1 de 1 lecciones disponibles completadas · 100 % · 199 previstas')
     const tables = screen.getAllByRole('table')
     expect(tables).toHaveLength(3)
-    expect(tables[0]).toHaveAccessibleName('Fase 00 · Lógica de programación 0 de 2 disponibles')
+    expect(tables[0]).toHaveAccessibleName('Fase 01 · Lógica de programación 0 de 2 disponibles')
     expect(tables[1]).toHaveAccessibleName('Fase 02 · Fundamentos de Java 1 de 2 disponibles')
     expect(tables[2]).toHaveAccessibleName('Fase 03 · Programación orientada a objetos 0 de 1 disponibles')
     const phase02 = tables[1]
@@ -212,12 +212,12 @@ describe('Índice del curso', () => {
     await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
     const tables = screen.getAllByRole('table')
     expect(tables).toHaveLength(2)
-    expect(tables[0]).toHaveAccessibleName('Fase 00 · Primera 1 de 2 disponibles')
-    expect(tables[1]).toHaveAccessibleName('Fase 01 · Segunda 0 de 1 disponibles')
+    expect(tables[0]).toHaveAccessibleName('Fase 01 · Primera 1 de 2 disponibles')
+    expect(tables[1]).toHaveAccessibleName('Fase 02 · Segunda 0 de 1 disponibles')
     const cells = (table: HTMLElement) => within(table).getAllByRole('row').slice(1)
       .map((row) => within(row).getAllByRole('cell').slice(0, 2).map((cell) => cell.textContent))
-    expect(cells(tables[0])).toEqual([['00.01', 'Equis'], ['00.02', 'Engañosa']])
-    expect(cells(tables[1])).toEqual([['01.01', 'Sin número']])
+    expect(cells(tables[0])).toEqual([['01.01', 'Equis'], ['01.02', 'Engañosa']])
+    expect(cells(tables[1])).toEqual([['02.01', 'Sin número']])
     expect(within(tables[0]).getByRole('link', { name: 'Equis' })).toHaveAttribute('href', '/lessons/x-a')
   })
 
@@ -235,7 +235,7 @@ describe('Índice del curso', () => {
     await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
     const tables = screen.getAllByRole('table')
     expect(tables.map((table) => table.querySelector('caption')?.textContent)).toEqual([
-      'Fase 00 · Lógica de programación 0 de 1 disponibles',
+      'Fase 01 · Lógica de programación 0 de 1 disponibles',
       'Fase 02 · Fundamentos de Java 1 de 2 disponibles',
       'Fase 03 · Programación orientada a objetos 0 de 1 disponibles',
       'Sin fase 0 de 1 disponibles',

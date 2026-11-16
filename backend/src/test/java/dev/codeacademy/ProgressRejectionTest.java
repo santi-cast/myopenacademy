@@ -34,10 +34,10 @@ class ProgressRejectionTest extends ProgressTestSupport {
 			// Cyrillic «о» in place of the Latin o.
 			"ejempl%D0%BE.ficheros-json", "ejempl%D0%BE", "dem%D0%BE-01.01-e01",
 			"a".repeat(300),
-			"ejemplo.ficheros-json%20", "ejemplo%20", "demo-01.01-e01%20",
+			"ejemplo.ficheros-json%20", "ejemplo%20", "demo.01.01.e01%20",
 			// A dot is part of the ID, never an extension to strip.
 			"ejemplo.ficheros-json.json", "ejemplo.ficheros-json.un-pedido.json",
-			"ejemplo.no-existe", "demo-01.01-e99", "python");
+			"ejemplo.no-existe", "demo.01.01.e99", "python");
 
 	@Test
 	void unknownAndLookAlikeIdsAre404OnEveryRouteAndAddNothing() throws Exception {

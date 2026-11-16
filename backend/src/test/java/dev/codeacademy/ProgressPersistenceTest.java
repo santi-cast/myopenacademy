@@ -102,7 +102,7 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 				base.lessons().stream().filter(lesson -> !lesson.id().equals(NEXT)).toList(), base.resources(),
 				base.sourceToId());
 		Manifest phaseRemoved = new Manifest(base.schemaVersion(), base.source(), base.course(),
-				base.phases().subList(0, 1), base.lessons().stream().map(lesson -> withPhase(lesson, "demo-phase-01"))
+				base.phases().subList(0, 1), base.lessons().stream().map(lesson -> withPhase(lesson, "demo.phase-01"))
 					.toList(), base.resources(), base.sourceToId());
 		var before = snapshot();
 
@@ -112,13 +112,13 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 		synchronizer.synchronize(List.of(ejemplo, base));
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, exerciseRemoved)))
 			.isInstanceOf(CatalogConflictException.class)
-			.hasMessageContaining("exercise demo-01.01-e02 is no longer in the manifest");
+			.hasMessageContaining("exercise demo.01.01.e02 is no longer in the manifest");
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, lessonRemoved)))
 			.isInstanceOf(CatalogConflictException.class)
-			.hasMessageContaining("lesson demo-01.02 is no longer in the manifest");
+			.hasMessageContaining("lesson demo.01.02 is no longer in the manifest");
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, phaseRemoved)))
 			.isInstanceOf(CatalogConflictException.class)
-			.hasMessageContaining("phase demo-phase-02 is no longer in the manifest");
+			.hasMessageContaining("phase demo.phase-02 is no longer in the manifest");
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(base)))
 			.isInstanceOf(CatalogConflictException.class)
 			.hasMessageContaining("course ejemplo is no longer in the content");
@@ -135,7 +135,7 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 		JsonNode demo = ok(progress(browser, "demo"));
 		Manifest ejemplo = ContentLoader.load(CONTENT_ROOT, "ejemplo/manifest.json").manifest();
 		Manifest base = ContentLoader.load(CONTENT_ROOT, "demo/manifest.json").manifest();
-		Manifest moved = withLessons(base, lesson -> lesson.id().equals(NEXT) ? withPhase(lesson, "demo-phase-02")
+		Manifest moved = withLessons(base, lesson -> lesson.id().equals(NEXT) ? withPhase(lesson, "demo.phase-02")
 				: lesson);
 		var progressBefore = TestDatabase.snapshot(jdbc, "users", "enrollments", "lesson_states", "exercise_states");
 
@@ -143,7 +143,7 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 			synchronizer.synchronize(List.of(ejemplo, moved));
 
 			assertThat(jdbc.queryForObject("select phase_id from code_academy.lessons where id = ?", String.class, NEXT))
-				.isEqualTo("demo-phase-02");
+				.isEqualTo("demo.phase-02");
 			assertThat(TestDatabase.snapshot(jdbc, "users", "enrollments", "lesson_states", "exercise_states"))
 				.isEqualTo(progressBefore);
 			assertThat(ok(progress(browser, "demo"))).isEqualTo(demo);
@@ -152,7 +152,7 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 			synchronizer.synchronize(List.of(ejemplo, base));
 		}
 		assertThat(jdbc.queryForObject("select phase_id from code_academy.lessons where id = ?", String.class, NEXT))
-			.isEqualTo("demo-phase-01");
+			.isEqualTo("demo.phase-01");
 	}
 
 	@Test
@@ -174,7 +174,7 @@ class ProgressPersistenceTest extends ProgressTestSupport {
 
 		assertThatThrownBy(() -> synchronizer.synchronize(List.of(ejemplo, broken.load().manifest())))
 			.isInstanceOf(ContentValidationException.class)
-			.hasMessageContaining("exercise demo-01.01-e02 «Segundo ejercicio» has no heading with that title");
+			.hasMessageContaining("exercise demo.01.01.e02 «Segundo ejercicio» has no heading with that title");
 		assertThat(catchThrowable(() -> synchronizer.synchronize(List.of(ejemplo, clash)))).isNotNull();
 
 		assertThat(snapshot()).isEqualTo(before);
