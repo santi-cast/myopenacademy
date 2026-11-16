@@ -445,6 +445,10 @@ final class ContentImportGenerator {
 				return;
 			}
 			String where = documentPath + ":" + reference.line() + ": " + destination;
+			if (LessonPipeline.EMAIL.matcher(destination).find()) {
+				reported.add("email link kept as text " + where);
+				return;
+			}
 			if (SCHEME.matcher(destination).find()) {
 				if (!EXTERNAL.matcher(destination).matches()) findings.add("unsupported destination " + where);
 				return;

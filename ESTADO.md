@@ -18,7 +18,7 @@ Lo que ya existe en los otros proyectos:
 
 **9 de noviembre de 2026:** prueba de importación hecha y **`PLAN.md` reescrito con el autor** para MyOpenAcademy, con los hitos H6 a H11 hasta el pack base 1.0 (unos 20 días de trabajo). **Siguiente: H7, cursos como DLC** (`PLAN.md`, apartado 4): rama `feat/h7-…`, tareas en `odd/tasks/` y, como primer paso, el curso de ejemplo pequeño. H6 (uso real) va en paralelo.
 
-**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 hecha salvo la etiqueta (A5): el generador lee `curso.json` y genera el curso de ejemplo, `ejemplo-destino` y el curso inicial completo. **T4b hecha:** la comparación verifica cada curso contra su origen, los de otros repositorios tienen que llegar idénticos byte a byte, y los retítulos son un cambio, no un conflicto. Cursos de ejemplo del kit (`bueno` y `ejemplo-destino`) traídos de `3c07a76`. **T3 hecha:** ninguna prueba usa ya el curso de Java ni lee `content/` (las pruebas instalan los cursos de ejemplo con el importador real), y `content/` está fuera de Git salvo su README. **T3b hecha:** «Mis cursos» se ordena por identificador byte a byte (`collate "C"`), igual con cualquier intercalación de la base. **T2 hecha** (16 de noviembre de 2026): solo identificadores `<curso>.` y números de fase y de módulo por el orden de `curso.json`. Cursos de ejemplo renovados desde el kit en `27893e8`: la carpeta 2.4 (ejemplo de `curl`, con `servidor.json`) llega entera al ZIP, comprobado en el E2E (L17). Detalle en `odd/tasks/h7-cursos-dlc.md` (L1 a L22).
+**H7 en marcha** (9 de noviembre de 2026) en la rama `feat/h7-cursos-dlc`: tareas y registro en `odd/tasks/h7-cursos-dlc.md`. Hecha la T1 (curso de ejemplo traído del kit a `cursos-ejemplo/`, desde `80e803a`). T4 hecha salvo la etiqueta (A5): el generador lee `curso.json` y genera el curso de ejemplo, `ejemplo-destino` y el curso inicial completo. **T4b hecha:** la comparación verifica cada curso contra su origen, los de otros repositorios tienen que llegar idénticos byte a byte, y los retítulos son un cambio, no un conflicto. Cursos de ejemplo del kit (`bueno` y `ejemplo-destino`) traídos de `3c07a76`. **T3 hecha:** ninguna prueba usa ya el curso de Java ni lee `content/` (las pruebas instalan los cursos de ejemplo con el importador real), y `content/` está fuera de Git salvo su README. **T3b hecha:** «Mis cursos» se ordena por identificador byte a byte (`collate "C"`), igual con cualquier intercalación de la base. **T2 hecha** (16 de noviembre de 2026): solo identificadores `<curso>.` y números de fase y de módulo por el orden de `curso.json`. Cursos de ejemplo renovados desde el kit en `27893e8`: la carpeta 2.4 (ejemplo de `curl`, con `servidor.json`) llega entera al ZIP, comprobado en el E2E (L17). Detalle en `odd/tasks/h7-cursos-dlc.md` (L1 a L23).
 
 **Siguiente, en este orden:**
 
@@ -30,11 +30,11 @@ Lo que ya existe en los otros proyectos:
 6. ~~T6~~ **Hecho** (L20): catálogo con descripción y «Conviene saber antes».
 7. ~~T7~~ **Hecho** (L21): `cursos-instalados.json` y `content-courses list|reinstall`.
 8. ~~T8~~ **Hecho** (L22): documentación al día, interfaz en tuteo y prueba en el navegador con el curso inicial (`ed6c0b7`).
-9. **H7, a falta de la revisión del autor** (y de lo que decida sobre el `mailto:` de abajo).
+9. **H7, a falta de la revisión del autor.** Curso inicial instalado desde `9f55661` (fases 1 a 5) sin hallazgos (L23); copia lista para revisar en `backend/target/revision/`.
 
 **Preguntas abiertas para el autor:**
 
-- **Enlaces de correo (`mailto:`)** (L22, 16 de noviembre de 2026): el último commit verificado del curso inicial (`68de4b3`) **no se instala**: en 05.01 (línea 113), `«Ana García <ana@example.com>»` fuera de código es un enlace automático de correo (CommonMark y GitHub lo enlazan) y la academia rechaza los enlaces `mailto:`. Opciones: (a) la academia convierte los enlaces automáticos de correo en texto, con un aviso que no bloquea (como un enlace a un fichero protegido); (b) el curso los escribe entre comillas invertidas (como ya hace en la tabla de la línea 139) y el kit avisa; (c) las dos. Propuesta: (c).
+- ~~**Enlaces de correo (`mailto:`)**~~ **Resuelto** (16 de noviembre de 2026, opción c, L23): la academia los deja como texto y avisa sin bloquear; el curso lo corrigió en `9f55661`, que se instala sin hallazgos (fases 1 a 5).
 
 - **Orden de «Mis cursos»** (T3b): por identificador (lo de ahora, `collate "C"`), el curso inicial primero, por título o por orden de alta. Lo decide el autor al revisar esa pantalla.
 - **Historial de Git con `content/java`** (antes de H11): el historial heredado de Code Academy sigue guardando la copia de Java (unos 22.856 ficheros). El autor decide si se reescribe antes de la primera publicación; es barato mientras no haya remoto.
@@ -177,6 +177,7 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-09 | `PLAN.md` reescrito con el autor: hitos H6 a H11 hasta el pack base 1.0, con la lista de cambios de la prueba de importación y lo que faltaba del plan común. |
 | 2026-11-09 | H7, T1, T4 (salvo la etiqueta) y T4b: cursos de ejemplo del kit, importador por `curso.json` y comparación por curso con retítulos permitidos. |
 | 2026-11-09 | H7, T3 y T3b: pruebas con los cursos de ejemplo instalados por el importador real, `content/` fuera de Git y orden de «Mis cursos» igual con cualquier intercalación. |
+| 2026-11-16 | Enlaces de correo como texto (aviso sin bloquear) y prueba de instalación del curso inicial desde `9f55661`, fases 1 a 5: 0 hallazgos, todo byte a byte. |
 | 2026-11-16 | H7, T8: documentación al día, interfaz en tuteo y prueba en el navegador con el curso inicial; hallazgo del `mailto:` en la fase 5. |
 | 2026-11-16 | H7, T7: lista de cursos instalados (`cursos-instalados.json`) y `content-courses list|reinstall`. |
 | 2026-11-16 | H7, T6: catálogo con la descripción y las recomendaciones de `curso.json` (API y pantalla). |

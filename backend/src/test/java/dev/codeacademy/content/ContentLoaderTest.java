@@ -407,6 +407,15 @@ class ContentLoaderTest {
 		assertThat(html).contains("config", "ejemplo", "repo").doesNotContain(".env", ".git", "<a href=\"codigo");
 	}
 
+	@Test
+	void emailLinksKeepOnlyTheirText() {
+		// CommonMark (and GitHub) turn <ana@example.com> into a mailto: link; the academy keeps only its text (H7).
+		fixture.replace(INTRO, "Texto de cuerpo.",
+			"Texto de cuerpo de Ana García <ana@example.com> y [escríbeme](mailto:Ana@Example.com).");
+		String html = fixture.load().lessons().get("demo.01.01").bodyHtml();
+		assertThat(html).contains("Ana García ana&#64;example.com y escríbeme").doesNotContain("mailto", "<a href=\"ana");
+	}
+
 	@ParameterizedTest
 	@ValueSource(strings = { "codigo/%2Eenv", "codigo/.%65nv", "codigo%2F.env", "codigo/.env#", "./.env", "%2E%2E/.env",
 		"codigo/.env/", "codigo//.env", "codigo/.env.local", ".git", "codigo/.git/config" })

@@ -46,6 +46,8 @@ final class LessonPipeline {
 	static final String EXERCISES_SECTION = "Ejercicios prácticos resueltos";
 	private static final Pattern EXERCISE_HEADING = Pattern.compile("Ejercicio \\d+ · (.+)");
 	private static final Pattern SCHEME = Pattern.compile("^[A-Za-z][A-Za-z0-9+.-]*:");
+	/** An email link, autolink or written: only its text is kept. */
+	static final Pattern EMAIL = Pattern.compile("^(?i)mailto:");
 	private static final Pattern EXTERNAL = Pattern.compile("(?i)https?://[^\\s/?#]+.*");
 	private static final Pattern DETAILS_OPEN = Pattern.compile("(?is)<details>.*");
 	private static final Pattern DETAILS_CLOSE = Pattern.compile("(?is).*</details>");
@@ -490,6 +492,12 @@ final class LessonPipeline {
 
 	private void rewrite(ParsedLesson lesson, String label, Link link, Set<String> hrefs, Set<String> usedResources) {
 		String destination = link.getDestination();
+		// An email link (CommonMark turns <ana@example.com> into one, as GitHub does) keeps only its text: the importer
+		// reports it without blocking (author's decision, 16 November 2026).
+		if (EMAIL.matcher(destination).find()) {
+			unwrap(link);
+			return;
+		}
 		if (SCHEME.matcher(destination).find() || destination.startsWith("/") || destination.startsWith("\\")) {
 			if (EXTERNAL.matcher(destination).matches()) {
 				hrefs.add(destination);

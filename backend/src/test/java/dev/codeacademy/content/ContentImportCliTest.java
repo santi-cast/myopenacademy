@@ -239,6 +239,20 @@ class ContentImportCliTest {
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
 	}
 
+	@Test void anEmailLinkIsReportedAndKeepsItsTextWithoutBlocking() throws Exception {
+		String body = new String(files.get("fase-01/02-siguiente.md"), StandardCharsets.UTF_8)
+			+ "\nLa identidad es «Ana García <ana@example.com>».\n";
+		files.put("fase-01/02-siguiente.md", body.getBytes(StandardCharsets.UTF_8));
+		active.write("demo/lessons/demo.01.02.md", body);
+		assertThat(generate("--commit", commit(files, "email\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(Files.exists(output)).isTrue();
+		assertThat(reported()).singleElement().asString()
+			.startsWith("email link kept as text fase-01/02-siguiente.md:").endsWith(": mailto:ana@example.com");
+		assertThat(ContentLoader.loadAll(output).getFirst().lessons().get("demo.01.02").bodyHtml())
+			.contains("Ana García ana&#64;example.com").doesNotContain("mailto");
+	}
+
 	@Test void theSourceMayBeRelativeAndClimbWithDotDot() throws Exception {
 		// The common plan keeps the courses beside the academy (../Cursos/curso-inicial): the source is only read, so
 		// it is normalized and then checked like any other path (H7, T5).
