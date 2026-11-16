@@ -13,7 +13,11 @@ sh backend/content-import generate --active /srv/academy/content --source /srv/s
 ```
 
 - `--active DIR` es la raíz de la copia aceptada: su manifiesto es el mapa permanente de identidad (IDs, títulos, posiciones, fases, ejercicios, recursos, rutas locales y bytes ya importados) y se valida completo antes de generar.
-- `--source GIT` es el repositorio de origen y `--commit SHA`, un commit completo de 40 caracteres hexadecimales. Solo se leen objetos Git (`cat-file`, `ls-tree`) de ese commit: nunca HEAD, ramas, etiquetas, el índice, archivos de trabajo ni un archivo comprimido de la raíz del repositorio.
+- `--source GIT` es el repositorio de origen. Lo que se instala es **una de estas dos cosas** (nunca las dos):
+  - `--tag vX.Y.Z`, la etiqueta de una versión publicada (`FORMATO.md` 11.1; la forma normal de instalar un curso). Se busca solo entre las etiquetas (`refs/tags/`, ligera o anotada, nunca una rama con ese nombre) y se resuelve a su commit; la `version` de `curso.json` en ese commit tiene que ser la de la etiqueta (`v2.1.0` → `"version": "2.1.0"`), o es un hallazgo. El manifiesto guarda el commit (`source.versionRef`), la etiqueta (`source.versionTag`) y la versión (`source.courseVersion`), y el informe, `tag` y `commit`.
+  - `--commit SHA`, un commit completo de 40 caracteres hexadecimales (para probar contenido sin publicar). El manifiesto guarda el commit y la versión de `curso.json`, sin etiqueta.
+
+  En los dos casos solo se leen objetos Git (`cat-file`, `ls-tree`) de ese commit: nunca HEAD, ramas, el índice, archivos de trabajo ni un archivo comprimido de la raíz del repositorio. La comparación (`content-update compare`) muestra en `baseVersions` y `candidateVersions` la versión y la etiqueta de cada curso.
 - `--output DIR` debe ser una ruta nueva; el candidato queda en una raíz distinta de la activa y del origen.
 - `--report FILE` debe ser nuevo y guarda recuentos y hallazgos con su ruta y línea.
 
@@ -21,7 +25,7 @@ sh backend/content-import generate --active /srv/academy/content --source /srv/s
 |---|---|
 | 0 | Ayuda, o candidato escrito y validado con el `ContentLoader` puro. |
 | 3 | Hallazgos: no se escribe ninguna raíz candidata y el informe los enumera. |
-| 2 | Argumentos inválidos, commit ausente o abreviado, contenido activo inválido o error de archivos. El motivo va a stderr con prefijo `content-import:`. |
+| 2 | Argumentos inválidos, commit ausente o abreviado, etiqueta que no existe o sin la forma `vX.Y.Z`, contenido activo inválido o error de archivos. El motivo va a stderr con prefijo `content-import:`. |
 
 Mensajes: `Candidate written; lessons: N; stages: N; resources: N`, con el sufijo `; reported: N` cuando hay hallazgos no bloqueantes, y `Candidate not written; findings: N`. El informe guarda `findings` (bloqueantes) y `reported` (no bloqueantes), siempre con la ruta del documento o de origen. El script usa `PropertiesLauncher` con `dev.codeacademy.content.ContentImportCli`, no el main normal ni su parser de contraseña.
 

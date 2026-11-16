@@ -25,6 +25,7 @@ const E02 = `${LESSON_ID}.la-coma-de-mas`
 const EXERCISES = [E01, E02]
 const manifest = JSON.parse(readFileSync(join(contentDir, COURSE_ID, 'manifest.json'), 'utf8')) as {
   lessons: { id: string; available: boolean }[]
+  source: { versionRef: string; versionTag: string | null; courseVersion: string }
 }
 const PLANNED = manifest.lessons.length
 const AVAILABLE = manifest.lessons.filter((lesson) => lesson.available).length
@@ -304,6 +305,10 @@ test('two learners keep separate progress across a backend restart, without cros
   })
 
   let anaSnapshot: ProgressBody
+  // The run installs the example course by its version tag (H7, A5): the copy records the tag and its version.
+  expect(manifest.source.versionTag).toBe(`v${manifest.source.courseVersion}`)
+  expect(manifest.source.versionRef).toMatch(/^[0-9a-f]{40}$/)
+
   await test.step('3. Ana opens the module from Mis cursos and the index, marks lesson, e01 and e02', async () => {
     await login(pageA, ana)
     await pageA.getByRole('link', { name: 'Ver el índice del curso' }).click()

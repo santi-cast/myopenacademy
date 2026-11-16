@@ -37,8 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ContentImportCliTest {
 
 	static final JsonMapper JSON = JsonMapper.builder().build();
-	static final String HELP = "Usage: content-import generate --active DIR --source GIT --commit SHA --output DIR --report FILE\n"
-		+ "Generate a new candidate copy offline; never applies it and never writes a database.\n";
+	static final String HELP = "Usage: content-import generate --active DIR --source GIT (--tag vX.Y.Z | --commit SHA)"
+		+ " --output DIR --report FILE\n"
+		+ "Generate a new candidate copy offline; never applies it and never writes a database.\n"
+		+ "--tag installs a published version: the tag is resolved to its commit and both are recorded.\n";
 	static final String INDEX = """
 		# Índice del curso
 
@@ -91,7 +93,7 @@ class ContentImportCliTest {
 	 * again in H7, when its identity started to come from curso.json (source.name is now the course's own title).
 	 */
 	static final String SHARED_MANIFEST_SHA =
-		"84eb1e33421a22703fafe359c0a257e5b47a95463d493d4ce9761a51e25ce886";
+		"85f7f22cdd9b45ac296b302aab4d79ee5e210f972f502756e4d454b5d4152f0c";
 	static final List<String> SHARED_ARCHIVE_SHA = List.of(
 		"a253f8f587fd349a355352d11015051ae223261e97e9b37734d837711b068eac",
 		"5a38b4b35047d1d7604d2e0dccf3d45f0b3372b465573e1098ee7b19af6cb2e5",
@@ -235,6 +237,64 @@ class ContentImportCliTest {
 		assertThat(JSON.readTree(Files.readString(report)).path("written").asBoolean()).isFalse();
 		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
+	}
+
+	@Test void aVersionTagIsResolvedToItsCommitAndBothAreRecorded() throws Exception {
+		// FORMATO.md 11.1: what the academy installs is the tag of a published version (H7, A5).
+		git(null, "tag", "v1.0.0", commit);
+		assertThat(generate("--commit", null, "--tag", "v1.0.0").code()).isZero();
+		JsonNode source = manifest().path("source");
+		assertThat(source.path("versionRef").asString()).isEqualTo(commit);
+		assertThat(source.path("versionTag").asString()).isEqualTo("v1.0.0");
+		assertThat(source.path("courseVersion").asString()).isEqualTo("1.0.0");
+		JsonNode written = JSON.readTree(Files.readString(report));
+		assertThat(written.path("tag").asString()).isEqualTo("v1.0.0");
+		assertThat(written.path("commit").asString()).isEqualTo(commit);
+		assertThat(ContentLoader.loadAll(output)).hasSize(1);
+		// The comparison shows which version replaces which: the accepted copy predates tags, the candidate has one.
+		var comparison = JSON.readTree(ContentUpdateComparison.compare(
+			new ContentUpdateCli.Paths(active.root, output, this.source, temp.resolve("comparison.json"))).report());
+		assertThat(comparison.path("baseVersions").path("demo").isEmpty()).isTrue();
+		assertThat(comparison.path("candidateVersions").path("demo").path("tag").asString()).isEqualTo("v1.0.0");
+		assertThat(comparison.path("candidateVersions").path("demo").path("version").asString()).isEqualTo("1.0.0");
+	}
+
+	@Test void anAnnotatedTagIsResolvedToTheCommitItNames() throws Exception {
+		git(null, "tag", "-a", "-m", "Versión 1.0.0", "v1.0.0", commit);
+		assertThat(generate("--commit", null, "--tag", "v1.0.0").code()).isZero();
+		assertThat(manifest().path("source").path("versionRef").asString()).isEqualTo(commit);
+	}
+
+	@Test void installingFromACommitRecordsTheCourseVersionAndNoTag() throws Exception {
+		assertThat(generate().code()).isZero();
+		JsonNode source = manifest().path("source");
+		assertThat(source.path("versionTag").isNull()).isTrue();
+		assertThat(source.path("courseVersion").asString()).isEqualTo("1.0.0");
+		assertThat(JSON.readTree(Files.readString(report)).has("tag")).isFalse();
+	}
+
+	@Test void aTagThatDoesNotNameTheVersionOfCursoJsonIsAFinding() throws Exception {
+		git(null, "tag", "v1.1.0", commit);
+		assertThat(generate("--commit", null, "--tag", "v1.1.0").code()).isEqualTo(3);
+		assertThat(findings()).contains("tag v1.1.0 points to a curso.json with version 1.0.0");
+		assertThat(Files.exists(output)).isFalse();
+	}
+
+	@Test void onlyAnExistingVersionTagIsAccepted() throws Exception {
+		String invalid = "content-import: invalid arguments; use --help\n";
+		assertThat(generate("--tag", "v1.0.0")).as("--commit and --tag together").isEqualTo(new Result(2, "", invalid));
+		for (String malformed : List.of("1.0.0", "v1.0", "v01.0.0", "v1.0.0-beta", "main", "HEAD")) {
+			assertThat(generate("--commit", null, "--tag", malformed)).as(malformed)
+				.isEqualTo(new Result(2, "", "content-import: --tag must be a version tag like v1.2.3\n"));
+		}
+		assertThat(generate("--commit", null, "--tag", "v9.9.9"))
+			.isEqualTo(new Result(2, "", "content-import: source tag unavailable v9.9.9\n"));
+		// A branch with a tag's name is not a tag.
+		git(null, "branch", "v1.0.0", commit);
+		assertThat(generate("--commit", null, "--tag", "v1.0.0"))
+			.isEqualTo(new Result(2, "", "content-import: source tag unavailable v1.0.0\n"));
+		assertThat(Files.exists(output)).isFalse();
+		assertThat(Files.exists(report)).isFalse();
 	}
 
 	@Test void onlyDottedIdsInTheCourseNamespaceAreAccepted() throws Exception {
@@ -1429,7 +1489,11 @@ class ContentImportCliTest {
 		Map<String, String> options = new TreeMap<>(Map.of("--active", active.root.toString(),
 			"--source", source.toString(), "--commit", commit, "--output", output.toString(),
 			"--report", report.toString()));
-		for (int i = 0; i < overrides.length; i += 2) options.put(overrides[i], overrides[i + 1]);
+		// A null value drops the option (to install by --tag instead of --commit).
+		for (int i = 0; i < overrides.length; i += 2) {
+			if (overrides[i + 1] == null) options.remove(overrides[i]);
+			else options.put(overrides[i], overrides[i + 1]);
+		}
 		List<String> args = new ArrayList<>(List.of("generate"));
 		options.forEach((name, value) -> {
 			args.add(name);

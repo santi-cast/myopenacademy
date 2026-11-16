@@ -27,7 +27,14 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 	public record GeneratedFile(String localPath, String copySha256, List<String> inputResourceIds) {
 	}
 
-	public record Source(String name, String versionRef) {
+	/**
+	 * Where the copy comes from: the pinned commit ({@code versionRef}) and, when it was installed from a version tag,
+	 * that tag and the {@code version} of curso.json it names (FORMATO.md 11.1; H7, A5).
+	 */
+	public record Source(String name, String versionRef, String versionTag, String courseVersion) {
+		public Source(String name, String versionRef) {
+			this(name, versionRef, null, null);
+		}
 	}
 
 	public record Course(String id, String namespace, String title) {

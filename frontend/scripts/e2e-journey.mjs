@@ -8,7 +8,7 @@
 // The owner's Compose project (service db, volume code-academy_postgres_data) is never used.
 import { spawn, execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { createWriteStream, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { createServer as createTcpServer } from 'node:net'
 import { dirname, join, resolve } from 'node:path'
@@ -146,11 +146,14 @@ async function installExampleCourses() {
     await run('git', ['init', '--bare', '--quiet', repository], { env: gitEnvironment })
     await git(`--work-tree=${join(exampleCourses, folder)}`, 'add', '--all')
     await git(`--work-tree=${join(exampleCourses, folder)}`, 'commit', '--quiet', '--message=ejemplo')
-    const commit = (await git('rev-parse', 'HEAD')).stdout.trim()
+    // Installed the way an academy installs a published version: by its tag, v + the version of curso.json.
+    const version = JSON.parse(readFileSync(join(exampleCourses, folder, 'curso.json'), 'utf8')).version
+    const tag = `v${version}`
+    await git('tag', tag)
     const output = index === exampleFolders.length - 1 ? contentDir : join(work, `content-${index + 1}`)
     const { stdout } = await run('java', ['-Dloader.main=dev.codeacademy.content.ContentImportCli', '-cp', jar,
       'org.springframework.boot.loader.launch.PropertiesLauncher', 'generate', '--active', active, '--source', repository,
-      '--commit', commit, '--output', output, '--report', join(logDir, `content-import-${folder}.json`)])
+      '--tag', tag, '--output', output, '--report', join(logDir, `content-import-${folder}.json`)])
     log(`${folder}: ${stdout.trim()}`)
     active = output
   }

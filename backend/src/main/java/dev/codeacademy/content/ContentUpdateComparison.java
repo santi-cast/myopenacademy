@@ -114,9 +114,24 @@ final class ContentUpdateComparison {
         data.put("candidateFingerprint", fingerprint(next.files()));
         data.put("baseRefs", base.refs());
         data.put("candidateRefs", next.refs());
+        data.put("baseVersions", versions(base));
+        data.put("candidateVersions", versions(next));
         data.put("changes", changes);
         data.put("conflicts", conflicts);
         return new ContentUpdateComparison(base, next, conflicts, JSON.writerWithDefaultPrettyPrinter().writeValueAsString(data) + "\n");
+    }
+
+    /** Per course, the curso.json version and the tag it was installed from, when the copy records them (H7, A5). */
+    static Map<String, Map<String, String>> versions(Copy copy) {
+        Map<String, Map<String, String>> versions = new TreeMap<>();
+        for (CourseContent course : copy.courses()) {
+            Manifest.Source source = course.manifest().source();
+            Map<String, String> version = new TreeMap<>();
+            if (source.courseVersion() != null) version.put("version", source.courseVersion());
+            if (source.versionTag() != null) version.put("tag", source.versionTag());
+            versions.put(course.manifest().course().id(), version);
+        }
+        return versions;
     }
 
     static Copy read(Path root) throws IOException {

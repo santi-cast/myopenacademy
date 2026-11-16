@@ -11,8 +11,10 @@ import java.util.Map;
 /** Standalone offline generator entry point. Deliberately never starts Spring, installs a copy or opens a database. */
 public final class ContentImportCli {
 
-	static final String HELP = "Usage: content-import generate --active DIR --source GIT --commit SHA --output DIR --report FILE\n"
-		+ "Generate a new candidate copy offline; never applies it and never writes a database.\n";
+	static final String HELP = "Usage: content-import generate --active DIR --source GIT (--tag vX.Y.Z | --commit SHA)"
+		+ " --output DIR --report FILE\n"
+		+ "Generate a new candidate copy offline; never applies it and never writes a database.\n"
+		+ "--tag installs a published version: the tag is resolved to its commit and both are recorded.\n";
 
 	private ContentImportCli() {
 	}
@@ -41,12 +43,19 @@ public final class ContentImportCli {
 		if (args.length != 11 || !args[0].equals("generate")) throw invalid();
 		Map<String, String> options = new HashMap<>();
 		for (int i = 1; i < args.length; i += 2) {
-			if (!List.of("--active", "--source", "--commit", "--output", "--report").contains(args[i])
+			if (!List.of("--active", "--source", "--commit", "--tag", "--output", "--report").contains(args[i])
 				|| args[i + 1].isBlank() || options.putIfAbsent(args[i], args[i + 1]) != null) throw invalid();
 		}
-		Paths paths = new Paths(ContentUpdateCli.checked(Path.of(options.get("--active"))),
-			ContentUpdateCli.checked(Path.of(options.get("--source"))),
-			options.get("--commit"),
+		// Exactly one of --commit and --tag: five options in all, each once.
+		if (options.containsKey("--commit") == options.containsKey("--tag")) throw invalid();
+		Path source = ContentUpdateCli.checked(Path.of(options.get("--source")));
+		String tag = options.get("--tag");
+		String commit = options.get("--commit");
+		if (tag != null) {
+			if (!Files.isDirectory(source)) throw new IllegalArgumentException("directories must exist");
+			commit = ContentImportSource.resolveTag(source, tag);
+		}
+		Paths paths = new Paths(ContentUpdateCli.checked(Path.of(options.get("--active"))), source, commit, tag,
 			ContentUpdateCli.checked(Path.of(options.get("--output"))),
 			ContentUpdateCli.checked(Path.of(options.get("--report"))));
 		List<Path> distinct = List.of(paths.active(), paths.source(), paths.output(), paths.report());
@@ -77,6 +86,10 @@ public final class ContentImportCli {
 		return new IllegalArgumentException("invalid arguments; use --help");
 	}
 
-	record Paths(Path active, Path source, String commit, Path output, Path report) {
+	/** {@code commit} is always the full commit installed; {@code tag} is the version tag it came from, or null. */
+	record Paths(Path active, Path source, String commit, String tag, Path output, Path report) {
+		Paths(Path active, Path source, String commit, Path output, Path report) {
+			this(active, source, commit, null, output, report);
+		}
 	}
 }

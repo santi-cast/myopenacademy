@@ -64,6 +64,12 @@ final class ManifestValidator {
 		else if (versionRef == null || !COMMIT.matcher(versionRef).matches()) {
 			problems.add("source.versionRef must be a full 40-character commit hash, not " + versionRef);
 		}
+		String versionTag = manifest.source() == null ? null : manifest.source().versionTag();
+		if (versionTag != null && (!ContentImportSource.VERSION_TAG.matcher(versionTag).matches()
+				|| !versionTag.equals("v" + manifest.source().courseVersion()))) {
+			problems.add("source.versionTag " + versionTag + " must be v + source.courseVersion ("
+				+ manifest.source().courseVersion() + ")");
+		}
 		if (manifest.course() == null || blank(manifest.course().id()) || blank(manifest.course().title())
 				|| manifest.course().namespace() == null || !NAMESPACE.matcher(manifest.course().namespace()).matches()) {
 			problems.add("course needs id, title and a lower-case namespace");

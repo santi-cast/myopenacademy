@@ -95,7 +95,11 @@ final class ContentImportGenerator {
 				if (course.manifest().course().id().equals(descriptor.id())) previous = course.manifest();
 				else carried.add(course.manifest().course().id());
 			}
-			plans.add(new Builder(descriptor, previous, paths.active(), source, findings, reported).build());
+			// FORMATO.md 11.1: the tag names the version of curso.json it points to (v2.1.0 is "version": "2.1.0").
+			if (paths.tag() != null && !paths.tag().equals("v" + descriptor.version())) {
+				findings.add("tag " + paths.tag() + " points to a curso.json with version " + descriptor.version());
+			}
+			plans.add(new Builder(descriptor, previous, paths.active(), source, paths.tag(), findings, reported).build());
 			int lessons = 0;
 			int stages = 0;
 			int resources = 0;
@@ -206,6 +210,7 @@ final class ContentImportGenerator {
 		data.put("active", paths.active().toString());
 		data.put("source", paths.source().toString());
 		data.put("commit", paths.commit());
+		if (paths.tag() != null) data.put("tag", paths.tag());
 		data.put("output", paths.output().toString());
 		data.put("report", paths.report().toString());
 		ObjectNode refs = data.putObject("baseRefs");
@@ -293,10 +298,13 @@ final class ContentImportGenerator {
 		 * page (H8), each phase's challenges and the course glossary. A link to one of them leads to the course entry, never a guessed anchor.
 		 */
 		private final Set<String> entryPaths = new TreeSet<>();
+		/** The version tag this copy is installed from, or null when it is installed from a commit. */
+		private final String tag;
 
 		Builder(CourseDescriptor descriptor, Manifest previous, Path acceptedRoot, ContentImportSource source,
-				Set<String> findings, Set<String> reported) {
+				String tag, Set<String> findings, Set<String> reported) {
 			this.descriptor = descriptor;
+			this.tag = tag;
 			this.previous = previous;
 			this.acceptedRoot = acceptedRoot;
 			this.source = source;
@@ -683,7 +691,7 @@ final class ContentImportGenerator {
 			for (CourseDescriptor.Phase phase : descriptor.phases()) {
 				phases.add(new Manifest.Phase(phase.id(), phase.title(), phases.size() + 1));
 			}
-			return new Manifest(2, new Manifest.Source(descriptor.title(), source.commit()),
+			return new Manifest(2, new Manifest.Source(descriptor.title(), source.commit(), tag, descriptor.version()),
 				new Manifest.Course(descriptor.id(), descriptor.id(), descriptor.title()),
 				List.copyOf(phases), List.copyOf(lessons), List.copyOf(resourceEntries), List.copyOf(links),
 				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()));

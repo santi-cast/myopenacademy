@@ -2,8 +2,9 @@
 # Offline only: do not route through the normal Spring Boot application main.
 set -eu
 if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
-    printf '%s\n' 'Usage: content-import generate --active DIR --source GIT --commit SHA --output DIR --report FILE' \
-        'Generate a new candidate copy offline; never applies it and never writes a database.'
+    printf '%s\n' 'Usage: content-import generate --active DIR --source GIT (--tag vX.Y.Z | --commit SHA) --output DIR --report FILE' \
+        'Generate a new candidate copy offline; never applies it and never writes a database.' \
+        '--tag installs a published version: the tag is resolved to its commit and both are recorded.'
     exit 0
 fi
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
