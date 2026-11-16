@@ -28,6 +28,13 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 	public record Document(String id, String kind, String title, String phaseId, String sourcePath, String bodyPath) {
 		public static final String CHALLENGES = "retos";
 		public static final String GLOSSARY = "glosario";
+		/** The learning path (ROADMAP.md), the minimal path (RUTA-MINIMA.md) and the global cheat sheet (FORMATO.md 4). */
+		public static final String ROADMAP = "ruta";
+		public static final String MINIMAL_ROADMAP = "ruta-minima";
+		public static final String CHEAT_SHEET = "chuleta";
+		/** The course-wide documents, by kind, with their file (FORMATO.md 4 and 9): at most one of each. */
+		public static final java.util.Map<String, String> COURSE_FILES = java.util.Map.of(GLOSSARY, "glosario.md",
+			ROADMAP, "ROADMAP.md", MINIMAL_ROADMAP, "RUTA-MINIMA.md", CHEAT_SHEET, "99-chuleta-global.md");
 	}
 
 	public record Stage(String id, String title, Integer position, String sourcePath,

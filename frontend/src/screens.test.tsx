@@ -303,6 +303,7 @@ describe('Documentos del curso (H8, T3)', () => {
 
     await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
     expect(screen.getByRole('link', { name: 'Glosario del curso' })).toHaveAttribute('href', '/documents/java.glosario')
+    expect(screen.queryByRole('link', { name: 'Ruta de aprendizaje' })).not.toBeInTheDocument()
     const tables = screen.getAllByRole('table')
     // The challenges do not change the count of the phase.
     expect(tables[1]).toHaveAccessibleName('Fase 02 · Fundamentos de Java 1 de 2 disponibles')
@@ -356,6 +357,18 @@ describe('Documentos del curso (H8, T3)', () => {
     expect(within(pager).getByRole('link', { name: /Anterior/ })).toHaveTextContent('02.02 Variables y tipos de datos')
     expect(within(pager).getByRole('link', { name: /Siguiente/ })).toHaveAttribute('href', '/lessons/java-03.01')
     expect(within(pager).getByRole('link', { name: /Siguiente/ })).toHaveTextContent('03.01 Clases y objetos')
+  })
+
+  it('links the learning path and the global cheat sheet with the glossary, in that order', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    const ruta: DocumentEntry = { id: 'java.ruta', courseId: 'java', kind: 'ruta', title: 'Ruta de Java', phaseId: null }
+    const chuleta: DocumentEntry = { id: 'java.chuleta', courseId: 'java', kind: 'chuleta', title: 'Chuleta global', phaseId: null }
+    backend.route('GET /api/courses/java', { status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons, documents: [retos, ruta, chuleta, glosario] } })
+    renderApp('/courses/java')
+    await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
+    const line = screen.getByRole('link', { name: 'Ruta de aprendizaje' }).closest('p')!
+    expect(within(line).getAllByRole('link').map((link) => link.textContent)).toEqual(['Ruta de aprendizaje', 'Chuleta global', 'Glosario del curso'])
+    expect(within(line).getByRole('link', { name: 'Chuleta global' })).toHaveAttribute('href', '/documents/java.chuleta')
   })
 })
 

@@ -1261,6 +1261,25 @@ class ContentImportCliTest {
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
 	}
 
+	@Test void theLearningPathAndTheGlobalCheatSheetAreDocumentsWithTheirPageAndAnchors() throws Exception {
+		// FORMATO.md 4: ROADMAP.md and 99-chuleta-global.md are documents of the course (H11, decision of the author).
+		files.put("ROADMAP.md", "# Ruta del curso\n\n## Mapa del recorrido\n\nPrimero la fase 1.\n".getBytes(StandardCharsets.UTF_8));
+		files.put("99-chuleta-global.md", "# Chuleta global\n\n## 01.01 Introducción\n\nResumen.\n".getBytes(StandardCharsets.UTF_8));
+		String body = new String(files.get("fase-01/02-siguiente.md"), StandardCharsets.UTF_8)
+			+ "\nSigue la [ruta](../ROADMAP.md#mapa-del-recorrido) y la [chuleta global](../99-chuleta-global.md).\n";
+		files.put("fase-01/02-siguiente.md", body.getBytes(StandardCharsets.UTF_8));
+		// A new installation: the accepted copy here does not know these documents.
+		Path empty = Files.createDirectory(temp.resolve("vacia"));
+		var result = generate("--commit", commit(files, "path and cheat sheet\n"), "--active", empty.toString());
+		assertThat(result.code()).as(result.err()).isZero();
+		assertThat(findings()).isEmpty();
+		var course = ContentLoader.loadAll(output).getFirst();
+		assertThat(course.documents()).containsKeys("demo.ruta", "demo.chuleta");
+		assertThat(course.lessons().get("demo.01.02").bodyHtml())
+			.contains("<a href=\"/documents/demo.ruta#mapa-del-recorrido\">ruta</a>")
+			.contains("<a href=\"/documents/demo.chuleta\">chuleta global</a>");
+	}
+
 	@Test void aGithubFolderIsNotProtectedAndShipsByteForByteInTheZip() throws Exception {
 		// Only the exact name .git is protected: .github (issue templates, workflows) is course material (phase 7 of
 		// the base course), installed and in the learner's ZIP like any other file of the folder.

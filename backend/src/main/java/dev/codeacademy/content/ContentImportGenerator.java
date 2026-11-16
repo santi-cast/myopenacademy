@@ -413,9 +413,16 @@ final class ContentImportGenerator {
 					Manifest.Document.CHALLENGES, phase.id(), phase.challenges(), "Retos de la fase");
 				if (document != null) result.add(document);
 			}
-			if (source.file(CourseDescriptor.GLOSSARY) && allowed(CourseDescriptor.GLOSSARY)) {
-				Manifest.Document document = courseDocument(descriptor.id() + "." + Manifest.Document.GLOSSARY,
-					Manifest.Document.GLOSSARY, null, CourseDescriptor.GLOSSARY, "Glosario");
+			// The course-wide documents (FORMATO.md 4 and 9), when the course has them: the glossary, the learning path,
+			// the minimal path and the global cheat sheet, each with its own page.
+			java.util.Map<String, String> fallbacks = java.util.Map.of(Manifest.Document.GLOSSARY, "Glosario",
+				Manifest.Document.ROADMAP, "Ruta de aprendizaje", Manifest.Document.MINIMAL_ROADMAP, "Ruta mínima",
+				Manifest.Document.CHEAT_SHEET, "Chuleta global");
+			for (String kind : List.of(Manifest.Document.ROADMAP, Manifest.Document.MINIMAL_ROADMAP,
+					Manifest.Document.CHEAT_SHEET, Manifest.Document.GLOSSARY)) {
+				String file = Manifest.Document.COURSE_FILES.get(kind);
+				if (!source.file(file) || !allowed(file)) continue;
+				Manifest.Document document = courseDocument(descriptor.id() + "." + kind, kind, null, file, fallbacks.get(kind));
 				if (document != null) result.add(document);
 			}
 			return result;

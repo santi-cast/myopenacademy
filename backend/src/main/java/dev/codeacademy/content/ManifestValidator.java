@@ -288,7 +288,7 @@ final class ManifestValidator {
 			return documents;
 		}
 		Set<String> phasesWithChallenges = new HashSet<>();
-		boolean glossary = false;
+		Set<String> courseKinds = new HashSet<>();
 		for (Manifest.Document document : manifest.documents()) {
 			if (document == null || blank(document.id()) || blank(document.title()) || blank(document.sourcePath())
 					|| blank(document.bodyPath())) {
@@ -305,10 +305,12 @@ final class ManifestValidator {
 					problems.add("phase " + document.phaseId() + " has two challenge documents");
 				}
 			}
-			else if (Manifest.Document.GLOSSARY.equals(document.kind())) {
-				if (document.phaseId() != null) problems.add("document " + document.id() + ": a glossary has no phase");
-				if (glossary) problems.add("the course has two glossaries");
-				glossary = true;
+			else if (Manifest.Document.COURSE_FILES.containsKey(document.kind())) {
+				// The glossary, the paths and the global cheat sheet belong to the whole course: no phase, one of each.
+				if (document.phaseId() != null) {
+					problems.add("document " + document.id() + ": a " + document.kind() + " document has no phase");
+				}
+				if (!courseKinds.add(document.kind())) problems.add("the course has two " + document.kind() + " documents");
 			}
 			else problems.add("document " + document.id() + ": unsupported kind " + document.kind());
 		}

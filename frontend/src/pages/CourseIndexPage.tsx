@@ -19,6 +19,11 @@ async function loadIndex(courseId: string): Promise<CourseIndex> {
 
 const PENDING_DESCRIPTION_ID = 'pending-lesson-description'
 
+const COURSE_DOCUMENT_LABELS: Record<DocumentEntry['kind'], string> = {
+  'ruta': 'Ruta de aprendizaje', 'ruta-minima': 'Ruta mínima', 'chuleta': 'Chuleta global', 'glosario': 'Glosario del curso',
+  'retos': 'Retos de la fase',
+}
+
 function LessonState({ lesson, completed }: { lesson: LessonEntry; completed: boolean }) {
   if (!lesson.available) return <span className="badge badge-pending">Todavía no disponible</span>
   // No saved state means «no completada» (docs/api.md, «Progreso y continuación»).
@@ -103,7 +108,10 @@ export function CourseIndexPage() {
   const continuation = syllabus.lessons.find((lesson) => lesson.id === progress.continuation.lastOpenedLessonId)
   const phases = groupByPhase(syllabus.phases, syllabus.lessons)
   const documents = syllabus.documents ?? []
-  const glossary = documents.find((document) => document.kind === 'glosario')
+  // The course-wide documents (FORMATO.md 4 and 9), in this order, when the course has them.
+  const courseDocuments = (['ruta', 'ruta-minima', 'chuleta', 'glosario'] as const)
+    .map((kind) => documents.find((document) => document.kind === kind))
+    .filter((document): document is DocumentEntry => document !== undefined)
 
   return (
     <div className="index">
@@ -112,7 +120,16 @@ export function CourseIndexPage() {
           <p className="kicker">Curso</p>
           <h1>{syllabus.course.title} · Índice del curso</h1>
           <ProgressSummary counts={progress.progress} />
-          {glossary && <p className="index-glossary"><Link to={`/documents/${encodeURIComponent(glossary.id)}`}>Glosario del curso</Link></p>}
+          {courseDocuments.length > 0 && (
+            <p className="index-glossary">
+              {courseDocuments.map((document, index) => (
+                <span key={document.id}>
+                  {index > 0 && ' · '}
+                  <Link to={`/documents/${encodeURIComponent(document.id)}`}>{COURSE_DOCUMENT_LABELS[document.kind]}</Link>
+                </span>
+              ))}
+            </p>
+          )}
         </div>
         {continuation && (
           <Link className="btn btn-end" to={`/lessons/${encodeURIComponent(continuation.id)}`}>

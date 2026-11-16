@@ -114,7 +114,7 @@ class ProjectStageContentTest {
 		addGlossary("retos", null);
 		fixture.rejected("document demo.glosario: unknown phase null");
 		addGlossary("glosario", "demo.phase-01");
-		fixture.rejected("document demo.glosario: a glossary has no phase");
+		fixture.rejected("document demo.glosario: a glosario document has no phase");
 	}
 
 	@Test

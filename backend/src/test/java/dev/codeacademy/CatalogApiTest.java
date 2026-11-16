@@ -160,7 +160,13 @@ class CatalogApiTest {
 		assertThat(destino.path("lessonId").asString()).isEqualTo("ejemplo-destino.mi-primer-repositorio");
 		// H8, T3: the challenges of the phase, a document without progress (the example course has no glossary).
 		JsonNode documents = body.path("documents");
-		assertThat(documents.size()).isEqualTo(1);
+		// The challenges, then the course-wide documents the course has: its learning path and its global cheat sheet.
+		assertThat(documents.size()).isEqualTo(3);
+		assertThat(documents.findValuesAsString("id")).containsExactly("ejemplo.fase.primeros-pasos.retos", "ejemplo.ruta",
+			"ejemplo.chuleta");
+		assertThat(documents.get(1).path("kind").asString()).isEqualTo("ruta");
+		assertThat(documents.get(2).path("kind").asString()).isEqualTo("chuleta");
+		assertThat(documents.get(2).path("phaseId").isNull()).isTrue();
 		assertThat(documents.get(0).propertyNames()).containsExactlyInAnyOrder("id", "courseId", "kind", "title", "phaseId");
 		assertThat(documents.get(0).path("id").asString()).isEqualTo("ejemplo.fase.primeros-pasos.retos");
 		assertThat(documents.get(0).path("kind").asString()).isEqualTo("retos");
