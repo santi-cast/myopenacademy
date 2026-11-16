@@ -217,10 +217,15 @@ final class ContentUpdateComparison {
         if (protectedName(path)) throw new IllegalArgumentException("protected paths are not allowed");
     }
 
-    /** Whether any segment is .git, .env or .env.*: the names the protection policy never reads or copies. */
+    /**
+     * Whether any segment is .git, .env or .env.*: the names the protection policy never reads or copies. The one
+     * exception is the exact name .env.example, the standard template without secrets that courses teach (author's
+     * decision, 16 November 2026).
+     */
     static boolean protectedName(String path) {
         for (String segment : path.split("/")) {
-            if (segment.equals(".git") || segment.equals(".env") || segment.startsWith(".env.")) return true;
+            if (segment.equals(".git") || segment.equals(".env")
+                    || (segment.startsWith(".env.") && !segment.equals(".env.example"))) return true;
         }
         return false;
     }

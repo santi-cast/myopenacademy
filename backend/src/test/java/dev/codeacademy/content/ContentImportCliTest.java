@@ -1123,17 +1123,19 @@ class ContentImportCliTest {
 	@Test void protectedSourcePathsAreExcludedAndReportedWithoutSerializingTheirBytes() throws Exception {
 		// Policy: a protected source path is never read nor serialized. The folder ships without that example file and
 		// the omission is reported with its source path; nothing is substituted for it and the run is not aborted.
+		// The exact name .env.example is the one exception (author's decision, 16 November 2026): it ships as is.
 		files.put("fase-01/codigo/hola/.env", "SECRETO_DIDACTICO=uno\n".getBytes(StandardCharsets.UTF_8));
-		files.put("fase-01/codigo/hola/.env.example", "OTRO_SECRETO=dos\n".getBytes(StandardCharsets.UTF_8));
+		files.put("fase-01/codigo/hola/.env.local", "OTRO_SECRETO=dos\n".getBytes(StandardCharsets.UTF_8));
+		files.put("fase-01/codigo/hola/.env.example", "PLANTILLA=sin-secretos\n".getBytes(StandardCharsets.UTF_8));
 		String changed = commit(files, "protected members\n");
 		Map<String, String> activeBefore = snapshot(active.root);
 		Map<String, String> sourceBefore = snapshot(source);
 		assertThat(generate("--commit", changed)).isEqualTo(new Result(0,
-			"Candidate written; lessons: 3; stages: 2; resources: 4; reported: 2\n", ""));
+			"Candidate written; lessons: 3; stages: 2; resources: 5; reported: 2\n", ""));
 		assertThat(findings()).isEmpty();
 		assertThat(reported()).containsExactly(
 			"protected source path excluded by policy: fase-01/codigo/hola/.env",
-			"protected source path excluded by policy: fase-01/codigo/hola/.env.example");
+			"protected source path excluded by policy: fase-01/codigo/hola/.env.local");
 		assertThat(JSON.readTree(Files.readString(report)).path("written").asBoolean()).isTrue();
 		// Never serialized: no path, manifest entry or stored ZIP copy carries the protected name or its bytes.
 		List<String> paths = new ArrayList<>();
@@ -1147,15 +1149,46 @@ class ContentImportCliTest {
 				}
 			}
 		}
-		assertThat(paths).noneMatch(path -> path.contains(".env"));
 		JsonNode manifest = manifest();
-		assertThat(manifest.path("resources")).noneMatch(resource -> resource.path("sourcePath").asString().contains(".env"));
-		assertThat(manifest.path("sourceToId")).noneMatch(entry -> entry.path("sourcePath").asString().contains(".env"));
-		// The claimed folder keeps the three files it may copy, so the example file is absent, not replaced.
-		assertThat(link(manifest, "fase-01/codigo/hola/").path("resourceIds")).hasSize(3);
+		assertThat(manifest.path("resources")).noneMatch(resource -> resource.path("sourcePath").asString().endsWith("/.env")
+			|| resource.path("sourcePath").asString().contains(".env.local"));
+		// The claimed folder keeps the three files it already had plus .env.example; .env and .env.local are absent.
+		assertThat(link(manifest, "fase-01/codigo/hola/").path("resourceIds")).hasSize(4);
+		JsonNode template = resource(manifest, "fase-01/codigo/hola/.env.example");
+		assertThat(Files.readString(output.resolve(template.path("localPath").asString()))).isEqualTo("PLANTILLA=sin-secretos\n");
+		assertThat(template.path("mediaType").asString()).isEqualTo("text/plain; charset=utf-8");
 		assertThat(ContentLoader.loadAll(output)).hasSize(1);
 		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
+	}
+
+	@Test void aCsvTakesTheCharsetItsFolderDeclaresInCodificacionTxt() throws Exception {
+		// FORMATO.md 7.1: codificacion.txt names, as iconv does, the encoding of the folder's CSV files. The bytes ship
+		// untouched and the charset is declared (author's decision, 16 November 2026); every other text file is UTF-8.
+		byte[] windows1252 = "nombre\nMaría Núñez\n".getBytes(java.nio.charset.Charset.forName("windows-1252"));
+		files.put("fase-01/codigo/hola/socios.csv", windows1252);
+		files.put("fase-01/codigo/hola/codificacion.txt", "WINDOWS-1252\n".getBytes(StandardCharsets.UTF_8));
+		assertThat(generate("--commit", commit(files, "windows-1252 csv\n")).code()).isZero();
+		JsonNode manifest = manifest();
+		JsonNode csv = resource(manifest, "fase-01/codigo/hola/socios.csv");
+		assertThat(csv.path("mediaType").asString()).isEqualTo("text/plain; charset=windows-1252");
+		assertThat(Files.readAllBytes(output.resolve(csv.path("localPath").asString()))).isEqualTo(windows1252);
+		assertThat(resource(manifest, "fase-01/codigo/hola/codificacion.txt").path("mediaType").asString())
+			.isEqualTo("text/plain; charset=utf-8");
+	}
+
+	@Test void aCsvWithoutCodificacionTxtIsUtf8() throws Exception {
+		files.put("fase-01/codigo/hola/socios.csv", "nombre\nMaría\n".getBytes(StandardCharsets.UTF_8));
+		assertThat(generate("--commit", commit(files, "utf-8 csv\n")).code()).isZero();
+		assertThat(resource(manifest(), "fase-01/codigo/hola/socios.csv").path("mediaType").asString())
+			.isEqualTo("text/plain; charset=utf-8");
+	}
+
+	@Test void anUnknownEncodingInCodificacionTxtIsAFinding() throws Exception {
+		files.put("fase-01/codigo/hola/socios.csv", "nombre\nMaría\n".getBytes(StandardCharsets.UTF_8));
+		files.put("fase-01/codigo/hola/codificacion.txt", "KLINGON-1\n".getBytes(StandardCharsets.UTF_8));
+		assertThat(generate("--commit", commit(files, "unknown encoding\n")).code()).isEqualTo(3);
+		assertThat(findings()).contains("fase-01/codigo/hola/codificacion.txt: unknown encoding «KLINGON-1»");
 	}
 
 	@Test void resourceOwnershipStaysExactPerOwner() throws Exception {

@@ -7,6 +7,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -18,6 +21,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -282,6 +286,8 @@ final class ContentImportGenerator {
 		private final Map<String, String> hashes = new TreeMap<>();
 		private final Map<String, FolderPlan> folders = new TreeMap<>();
 		private final Set<String> stageIds = new TreeSet<>();
+		/** Charset declared by each folder's codificacion.txt, read once per folder ("" for none). */
+		private final Map<String, String> csvCharsets = new TreeMap<>();
 		/**
 		 * Course documents that are not lessons or stages and are not imported: the index and, until they get their own
 		 * page (H8), each phase's challenges and the course glossary. A link to one of them leads to the course entry, never a guessed anchor.
@@ -522,11 +528,44 @@ final class ContentImportGenerator {
 				return null;
 			}
 			String id = owner + "-r-" + HeadingIds.slug(name(path)) + "-" + digest(path);
-			ResourcePlan plan = new ResourcePlan(id, directory + "/resources/" + id,
-				ContentImportDocuments.mediaType(path), owner, stage);
+			ResourcePlan plan = new ResourcePlan(id, directory + "/resources/" + id, mediaType(path), owner, stage);
 			checkInstalledResource(path, plan.localPath());
 			register(key, plan);
 			return plan;
+		}
+
+		/**
+		 * The media type of a resource. A CSV whose folder declares its encoding in codificacion.txt (FORMATO.md 7.1,
+		 * an iconv name such as WINDOWS-1252) is served with that charset; every other text file is UTF-8.
+		 */
+		private String mediaType(String path) {
+			String mediaType = ContentImportDocuments.mediaType(path);
+			if (!path.toLowerCase(Locale.ROOT).endsWith(".csv")) return mediaType;
+			String folder = path.substring(0, path.lastIndexOf('/') + 1);
+			String charset = csvCharsets.computeIfAbsent(folder, this::declaredCharset);
+			return charset.isEmpty() ? mediaType : "text/plain; charset=" + charset;
+		}
+
+		/** The charset codificacion.txt names, in lower case; empty when there is none or it is not usable. */
+		private String declaredCharset(String folder) {
+			String declaration = folder + "codificacion.txt";
+			byte[] bytes;
+			try {
+				bytes = source.file(declaration) ? source.read(declaration) : null;
+			}
+			catch (IOException ex) {
+				throw new java.io.UncheckedIOException(ex);
+			}
+			if (bytes == null) return "";
+			String name = new String(bytes, StandardCharsets.UTF_8).strip();
+			try {
+				if (name.isEmpty() || name.contains("\n")) throw new IllegalCharsetNameException(name);
+				return Charset.forName(name).name().toLowerCase(Locale.ROOT);
+			}
+			catch (IllegalCharsetNameException | UnsupportedCharsetException ex) {
+				findings.add(declaration + ": unknown encoding «" + name + "»");
+				return "";
+			}
 		}
 
 		/** One claim enters both orders: by (path, owner) for identity and by path for the folder entries. */

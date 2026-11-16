@@ -395,7 +395,7 @@ class ContentLoaderTest {
 	@Test
 	void keepsOnlyTheTextOfLinksToProtectedSourcePaths() {
 		fixture.replace(INTRO, "Texto de cuerpo.",
-			"Texto de cuerpo con [config](codigo/.env), [ejemplo](codigo/.env.example#x) y [repo](../.git/config).");
+			"Texto de cuerpo con [config](codigo/.env), [ejemplo](codigo/.env.local#x) y [repo](../.git/config).");
 		String html = fixture.load().lessons().get("demo.01.01").bodyHtml();
 		assertThat(html).contains("config", "ejemplo", "repo").doesNotContain(".env", ".git", "<a href=\"codigo");
 	}
@@ -468,12 +468,14 @@ class ContentLoaderTest {
 
 	@Test
 	void protectedNameMatchesSafeNames() {
-		for (String path : new String[] { ".env", "a/.env.local", "a/.git" }) {
+		for (String path : new String[] { ".env", "a/.env.local", "a/.git", ".env.example/x/.env", "a/.env.example.bak",
+				"a/.env.EXAMPLE" }) {
 			assertThat(ContentUpdateComparison.protectedName(path)).isTrue();
 			assertThat(assertThrows(IllegalArgumentException.class, () -> ContentUpdateComparison.safeNames(path)).getMessage())
 				.isEqualTo("protected paths are not allowed");
 		}
-		for (String path : new String[] { "", ".envrc", ".ENV", ".gitignore", "x.env", ".env_x" }) {
+		for (String path : new String[] { "", ".envrc", ".ENV", ".gitignore", "x.env", ".env_x", ".env.example",
+				"a/.env.example" }) {
 			assertThat(ContentUpdateComparison.protectedName(path)).isFalse();
 		}
 	}
