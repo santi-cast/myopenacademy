@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
+import dev.codeacademy.content.ExampleContent;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -50,22 +51,22 @@ class FlywayHistorySchemaTest {
 		try (var postgres = database("code_academy")) {
 			JdbcTemplate jdbc = jdbc(postgres);
 			String username = unique("Alumno_");
-			JsonNode java;
+			JsonNode progress;
 			List<Map<String, Object>> history;
 			try (var server = start(postgres)) {
 				assertThat(server.getEnvironment().getProperty("spring.jpa.properties.hibernate.default_schema"))
 					.isEqualTo("code_academy");
 				var browser = learner(port(server), username);
-				ok(lessonState(browser, "java-02.01", "completed"));
-				ok(exerciseState(browser, "java-02.01-e01", "solved"));
-				java = ok(progress(browser, "java"));
+				ok(lessonState(browser, ExampleContent.LESSON, "completed"));
+				ok(exerciseState(browser, ExampleContent.E01, "solved"));
+				progress = ok(progress(browser, ExampleContent.COURSE));
 				history = assertHistoryInPublicOnly(jdbc);
 			}
 
 			try (var server = start(postgres)) {
 				var browser = new ApiClient(port(server));
 				login(browser, username);
-				assertThat(ok(progress(browser, "java"))).isEqualTo(java);
+				assertThat(ok(progress(browser, ExampleContent.COURSE))).isEqualTo(progress);
 			}
 
 			assertThat(jdbc.queryForList(HISTORY)).isEqualTo(history);
@@ -132,7 +133,7 @@ class FlywayHistorySchemaTest {
 
 	/** The application with its own configuration on this database, as the backend starts locally. */
 	private static ConfigurableApplicationContext start(PostgreSQLContainer postgres) {
-		String[] args = { "--server.port=0", "--code-academy.content-dir=" + CatalogApiTest.CONTENT,
+		String[] args = { "--server.port=0", "--code-academy.content-dir=" + ExampleContent.root(),
 				"--spring.datasource.url=" + postgres.getJdbcUrl(), "--spring.datasource.username=" + postgres.getUsername(),
 				"--spring.datasource.password=" + postgres.getPassword() };
 		return CodeAcademyApplication.application(args).run(args);

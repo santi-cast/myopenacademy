@@ -15,28 +15,28 @@ import tools.jackson.databind.node.ObjectNode;
 
 /** Synthetic v2 folders; no source repository access. */
 public final class ZipFixture {
-	public static final String ZIP = "demo-folder-zip";
+	public static final String ZIP = "demo.folder-zip";
 	public static final String LOCAL = "demo/resources/folder.zip";
 	public static final String FOLDER = "fase-01/codigo/hola/";
 
 	public static void install(ContentFixture fixture) throws Exception {
-		fixture.addResource("demo-nested", FOLDER + "nested/útil.java", "text/plain", new byte[] { 0, 1, 2, 3 });
+		fixture.addResource("demo.nested", FOLDER + "nested/útil.java", "text/plain", new byte[] { 0, 1, 2, 3 });
 		fixture.editManifest(m -> {
 			m.put("schemaVersion", 2);
 			m.putArray("projectStages");
 			m.get("resources").forEach(r -> ((ObjectNode) r).put("kind", "file"));
 			ObjectNode folder = ContentFixture.link(m, FOLDER);
-			((ArrayNode) folder.get("resourceIds")).add("demo-nested");
+			((ArrayNode) folder.get("resourceIds")).add("demo.nested");
 			folder.put("zipResourceId", ZIP);
 			ObjectNode zip = ((ArrayNode) m.get("resources")).addObject();
-			zip.put("resourceId", ZIP).put("lessonId", "demo-01.01").put("kind", "zip")
+			zip.put("resourceId", ZIP).put("lessonId", "demo.01.01").put("kind", "zip")
 				.put("sourcePath", FOLDER).put("localPath", LOCAL).put("mediaType", "application/zip")
 				.put("fileName", "hola.zip");
 			zip.set("memberResourceIds", folder.get("resourceIds").deepCopy());
 		});
 		var out = new ByteArrayOutputStream();
 		try (var zip = new ZipOutputStream(out)) {
-			for (String id : List.of("demo-01.01-r-hello", "demo-01.01-r-other", "demo-nested")) {
+			for (String id : List.of("demo.01.01-r-hello", "demo.01.01-r-other", "demo.nested")) {
 				fixture.editManifest(m -> {
 					var resource = ContentFixture.resource(m, id);
 					try {

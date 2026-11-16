@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ContentSanitizerTest {
 
 	private static final Set<String> IDS = Set.of("qué-aprenderás");
-	private static final Set<String> HREFS = Set.of("/lessons/demo-01.02", "#qué-aprenderás", "https://dev.java/");
+	private static final Set<String> HREFS = Set.of("/lessons/demo.01.02", "#qué-aprenderás", "https://dev.java/");
 
 	@TempDir
 	Path tempDir;
@@ -30,7 +30,7 @@ class ContentSanitizerTest {
 		String html = """
 				<h2 id="qué-aprenderás">Qué <code>main</code></h2>
 				<p><strong>a</strong> <em>b</em> <del>c</del> <kbd>d</kbd> x<sup>2</sup> y<sub>i</sub><br />
-				<a href="/lessons/demo-01.02">l</a> <a href="#qué-aprenderás">f</a> <a href="https://dev.java/">w</a></p>
+				<a href="/lessons/demo.01.02">l</a> <a href="#qué-aprenderás">f</a> <a href="https://dev.java/">w</a></p>
 				<blockquote><p>q</p></blockquote><hr />
 				<ol start="2"><li>uno</li></ol><ul><li>dos</li></ul>
 				<table><thead><tr><th align="left">a</th></tr></thead><tbody><tr><td align="right">1</td></tr></tbody></table>
@@ -46,7 +46,7 @@ class ContentSanitizerTest {
 
 		assertThat(removed).isEmpty();
 		assertThat(clean).contains("<h2 id=\"qué-aprenderás\">", "<del>c</del>", "<kbd>d</kbd>", "<sup>2</sup>",
-				"<sub>i</sub>", "<br />", "<a href=\"/lessons/demo-01.02\">l</a>", "<a href=\"#qué-aprenderás\">f</a>",
+				"<sub>i</sub>", "<br />", "<a href=\"/lessons/demo.01.02\">l</a>", "<a href=\"#qué-aprenderás\">f</a>",
 				"<a href=\"https://dev.java/\" target=\"_blank\" rel=\"noopener noreferrer\">w</a>", "<ol start=\"2\">",
 				"<th align=\"left\">", "<td align=\"right\">", "<code class=\"language-c&#43;&#43;\">",
 				"<code class=\"language-mermaid\">A --&gt; B</code>", "<details>", "<summary>Ver solución</summary>",
@@ -57,28 +57,28 @@ class ContentSanitizerTest {
 
 	@Test
 	void externalLinksOpenInANewTabWithoutOpenerWhileOtherLinksDoNot() {
-		Set<String> hrefs = Set.of("http://example.org/a", "https://dev.java/", "/lessons/demo-01.02", "#qué-aprenderás",
-				"/courses/demo", "/api/resources/demo-01.01-r-hello");
+		Set<String> hrefs = Set.of("http://example.org/a", "https://dev.java/", "/lessons/demo.01.02", "#qué-aprenderás",
+				"/courses/demo", "/api/resources/demo.01.01-r-hello");
 		List<String> removed = new ArrayList<>();
 
 		String clean = ContentSanitizer.sanitize("""
 				<p><a href="http://example.org/a">h</a> <a href="https://dev.java/">s</a>
-				<a href="/lessons/demo-01.02">l</a> <a href="#qué-aprenderás">f</a> <a href="/courses/demo">c</a>
-				<a href="/api/resources/demo-01.01-r-hello">Hello.java</a></p>
+				<a href="/lessons/demo.01.02">l</a> <a href="#qué-aprenderás">f</a> <a href="/courses/demo">c</a>
+				<a href="/api/resources/demo.01.01-r-hello">Hello.java</a></p>
 				""", IDS, hrefs, removed);
 
 		assertThat(removed).isEmpty();
 		assertThat(clean).contains("<a href=\"http://example.org/a\" target=\"_blank\" rel=\"noopener noreferrer\">h</a>",
 				"<a href=\"https://dev.java/\" target=\"_blank\" rel=\"noopener noreferrer\">s</a>",
-				"<a href=\"/lessons/demo-01.02\">l</a>", "<a href=\"#qué-aprenderás\">f</a>", "<a href=\"/courses/demo\">c</a>",
-				"<a href=\"/api/resources/demo-01.01-r-hello\">Hello.java</a>");
+				"<a href=\"/lessons/demo.01.02\">l</a>", "<a href=\"#qué-aprenderás\">f</a>", "<a href=\"/courses/demo\">c</a>",
+				"<a href=\"/api/resources/demo.01.01-r-hello\">Hello.java</a>");
 	}
 
 	@Test
 	void aResourceLinkMayNameUnicodeLettersWhileEveryOtherFormStaysStrict() {
-		String unicode = "/api/resources/java-12.16-r-presupuesto-año-2026txt-0979a0bb";
+		String unicode = "/api/resources/java.12.16-r-presupuesto-año-2026txt-0979a0bb";
 		List<String> bad = List.of("/api/resources/a/b", "/api/resources/a%2Fb", "/api/resources/a b",
-				"/api/resources/año\u0000", "/lessons/demo-año", "/stages/demo-año", "/courses/demo-año");
+				"/api/resources/año\u0000", "/lessons/demo.año", "/stages/demo.año", "/courses/demo.año");
 		Set<String> hrefs = new java.util.HashSet<>(bad);
 		hrefs.add(unicode);
 		List<String> removed = new ArrayList<>();
@@ -87,7 +87,7 @@ class ContentSanitizerTest {
 				hrefs, removed);
 
 		assertThat(removed).isEmpty();
-		assertThat(clean).contains("<a href=\"/api/resources/java-12.16-r-presupuesto-a").contains("presupuesto año 2026.txt</a>");
+		assertThat(clean).contains("<a href=\"/api/resources/java.12.16-r-presupuesto-a").contains("presupuesto año 2026.txt</a>");
 		for (String href : bad) {
 			List<String> dropped = new ArrayList<>();
 			ContentSanitizer.sanitize("<p><a href=\"" + href + "\">x</a></p>", IDS, hrefs, dropped);
@@ -104,7 +104,7 @@ class ContentSanitizerTest {
 			ContentSanitizer.sanitize("<p><a href=\"" + href + "\">x</a></p>", IDS, Set.of(href), removed);
 			assertThat(removed).as(href).isNotEmpty();
 		}
-		String real = p + "java-12.16-r-presupuesto-año-2026txt-0979a0bb";
+		String real = p + "java.12.16-r-presupuesto-año-2026txt-0979a0bb";
 		List<String> removed = new ArrayList<>();
 		String clean = ContentSanitizer.sanitize("<p><a href=\"" + real + "\">ok</a> <a href=\"" + p + "ajeno-ñ\">no</a></p>", IDS,
 				Set.of(real), removed);
@@ -117,11 +117,11 @@ class ContentSanitizerTest {
 		List<String> removed = new ArrayList<>();
 
 		String clean = sanitize("<p><a href=\"https://dev.java/\" target=\"_self\" rel=\"opener\">x</a> "
-				+ "<a href=\"/lessons/demo-01.02\" target=\"_blank\">y</a></p>", removed);
+				+ "<a href=\"/lessons/demo.01.02\" target=\"_blank\">y</a></p>", removed);
 
 		assertThat(removed).isNotEmpty();
 		assertThat(clean).isEqualTo("<p><a href=\"https://dev.java/\" target=\"_blank\" rel=\"noopener noreferrer\">x</a> "
-				+ "<a href=\"/lessons/demo-01.02\">y</a></p>");
+				+ "<a href=\"/lessons/demo.01.02\">y</a></p>");
 	}
 
 	@ParameterizedTest
@@ -137,7 +137,7 @@ class ContentSanitizerTest {
 			"<a href=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\">x</a>",
 			"<a href=\"vbscript:msgbox(1)\">x</a>",
 			"<a href=\"//evil.example/\">x</a>",
-			"<a href=\"/lessons/demo-01.02\" onclick=\"alert(1)\">x</a>",
+			"<a href=\"/lessons/demo.01.02\" onclick=\"alert(1)\">x</a>",
 			"<a href=\"/somewhere/else\">x</a>",
 			"<h2 id=\"evil\">t</h2>",
 			"<p id=\"qué-aprenderás\">t</p>",
@@ -181,7 +181,7 @@ class ContentSanitizerTest {
 	@ValueSource(strings = {
 			"<script>alert(1)</script>",
 			"<img src=x onerror=alert(1)>",
-			"<p>texto <a href=\"/lessons/demo-01.02\" onclick=\"alert(1)\">x</a></p>",
+			"<p>texto <a href=\"/lessons/demo.01.02\" onclick=\"alert(1)\">x</a></p>",
 			"<h2 id=\"evil\">t</h2>",
 			"<iframe src=\"https://evil.example/\"></iframe>",
 			"<details ontoggle=\"alert(1)\">\n<summary>s</summary>\n</details>",
@@ -201,7 +201,7 @@ class ContentSanitizerTest {
 		ContentFixture fixture = ContentFixture.copyInto(tempDir);
 		fixture.replace(ContentFixture.INTRO, "Texto de cuerpo.", "Texto de cuerpo.\n\n" + malicious + "\n");
 
-		ContentValidationException ex = fixture.rejected("demo-01.01");
+		ContentValidationException ex = fixture.rejected("demo.01.01");
 
 		assertThat(ex.getMessage()).containsAnyOf("sanitizer removed", "disallowed link", "disallowed image");
 	}
@@ -212,7 +212,7 @@ class ContentSanitizerTest {
 		// The event handler is what keeps failing the load, and the message still names the exercise part.
 		fixture.replace(ContentFixture.INTRO, "Solución uno,", "Solución uno con <p onclick=\"x()\">nota</p>,");
 
-		fixture.rejected("demo-01.01 demo-01.01-e01 solution: sanitizer removed attribute [onclick] on <p>");
+		fixture.rejected("demo.01.01 demo.01.01.e01 solution: sanitizer removed attribute [onclick] on <p>");
 	}
 
 	@Test
@@ -220,7 +220,7 @@ class ContentSanitizerTest {
 		ContentFixture fixture = ContentFixture.copyInto(tempDir);
 		fixture.replace(ContentFixture.INTRO, "Solución uno,", "<span>Solución</span> <u>uno</u>,");
 
-		ExerciseContent exercise = fixture.load().lessons().get("demo-01.01").exercises().get(0);
+		ExerciseContent exercise = fixture.load().lessons().get("demo.01.01").exercises().get(0);
 
 		assertThat(exercise.solutionHtml()).contains("Solución uno").doesNotContain("<span", "<u>");
 	}

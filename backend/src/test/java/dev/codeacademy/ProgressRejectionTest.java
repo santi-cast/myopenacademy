@@ -25,17 +25,19 @@ class ProgressRejectionTest extends ProgressTestSupport {
 		ID_ROUTES.put("PUT /api/me/exercises/{id}/state", state("solved"));
 		ID_ROUTES.put("PUT /api/me/courses/{id}", null);
 		ID_ROUTES.put("GET /api/me/courses/{id}/progress", null);
-		ID_ROUTES.put("PUT /api/me/courses/{id}/continuation", "{\"lessonId\":\"java-02.01\"}");
+		ID_ROUTES.put("PUT /api/me/courses/{id}/continuation", "{\"lessonId\":\"" + EJEMPLO_LESSON + "\"}");
 	}
 
 	/** Look-alikes of real IDs that must never resolve to them. */
 	private static final List<String> NOT_FOUND_SEGMENTS = List.of(
-			"JAVA-02.01", "Java", "DEMO-01.01-E01",
-			// Cyrillic «а» in place of the Latin a.
-			"j%D0%B0va-02.01", "j%D0%B0va", "dem%D0%BE-01.01-e01",
+			"EJEMPLO.FICHEROS-JSON", "Ejemplo", "DEMO-01.01-E01",
+			// Cyrillic «о» in place of the Latin o.
+			"ejempl%D0%BE.ficheros-json", "ejempl%D0%BE", "dem%D0%BE-01.01-e01",
 			"a".repeat(300),
-			"java-02.01%20", "java%20", "demo-01.01-e01%20",
-			"java-99.99", "demo-01.01-e99", "python");
+			"ejemplo.ficheros-json%20", "ejemplo%20", "demo.01.01.e01%20",
+			// A dot is part of the ID, never an extension to strip.
+			"ejemplo.ficheros-json.json", "ejemplo.ficheros-json.un-pedido.json",
+			"ejemplo.no-existe", "demo.01.01.e99", "python");
 
 	@Test
 	void unknownAndLookAlikeIdsAre404OnEveryRouteAndAddNothing() throws Exception {
@@ -73,7 +75,7 @@ class ProgressRejectionTest extends ProgressTestSupport {
 
 		for (var route : ID_ROUTES.entrySet()) {
 			// Rejected by the server before routing (Tomcat answers 400), so no query ever sees U+0000.
-			for (String segment : List.of("%00", "java-02.01%00", "%00java")) {
+			for (String segment : List.of("%00", "ejemplo.ficheros-json%00", "%00ejemplo")) {
 				var response = send(browser, route.getKey(), segment, route.getValue());
 				assertThat(response.statusCode()).as(route.getKey() + " " + segment).isEqualTo(400);
 			}
@@ -85,13 +87,14 @@ class ProgressRejectionTest extends ProgressTestSupport {
 	@Test
 	void continuationBodyIdsThatDoNotResolveAre404() throws Exception {
 		var browser = learner();
-		ok(add(browser, "java"));
+		ok(add(browser, EJEMPLO));
 		var before = snapshot();
 
-		for (String lessonId : List.of("JAVA-02.01", "j\u0430va-02.01", "a".repeat(300), "java-02.01 ", " java-02.01",
-				"..", "../java-02.01", "java/02.01", "java-02.01/state", "", "java-99.99",
-				"\u0000", "java-02.01\u0000", "\u0000java-02.01")) {
-			assertError(continuation(browser, "java", lessonId), 404, "NOT_FOUND");
+		for (String lessonId : List.of("EJEMPLO.FICHEROS-JSON", "ejempl\u043e.ficheros-json", "a".repeat(300),
+				"ejemplo.ficheros-json ", " ejemplo.ficheros-json", "..", "../ejemplo.ficheros-json",
+				"ejemplo/ficheros-json", "ejemplo.ficheros-json/state", "", "ejemplo.no-existe", "\u0000",
+				"ejemplo.ficheros-json\u0000", "\u0000ejemplo.ficheros-json")) {
+			assertError(continuation(browser, EJEMPLO, lessonId), 404, "NOT_FOUND");
 		}
 
 		assertThat(snapshot()).isEqualTo(before);
@@ -190,7 +193,7 @@ class ProgressRejectionTest extends ProgressTestSupport {
 	@Test
 	void everyProgressWriteRequiresTheCsrfToken() throws Exception {
 		var browser = learner();
-		ok(add(browser, "java"));
+		ok(add(browser, EJEMPLO));
 		var before = snapshot();
 
 		for (var request : allRoutes()) {
@@ -207,7 +210,7 @@ class ProgressRejectionTest extends ProgressTestSupport {
 	void aStaleSessionIsRejectedOnEveryProgressRouteWithoutWriting() throws Exception {
 		var browser = learner();
 		String user = userId(browser);
-		ok(add(browser, "java"));
+		ok(add(browser, EJEMPLO));
 		// What the console reset does to the version; the console itself is covered separately.
 		jdbc.update("update code_academy.users set credentials_version = credentials_version + 1 where id = ?::uuid",
 				user);
@@ -246,11 +249,11 @@ class ProgressRejectionTest extends ProgressTestSupport {
 	/** The six routes with valid input, so only the missing session, token or credentials can reject them. */
 	private static List<Request> allRoutes() {
 		return List.of(new Request("GET", "/api/me/courses", null),
-				new Request("PUT", "/api/me/courses/java", null),
-				new Request("GET", "/api/me/courses/java/progress", null),
-				new Request("PUT", "/api/me/lessons/" + JAVA_LESSON + "/state", state("completed")),
-				new Request("PUT", "/api/me/exercises/java-02.01-e01/state", state("solved")),
-				new Request("PUT", "/api/me/courses/java/continuation", "{\"lessonId\":\"" + JAVA_LESSON + "\"}"));
+				new Request("PUT", "/api/me/courses/" + EJEMPLO, null),
+				new Request("GET", "/api/me/courses/" + EJEMPLO + "/progress", null),
+				new Request("PUT", "/api/me/lessons/" + EJEMPLO_LESSON + "/state", state("completed")),
+				new Request("PUT", "/api/me/exercises/" + EJEMPLO_E01 + "/state", state("solved")),
+				new Request("PUT", "/api/me/courses/" + EJEMPLO + "/continuation", "{\"lessonId\":\"" + EJEMPLO_LESSON + "\"}"));
 	}
 
 	/** Bodies that break the schema of a one-string-field object; a missing body is the null entry's absence. */

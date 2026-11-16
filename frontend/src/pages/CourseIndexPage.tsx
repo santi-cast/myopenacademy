@@ -93,7 +93,7 @@ export function CourseIndexPage() {
           <LessonTable
             key={phase.key}
             caption={phase.label}
-            count={`${phase.rows.filter(({ lesson }) => lesson.available).length} de ${phase.rows.length} disponibles`}
+            count={`${phase.rows.filter(({ lesson }) => lesson.available).length} de ${phase.rows.length} ${phase.rows.length === 1 ? 'disponible' : 'disponibles'}`}
             rows={phase.rows}
             completed={completed}
           />

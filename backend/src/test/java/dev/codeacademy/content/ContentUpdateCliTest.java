@@ -140,8 +140,8 @@ class ContentUpdateCliTest {
     @Test void comparesAndAppliesWithRetainedBackupAndComplements() throws Exception {
         Files.writeString(active.root.resolve("notes.txt"), "Academy complement");
         candidate.editManifest(m -> {
-            ContentFixture.lesson(m, "demo-01.01").put("position", 2);
-            ContentFixture.lesson(m, "demo-01.02").put("position", 1);
+            ContentFixture.lesson(m, "demo.01.01").put("position", 2);
+            ContentFixture.lesson(m, "demo.01.02").put("position", 1);
         });
         var before = snapshot(active.root);
         assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
@@ -149,7 +149,7 @@ class ContentUpdateCliTest {
         var data = JSON.readTree(Files.readString(report));
         assertThat(data.path("baseFingerprint").asString()).matches("[0-9a-f]{64}");
         assertThat(data.path("candidateFingerprint").asString()).matches("[0-9a-f]{64}");
-        assertThat(data.path("changes").toString()).contains("demo-01.01", "metadata");
+        assertThat(data.path("changes").toString()).contains("demo.01.01", "metadata");
         assertThat(run("apply")).isEqualTo(new Result(0, "Applied; previous root retained at "
             + active.root.resolveSibling(active.root.getFileName() + ".previous") + "\n", ""));
         assertThat(Files.readString(active.root.resolve("notes.txt"))).isEqualTo("Academy complement");
@@ -168,7 +168,7 @@ class ContentUpdateCliTest {
         Files.setPosixFilePermissions(active.root.resolve("demo/resources/local.txt"), PosixFilePermissions.fromString("rw-------"));
         candidate.write("demo/resources/local.txt", "nested complement");
         Files.setPosixFilePermissions(candidate.root.resolve("demo/resources/local.txt"), PosixFilePermissions.fromString("rw-r--r--"));
-        candidate.addResource("demo-new-resource", "new.txt", "text/plain", "new bytes".getBytes(StandardCharsets.UTF_8));
+        candidate.addResource("demo.new-resource", "new.txt", "text/plain", "new bytes".getBytes(StandardCharsets.UTF_8));
         pinCandidate();
         var before = snapshot(active.root);
         var candidateBefore = snapshot(candidate.root);
@@ -200,23 +200,24 @@ class ContentUpdateCliTest {
         candidate.replace(ContentFixture.INTRO, "Texto de cuerpo.", "Adapted body.");
         var before = snapshot(active.root);
         assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 2\n", ""));
-        assertThat(Files.readString(report)).contains("source bytes differ", "demo/lessons/demo-01.01.md");
+        assertThat(Files.readString(report)).contains("source bytes differ", "demo/lessons/demo.01.01.md");
         assertThat(snapshot(active.root)).isEqualTo(before);
         rejected("apply", "comparison contains conflicts");
     }
 
-    @Test void retitlesAreConflictsAndReportIsNotAuthority() throws Exception {
-        candidate.editManifest(m -> ContentFixture.lesson(m, "demo-01.01").put("title", "Retitled"));
-        assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 1\n", ""));
-        assertThat(Files.readString(report)).contains("retitle demo-01.01");
-        String forged = Files.readString(report).replace("retitle demo-01.01", "approved");
+    @Test void retitlesAreChangesAndReportIsNotAuthority() throws Exception {
+        // The ID is the identity (curso.json): a new title is a change to review, not a conflict (FORMATO.md 11.2).
+        candidate.editManifest(m -> ContentFixture.lesson(m, "demo.01.01").put("title", "Retitled"));
+        assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+        assertThat(Files.readString(report)).contains("retitle demo.01.01: «Introducción» -> «Retitled»");
+        String forged = Files.readString(report).replace("retitle demo.01.01", "approved");
         Files.writeString(report, forged);
         rejected("apply", "report does not match current comparison");
     }
 
     @Test void candidateAndBaseDriftAreRejected() throws Exception {
         assertThat(run("compare").code()).isZero();
-        candidate.editManifest(m -> ContentFixture.lesson(m, "demo-01.01").put("position", 2));
+        candidate.editManifest(m -> ContentFixture.lesson(m, "demo.01.01").put("position", 2));
         rejected("apply", "invalid content: lesson positions must be 1..3 without gaps or repeats");
     }
 
@@ -229,14 +230,14 @@ class ContentUpdateCliTest {
     }
 
     @Test void additiveV2ContentUsesImmutableSourceAndReportsBytes() throws Exception {
-        candidate.replace("demo/lessons/demo-01.02.md", "Texto A.", "Updated body.");
-        candidate.addResource("demo-new-resource", "new.txt", "text/plain", "new educational file".getBytes(StandardCharsets.UTF_8));
+        candidate.replace("demo/lessons/demo.01.02.md", "Texto A.", "Updated body.");
+        candidate.addResource("demo.new-resource", "new.txt", "text/plain", "new educational file".getBytes(StandardCharsets.UTF_8));
         pinCandidate();
         upgradeCandidate();
         // A checkout is neither necessary nor consulted; immutable blobs are the sole input.
         Files.writeString(source.resolve("untracked.txt"), "ignored");
         assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
-        assertThat(Files.readString(report)).contains("demo-new-resource", "bytes", "demo/lessons/demo-01.02.md");
+        assertThat(Files.readString(report)).contains("demo.new-resource", "bytes", "demo/lessons/demo.01.02.md");
         assertThat(run("apply").code()).isZero();
         assertThat(ContentLoader.loadAll(active.root).getFirst().manifest().schemaVersion()).isEqualTo(2);
     }
@@ -292,35 +293,35 @@ class ContentUpdateCliTest {
     @Test void allIdentityConflictsAreReportedTogether() throws Exception {
         candidate.editManifest(m -> {
             m.withObject("/course").put("title", "Retitled course");
-            ContentFixture.phase(m, "demo-phase-01").put("title", "Retitled phase");
-            ContentFixture.lesson(m, "demo-01.01").put("title", "Retitled lesson");
-            ContentFixture.resource(m, "demo-01.01-r-solo").put("lessonId", "demo-01.02");
-            ContentFixture.lesson(m, "demo-01.02").put("available", false).putNull("bodyPath");
+            ContentFixture.phase(m, "demo.phase-01").put("title", "Retitled phase");
+            ContentFixture.lesson(m, "demo.01.01").put("title", "Retitled lesson");
+            ContentFixture.resource(m, "demo.01.01-r-solo").put("lessonId", "demo.01.02");
+            ContentFixture.lesson(m, "demo.01.02").put("available", false).putNull("bodyPath");
         });
-        assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 6\n", ""));
-        assertThat(Files.readString(report)).contains("retitle demo", "retitle demo-phase-01", "retitle demo-01.01",
-            "owner move demo-01.01-r-solo", "availability loss demo-01.02", "unmanaged candidate path demo/lessons/demo-01.02.md");
+        // The three retitles are changes; only owner, availability and the unmanaged path are conflicts.
+        assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 3\n", ""));
+        assertThat(Files.readString(report)).contains("retitle demo", "retitle demo.phase-01", "retitle demo.01.01",
+            "owner move demo.01.01-r-solo", "availability loss demo.01.02", "unmanaged candidate path demo/lessons/demo.01.02.md");
         rejected("apply", "comparison contains conflicts");
     }
 
     @Test void removedExerciseAndReassignedIdentityAreNotReconciled() throws Exception {
         candidate.editManifest(m -> {
-            var exercises = (tools.jackson.databind.node.ArrayNode) ContentFixture.lesson(m, "demo-01.01").path("exercises");
-            ((tools.jackson.databind.node.ObjectNode) exercises.get(0)).put("id", "demo-new-exercise");
+            var exercises = (tools.jackson.databind.node.ArrayNode) ContentFixture.lesson(m, "demo.01.01").path("exercises");
+            ((tools.jackson.databind.node.ObjectNode) exercises.get(0)).put("id", "demo.new-exercise");
         });
         assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 2\n", ""));
-        assertThat(Files.readString(report)).contains("removal demo-01.01-e01", "ambiguous identity");
+        assertThat(Files.readString(report)).contains("removal demo.01.01.e01", "ambiguous identity");
         rejected("apply", "comparison contains conflicts");
     }
 
-    @Test void existingExerciseTitleCannotChangeEvenWithNewSourceBytes() throws Exception {
+    @Test void anExistingExerciseCanChangeItsTitleWithNewSourceBytes() throws Exception {
         candidate.replace(ContentFixture.INTRO, "Primer ejercicio", "Changed exercise");
         candidate.editManifest(m -> ((tools.jackson.databind.node.ObjectNode)
-            ContentFixture.lesson(m, "demo-01.01").path("exercises").get(0)).put("title", "Changed exercise"));
+            ContentFixture.lesson(m, "demo.01.01").path("exercises").get(0)).put("title", "Changed exercise"));
         pinCandidate();
-        assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 1\n", ""));
-        assertThat(Files.readString(report)).contains("retitle demo-01.01-e01");
-        rejected("apply", "comparison contains conflicts");
+        assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+        assertThat(Files.readString(report)).contains("retitle demo.01.01.e01: «Primer ejercicio» -> «Changed exercise»");
     }
 
     @Test void complementsCannotBeClaimedOrChangedByCandidate() throws Exception {
@@ -332,15 +333,46 @@ class ContentUpdateCliTest {
     }
 
     @Test void newResourceDirectoryCannotReplaceAnActiveComplementFile() throws Exception {
-        candidate.addResource("demo-new-resource", "new.txt", "text/plain", "new bytes".getBytes(StandardCharsets.UTF_8));
+        candidate.addResource("demo.new-resource", "new.txt", "text/plain", "new bytes".getBytes(StandardCharsets.UTF_8));
         Files.createDirectory(candidate.root.resolve("demo/resources/local"));
-        Files.move(candidate.root.resolve("demo/resources/demo-new-resource"), candidate.root.resolve("demo/resources/local/new.txt"));
-        candidate.editManifest(m -> ContentFixture.resource(m, "demo-new-resource")
+        Files.move(candidate.root.resolve("demo/resources/demo.new-resource"), candidate.root.resolve("demo/resources/local/new.txt"));
+        candidate.editManifest(m -> ContentFixture.resource(m, "demo.new-resource")
             .put("localPath", "demo/resources/local/new.txt"));
         pinCandidate();
         assertThat(ContentLoader.loadAll(candidate.root)).hasSize(1);
         Files.writeString(active.root.resolve("demo/resources/local"), "preserved complement");
         directoryCollisionRejected("demo/resources/local");
+    }
+
+    @Test void aCourseFromAnotherRepositoryIsCarriedUnchangedAndOnlyThat() throws Exception {
+        // H7: each course comes from its own repository. Both copies hold a second course whose commit is not in this
+        // source: it cannot be verified here, so it may only travel byte for byte while demo is updated.
+        for (ContentFixture copy : List.of(active, candidate)) secondCourse(copy.root, "otro");
+        pinCandidate();
+        assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+        report = temp.resolve("changed-carried.json");
+        Path body = candidate.root.resolve("otro/lessons/otro.01.01.md");
+        Files.writeString(body, Files.readString(body).replace("Texto de cuerpo.", "Cambiado a mano."));
+        assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 1\n", ""));
+        assertThat(Files.readString(report)).contains("course otro changed without its source: otro/lessons/otro.01.01.md");
+        rejected("apply", "comparison contains conflicts");
+    }
+
+    /** A copy of the demo course under another ID, pinned to a commit that this test's source does not have. */
+    private static void secondCourse(Path root, String id) throws Exception {
+        try (var paths = Files.walk(root.resolve("demo"))) {
+            for (Path path : paths.sorted().toList()) {
+                Path target = root.resolve(root.relativize(path).toString().replace("demo", id));
+                if (Files.isDirectory(path)) Files.createDirectories(target);
+                else if (path.getFileName().toString().equals("manifest.json")) {
+                    var manifest = (tools.jackson.databind.node.ObjectNode) JSON.readTree(
+                        Files.readString(path).replace("demo", id));
+                    manifest.withObject("/source").put("versionRef", "0123456789abcdef0123456789abcdef01234567");
+                    Files.writeString(target, JSON.writeValueAsString(manifest));
+                }
+                else Files.copy(path, target);
+            }
+        }
     }
 
     @Test void newCourseDirectoryCannotReplaceAnActiveComplementFile() throws Exception {
@@ -407,8 +439,8 @@ class ContentUpdateCliTest {
     }
 
     @Test void manifestEscapeRejectsWithoutReadingOutsideRoot() throws Exception {
-        candidate.editManifest(m -> ContentFixture.lesson(m, "demo-01.02").put("bodyPath", "../outside.md"));
-        rejected("compare", "invalid content: bodyPath of demo-01.02: ../outside.md must be a plain relative path inside the content root");
+        candidate.editManifest(m -> ContentFixture.lesson(m, "demo.01.02").put("bodyPath", "../outside.md"));
+        rejected("compare", "invalid content: bodyPath of demo.01.02: ../outside.md must be a plain relative path inside the content root");
     }
 
     @Test void newExerciseKeepsExistingIdentitiesAndAddsNoPersonalState() throws Exception {
@@ -416,14 +448,14 @@ class ContentUpdateCliTest {
         String marker = "---\n\n## 6. Chuleta";
         candidate.write(ContentFixture.INTRO, body.replace(marker,
             "#### Ejercicio 3 · New exercise\n\nNew statement.\n\n<details>\n<summary>Solution</summary>\n\nAnswer.\n\n</details>\n\n" + marker));
-        candidate.editManifest(m -> ((tools.jackson.databind.node.ArrayNode) ContentFixture.lesson(m, "demo-01.01").path("exercises"))
-            .addObject().put("id", "demo-new-exercise").put("lessonId", "demo-01.01").put("title", "New exercise"));
+        candidate.editManifest(m -> ((tools.jackson.databind.node.ArrayNode) ContentFixture.lesson(m, "demo.01.01").path("exercises"))
+            .addObject().put("id", "demo.new-exercise").put("lessonId", "demo.01.01").put("title", "New exercise"));
         pinCandidate();
         assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
-        assertThat(Files.readString(report)).contains("addition demo-new-exercise");
+        assertThat(Files.readString(report)).contains("addition demo.new-exercise");
         assertThat(run("apply").code()).isZero();
         assertThat(ContentLoader.loadAll(active.root).getFirst().manifest().lessons().getFirst().exercises())
-            .extracting(Manifest.Exercise::id).containsExactly("demo-01.01-e01", "demo-01.01-e02", "demo-new-exercise");
+            .extracting(Manifest.Exercise::id).containsExactly("demo.01.01.e01", "demo.01.01.e02", "demo.new-exercise");
     }
 
     @Test void wrapperHelpAndMissingJarAreOfflineAndDoNotBuild() throws Exception {
@@ -442,22 +474,31 @@ class ContentUpdateCliTest {
         assertThat(snapshot(temp)).isEqualTo(before);
     }
 
+    @Test void theSourceMayBeRelativeAndClimbWithDotDot() throws Exception {
+        // Only the source, which is only read, may climb with ..; the other paths stay strict (H7, T5).
+        Path relative = Path.of("").toAbsolutePath().relativize(source);
+        assertThat(cli("compare", "--active", active.root.toString(), "--candidate", candidate.root.toString(),
+            "--source", relative.toString(), "--report", report.toString()))
+            .isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+        assertThat(JSON.readTree(Files.readString(report)).path("source").asString()).isEqualTo(source.toString());
+    }
+
     @Test void lexicalEscapeAndCandidateClaimOfComplementAreRejected() throws Exception {
         assertThat(cli("compare", "--active", active.root.resolve("..").resolve("content").toString(),
             "--candidate", candidate.root.toString(), "--source", source.toString(), "--report", report.toString()))
             .isEqualTo(new Result(2, "", "content-update: path escapes are not allowed\n"));
-        Files.writeString(active.root.resolve("demo/resources/demo-new-resource"), "local complement");
-        candidate.addResource("demo-new-resource", "new.txt", "text/plain", "source content".getBytes(StandardCharsets.UTF_8));
+        Files.writeString(active.root.resolve("demo/resources/demo.new-resource"), "local complement");
+        candidate.addResource("demo.new-resource", "new.txt", "text/plain", "source content".getBytes(StandardCharsets.UTF_8));
         pinCandidate();
         assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 1\n", ""));
-        assertThat(Files.readString(report)).contains("candidate claims complement demo/resources/demo-new-resource");
+        assertThat(Files.readString(report)).contains("candidate claims complement demo/resources/demo.new-resource");
         rejected("apply", "comparison contains conflicts");
     }
 
     @Test void sourceAvailabilityLossAlsoConflictsForAnUnimportedLesson() throws Exception {
-        active.editManifest(m -> ContentFixture.lesson(m, "demo-02.01").put("sourceAvailable", true));
+        active.editManifest(m -> ContentFixture.lesson(m, "demo.02.01").put("sourceAvailable", true));
         assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 1\n", ""));
-        assertThat(Files.readString(report)).contains("availability loss demo-02.01");
+        assertThat(Files.readString(report)).contains("availability loss demo.02.01");
         rejected("apply", "comparison contains conflicts");
     }
 
@@ -466,18 +507,18 @@ class ContentUpdateCliTest {
         candidate.write("demo/lessons/stage.md", "# Stage\n\nEducational project.\n");
         candidate.editManifest(m -> {
             ((tools.jackson.databind.node.ArrayNode) m.path("projectStages")).addObject()
-                .put("id", "demo-stage").put("title", "Stage").put("position", 1)
+                .put("id", "demo.stage").put("title", "Stage").put("position", 1)
                 .put("sourcePath", "project/stage.md").put("sourceAvailable", true).put("available", true)
                 .put("bodyPath", "demo/lessons/stage.md");
             ((tools.jackson.databind.node.ArrayNode) m.path("sourceToId")).addObject()
-                .put("sourcePath", "project/stage.md").put("stageId", "demo-stage");
+                .put("sourcePath", "project/stage.md").put("stageId", "demo.stage");
         });
         ZipFixture.refresh(candidate);
         pinCandidate();
         assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
         assertThat(run("apply").code()).isZero();
         var loaded = ContentLoader.loadAll(active.root).getFirst();
-        assertThat(loaded.stages()).containsKey("demo-stage");
+        assertThat(loaded.stages()).containsKey("demo.stage");
         assertThat(Files.readAllBytes(active.root.resolve(ZipFixture.LOCAL)))
             .isEqualTo(Files.readAllBytes(candidate.root.resolve(ZipFixture.LOCAL)));
     }

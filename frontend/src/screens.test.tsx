@@ -73,7 +73,7 @@ describe('Mis cursos', () => {
     installFakeBackend({ loggedInAs: ana })
     renderApp('/')
 
-    expect(await screen.findByText('Todavía no añadiste ningún curso.')).toBeVisible()
+    expect(await screen.findByText('Todavía no has añadido ningún curso.')).toBeVisible()
     expect(screen.getByRole('link', { name: 'Explorar el catálogo' })).toHaveAttribute('href', '/courses')
   })
 
@@ -83,7 +83,7 @@ describe('Mis cursos', () => {
     renderApp('/')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Algo salió mal.')
-    expect(screen.queryByText('Todavía no añadiste ningún curso.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Todavía no has añadido ningún curso.')).not.toBeInTheDocument()
   })
 })
 
@@ -94,6 +94,29 @@ describe('Catálogo', () => {
 
     const course = await screen.findByRole('article', { name: 'Java' })
     expect(within(course).getByRole('link', { name: 'Java' })).toHaveAttribute('href', '/courses/java')
+  })
+
+  it('shows the description and the recommended courses, linked only when installed', async () => {
+    const backend = installFakeBackend({ loggedInAs: ana })
+    const inicial = { id: 'inicial', title: 'Fundamentos para programar', description: 'Lo que conviene saber antes.', recommended: [] }
+    const java = {
+      ...javaCourse,
+      description: 'De no saber programar a trabajar con Java.',
+      recommended: [{ id: 'inicial', title: 'Fundamentos para programar' }, { id: 'sql', title: null }],
+    }
+    backend.route('GET /api/courses', { status: 200, body: { courses: [inicial, java] } })
+    renderApp('/courses')
+
+    const course = await screen.findByRole('article', { name: 'Java' })
+    expect(within(course).getByText('De no saber programar a trabajar con Java.')).toBeVisible()
+    const recommended = within(course).getByText(/Conviene saber antes/)
+    expect(recommended).toHaveTextContent('Conviene saber antes: Fundamentos para programar, sql (no está instalado en esta academia)')
+    expect(within(recommended).getByRole('link', { name: 'Fundamentos para programar' })).toHaveAttribute('href', '/courses/inicial')
+    expect(within(recommended).queryByRole('link', { name: /sql/ })).not.toBeInTheDocument()
+    // Only a recommendation: Java can be added all the same.
+    expect(within(course).getByRole('button', { name: 'Añadir Java a Mis cursos' })).toBeEnabled()
+    const first = await screen.findByRole('article', { name: 'Fundamentos para programar' })
+    expect(within(first).queryByText(/Conviene saber antes/)).not.toBeInTheDocument()
   })
 
   it('shows the course as added only after the server confirms with 200', async () => {
@@ -156,9 +179,9 @@ describe('Índice del curso', () => {
     expect(screen.getByText(/lecciones disponibles completadas/)).toHaveTextContent('1 de 1 lecciones disponibles completadas · 100 % · 199 previstas')
     const tables = screen.getAllByRole('table')
     expect(tables).toHaveLength(3)
-    expect(tables[0]).toHaveAccessibleName('Fase 00 · Lógica de programación 0 de 2 disponibles')
+    expect(tables[0]).toHaveAccessibleName('Fase 01 · Lógica de programación 0 de 2 disponibles')
     expect(tables[1]).toHaveAccessibleName('Fase 02 · Fundamentos de Java 1 de 2 disponibles')
-    expect(tables[2]).toHaveAccessibleName('Fase 03 · Programación orientada a objetos 0 de 1 disponibles')
+    expect(tables[2]).toHaveAccessibleName('Fase 03 · Programación orientada a objetos 0 de 1 disponible')
     const phase02 = tables[1]
     const rows = within(phase02).getAllByRole('row').slice(1)
     expect(within(rows[0]).getByText('02.01')).toBeVisible()
@@ -212,12 +235,12 @@ describe('Índice del curso', () => {
     await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
     const tables = screen.getAllByRole('table')
     expect(tables).toHaveLength(2)
-    expect(tables[0]).toHaveAccessibleName('Fase 00 · Primera 1 de 2 disponibles')
-    expect(tables[1]).toHaveAccessibleName('Fase 01 · Segunda 0 de 1 disponibles')
+    expect(tables[0]).toHaveAccessibleName('Fase 01 · Primera 1 de 2 disponibles')
+    expect(tables[1]).toHaveAccessibleName('Fase 02 · Segunda 0 de 1 disponible')
     const cells = (table: HTMLElement) => within(table).getAllByRole('row').slice(1)
       .map((row) => within(row).getAllByRole('cell').slice(0, 2).map((cell) => cell.textContent))
-    expect(cells(tables[0])).toEqual([['00.01', 'Equis'], ['00.02', 'Engañosa']])
-    expect(cells(tables[1])).toEqual([['01.01', 'Sin número']])
+    expect(cells(tables[0])).toEqual([['01.01', 'Equis'], ['01.02', 'Engañosa']])
+    expect(cells(tables[1])).toEqual([['02.01', 'Sin número']])
     expect(within(tables[0]).getByRole('link', { name: 'Equis' })).toHaveAttribute('href', '/lessons/x-a')
   })
 
@@ -235,10 +258,10 @@ describe('Índice del curso', () => {
     await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
     const tables = screen.getAllByRole('table')
     expect(tables.map((table) => table.querySelector('caption')?.textContent)).toEqual([
-      'Fase 00 · Lógica de programación 0 de 1 disponibles',
+      'Fase 01 · Lógica de programación 0 de 1 disponible',
       'Fase 02 · Fundamentos de Java 1 de 2 disponibles',
-      'Fase 03 · Programación orientada a objetos 0 de 1 disponibles',
-      'Sin fase 0 de 1 disponibles',
+      'Fase 03 · Programación orientada a objetos 0 de 1 disponible',
+      'Sin fase 0 de 1 disponible',
     ])
     expect(within(tables[3]).getByText('Qué es programar')).toBeVisible()
   })

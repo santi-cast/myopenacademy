@@ -71,7 +71,7 @@ export function RegisterPage() {
         {failure && <p className="form-error" role="alert">{failure}</p>}
         <button type="submit" className="btn" disabled={busy}>Crear cuenta</button>
       </form>
-      <p className="auth-alt">¿Ya tenés cuenta? <Link to="/login">Iniciar sesión</Link></p>
+      <p className="auth-alt">¿Ya tienes cuenta? <Link to="/login">Iniciar sesión</Link></p>
     </section>
   )
 }

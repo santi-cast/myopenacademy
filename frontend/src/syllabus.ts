@@ -6,15 +6,17 @@ export type PhaseGroup = { key: string; label: string; rows: SyllabusRow[] }
 const twoDigits = (value: number) => String(value).padStart(2, '0')
 
 // Lessons are grouped by their phaseId, in the order of the API phases' position; lesson IDs are
-// opaque and never read. The caption follows the 04 artboard: «Fase 02 · Fundamentos de Java»,
-// numbered from 00 by position. The code column numbers each lesson inside its phase («02.01»).
+// opaque and never read. The caption follows the 04 artboard: «Fase 02 · Fundamentos de Java».
+// Numbers come only from the order of the course (curso.json): the first phase is «Fase 01» and
+// the code column numbers each lesson inside its phase («01.01»), pending lessons included.
 // A lesson whose phase is not in the list is kept in a last «Sin fase» group, never dropped.
 export function groupByPhase(phases: Phase[], lessons: LessonEntry[]): PhaseGroup[] {
   const ordered = [...phases].sort((a, b) => a.position - b.position)
   const byId = new Map(ordered.map((phase) => [phase.id, phase]))
-  const groups = ordered.map((phase) => ({
+  const groups = ordered.map((phase, index) => ({
     key: phase.id,
-    label: `Fase ${twoDigits(phase.position - 1)} · ${phase.title}`,
+    number: twoDigits(index + 1),
+    label: `Fase ${twoDigits(index + 1)} · ${phase.title}`,
     rows: [] as SyllabusRow[],
   }))
   const orphans: SyllabusRow[] = []
@@ -25,8 +27,11 @@ export function groupByPhase(phases: Phase[], lessons: LessonEntry[]): PhaseGrou
       continue
     }
     const group = groups[ordered.indexOf(phase)]
-    group.rows.push({ lesson, code: `${twoDigits(phase.position - 1)}.${twoDigits(group.rows.length + 1)}` })
+    group.rows.push({ lesson, code: `${group.number}.${twoDigits(group.rows.length + 1)}` })
   }
-  if (orphans.length > 0) groups.push({ key: '', label: 'Sin fase', rows: orphans })
-  return groups.filter((group) => group.rows.length > 0)
+  const result: PhaseGroup[] = groups
+    .filter((group) => group.rows.length > 0)
+    .map(({ key, label, rows }) => ({ key, label, rows }))
+  if (orphans.length > 0) result.push({ key: '', label: 'Sin fase', rows: orphans })
+  return result
 }

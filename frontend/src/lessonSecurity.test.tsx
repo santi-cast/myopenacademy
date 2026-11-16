@@ -141,7 +141,7 @@ describe('session, storage and continuation', () => {
     renderApp('/')
     fireEvent.click(await screen.findByRole('button', { name: /Menú de usuario/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('La sesión cambió. Recargá la página e intentá de nuevo.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('La sesión cambió. Recarga la página e inténtalo de nuevo.')
     expect(apiCalls(backend).filter((call) => call.startsWith('POST'))).toEqual(['POST /api/auth/logout'])
     expect(screen.queryByRole('heading', { level: 1, name: 'Iniciar sesión' })).toBeNull()
   })

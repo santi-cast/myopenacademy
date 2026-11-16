@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import dev.codeacademy.api.ApiException;
+import dev.codeacademy.catalog.CourseOrder;
 import dev.codeacademy.progress.ProgressViews.Continuation;
 import dev.codeacademy.progress.ProgressViews.Counts;
 import dev.codeacademy.progress.ProgressViews.CourseView;
@@ -60,25 +62,33 @@ class ProgressService {
 	}
 
 	private final JdbcTemplate jdbc;
+	/** The course «Mis cursos» lists first (the base course); configuration, never a course written in the code. */
+	private final String firstCourse;
 
-	ProgressService(JdbcTemplate jdbc) {
+	ProgressService(JdbcTemplate jdbc, @Value("${code-academy.first-course:}") String firstCourse) {
 		this.jdbc = jdbc;
+		this.firstCourse = firstCourse;
 	}
 
-	/** One snapshot for the whole answer, so counts and continuation never mix two moments. */
+	/**
+	 * One snapshot for the whole answer, so counts and continuation never mix two moments. In {@link CourseOrder}, the
+	 * same order as the catalog.
+	 */
 	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	MyCourses courses(UUID user) {
 		List<MyCourse> courses = jdbc.query("""
 				select c.id, c.title, e.id as enrollment_id, e.last_opened_lesson_id, e.last_opened_stage_id
 				from code_academy.enrollments e join code_academy.courses c on c.id = e.course_id
-				where e.user_id = ? order by c.id
+				where e.user_id = ?
 				""", (row, i) -> {
 			var enrollment = new EnrollmentRow(row.getLong("enrollment_id"), row.getString("last_opened_lesson_id"),
 					row.getString("last_opened_stage_id"));
 			return new MyCourse(new CourseView(row.getString("id"), row.getString("title")),
 					enrollment(row.getString("id"), enrollment));
 		}, user);
-		return new MyCourses(courses);
+		return new MyCourses(courses.stream()
+			.sorted(CourseOrder.of(firstCourse, (MyCourse course) -> course.course().id(), course -> course.course().title()))
+			.toList());
 	}
 
 	/** Explicit add: an enrollment with an empty continuation; repeating it changes nothing. */

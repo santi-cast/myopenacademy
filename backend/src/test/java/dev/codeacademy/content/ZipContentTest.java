@@ -33,14 +33,14 @@ class ZipContentTest {
 
 	@Test void loadsFolderZipAndPreservesOrderedIndividualOriginalNames() throws Exception {
 		var course = fixture.load();
-		String html = course.lessons().get("demo-01.01").bodyHtml();
-		assertThat(html).contains("href=\"/api/resources/demo-folder-zip\"");
-		assertThat(html.indexOf("/api/resources/demo-folder-zip")).isLessThan(html.indexOf("/api/resources/demo-01.01-r-hello"));
-		assertThat(html).contains("Hello.java</a>, <a href=\"/api/resources/demo-01.01-r-other\">Other.java</a>, "
-			+ "<a href=\"/api/resources/demo-nested\">útil.java</a>)");
+		String html = course.lessons().get("demo.01.01").bodyHtml();
+		assertThat(html).contains("href=\"/api/resources/demo.folder-zip\"");
+		assertThat(html.indexOf("/api/resources/demo.folder-zip")).isLessThan(html.indexOf("/api/resources/demo.01.01-r-hello"));
+		assertThat(html).contains("Hello.java</a>, <a href=\"/api/resources/demo.01.01-r-other\">Other.java</a>, "
+			+ "<a href=\"/api/resources/demo.nested\">útil.java</a>)");
 		assertThat(course.resources().get(ZipFixture.ZIP).originalFileName()).isEqualTo("hola.zip");
 		try (var zip = new ZipInputStream(Files.newInputStream(fixture.root.resolve(ZipFixture.LOCAL)))) {
-			for (String id : java.util.List.of("demo-01.01-r-hello", "demo-01.01-r-other", "demo-nested")) {
+			for (String id : java.util.List.of("demo.01.01-r-hello", "demo.01.01-r-other", "demo.nested")) {
 				var resource = course.manifest().resources().stream().filter(r -> r.resourceId().equals(id)).findFirst().orElseThrow();
 				assertThat(zip.getNextEntry().getName()).isEqualTo(resource.sourcePath().substring(ZipFixture.FOLDER.length()));
 				assertThat(zip.readAllBytes()).isEqualTo(Files.readAllBytes(course.resources().get(id).localPath()));
@@ -77,16 +77,16 @@ class ZipContentTest {
 		fixture.replace(ContentFixture.INTRO, "Enunciado dos.", "[folder](codigo/hola/)");
 		fixture.replace(ContentFixture.INTRO, "Solución dos.", "[folder](codigo/hola/)");
 		ZipFixture.refresh(fixture);
-		var exercise = fixture.load().lessons().get("demo-01.01").exercises().get(1);
+		var exercise = fixture.load().lessons().get("demo.01.01").exercises().get(1);
 		for (String html : java.util.List.of(exercise.statementHtml(), exercise.solutionHtml())) {
-			assertThat(html).contains("<a href=\"/api/resources/demo-folder-zip\">folder</a> (",
-				"Hello.java</a>, <a href=\"/api/resources/demo-01.01-r-other\">Other.java</a>");
+			assertThat(html).contains("<a href=\"/api/resources/demo.folder-zip\">folder</a> (",
+				"Hello.java</a>, <a href=\"/api/resources/demo.01.01-r-other\">Other.java</a>");
 		}
 	}
 
 	@Test void copiedMemberSymlinksAreRejectedWithoutFollowingThem() throws Exception {
-		Path member = fixture.root.resolve("demo/resources/demo-nested");
-		Path target = fixture.root.resolve("demo/resources/demo-01.01-r-hello.java");
+		Path member = fixture.root.resolve("demo/resources/demo.nested");
+		Path target = fixture.root.resolve("demo/resources/demo.01.01-r-hello.java");
 		Files.move(member, fixture.root.resolve("demo/resources/saved-member"));
 		Files.createSymbolicLink(member, target);
 		Map<String, String> before = snapshot();
@@ -97,11 +97,11 @@ class ZipContentTest {
 	@Test void educationalJwtNamedMembersAreIncludedWithoutSilentFiltering() throws Exception {
 		byte[] teachingValue = "synthetic teaching value".getBytes(java.nio.charset.StandardCharsets.UTF_8);
 		String name = "secretos/mibiblioteca/jwt/secret";
-		fixture.addResource("demo-teaching-jwt", ZipFixture.FOLDER + name, "text/plain", teachingValue);
+		fixture.addResource("demo.teaching-jwt", ZipFixture.FOLDER + name, "text/plain", teachingValue);
 		fixture.editManifest(m -> {
-			ContentFixture.resource(m, "demo-teaching-jwt").put("kind", "file");
-			((ArrayNode) ContentFixture.resource(m, ZipFixture.ZIP).get("memberResourceIds")).add("demo-teaching-jwt");
-			((ArrayNode) ContentFixture.link(m, ZipFixture.FOLDER).get("resourceIds")).add("demo-teaching-jwt");
+			ContentFixture.resource(m, "demo.teaching-jwt").put("kind", "file");
+			((ArrayNode) ContentFixture.resource(m, ZipFixture.ZIP).get("memberResourceIds")).add("demo.teaching-jwt");
+			((ArrayNode) ContentFixture.link(m, ZipFixture.FOLDER).get("resourceIds")).add("demo.teaching-jwt");
 			try (var output = Files.newOutputStream(fixture.root.resolve(ZipFixture.LOCAL))) {
 				Manifest manifest = tools.jackson.databind.json.JsonMapper.builder().build().treeToValue(m, Manifest.class);
 				FolderZip.write(manifest, fixture.root, ZipFixture.ZIP, output);
@@ -124,9 +124,9 @@ class ZipContentTest {
 
 	@Test void plainV1FolderOutputKeepsItsExactExpansion() {
 		ContentFixture v1 = ContentFixture.copyInto(temp.resolve("v1"));
-		assertThat(v1.load().lessons().get("demo-01.01").bodyHtml()).contains(
-			"<code>codigo/hola/</code> (<a href=\"/api/resources/demo-01.01-r-hello\">Hello.java</a>, "
-			+ "<a href=\"/api/resources/demo-01.01-r-other\">Other.java</a>)");
+		assertThat(v1.load().lessons().get("demo.01.01").bodyHtml()).contains(
+			"<code>codigo/hola/</code> (<a href=\"/api/resources/demo.01.01-r-hello\">Hello.java</a>, "
+			+ "<a href=\"/api/resources/demo.01.01-r-other\">Other.java</a>)");
 	}
 
 	@ParameterizedTest
@@ -141,27 +141,27 @@ class ZipContentTest {
 			ArrayNode generated = (ArrayNode) m.get("provenance").get("generated");
 			switch (rule) {
 				case "self" -> members.add(ZipFixture.ZIP);
-				case "order" -> { members.remove(0); members.add("demo-01.01-r-hello"); }
-				case "duplicate" -> members.add("demo-nested");
+				case "order" -> { members.remove(0); members.add("demo.01.01-r-hello"); }
+				case "duplicate" -> members.add("demo.nested");
 				case "missing" -> members.remove(0);
 				case "wrongType" -> zip.put("mediaType", "text/plain");
 				case "wrongName" -> zip.put("fileName", "../hola.zip");
-				case "unknownZip" -> folder.put("zipResourceId", "demo-unknown");
+				case "unknownZip" -> folder.put("zipResourceId", "demo.unknown");
 				case "zipOnFile" -> ContentFixture.link(m, "fase-01/codigo/hola/Hello.java").put("zipResourceId", ZipFixture.ZIP);
-				case "fileMetadata" -> ContentFixture.resource(m, "demo-nested").put("fileName", "override.java");
-				case "twoOwners" -> zip.put("stageId", "demo-stage");
-				case "memberOwner" -> ContentFixture.resource(m, "demo-nested").put("lessonId", "demo-01.02");
+				case "fileMetadata" -> ContentFixture.resource(m, "demo.nested").put("fileName", "override.java");
+				case "twoOwners" -> zip.put("stageId", "demo.stage");
+				case "memberOwner" -> ContentFixture.resource(m, "demo.nested").put("lessonId", "demo.01.02");
 				case "traversal", "absolute", "backslash" -> {
 					String path = switch (rule) { case "traversal" -> ZipFixture.FOLDER + "../evil";
 						case "absolute" -> "/evil"; default -> ZipFixture.FOLDER + "nested\\evil"; };
-					ContentFixture.resource(m, "demo-nested").put("sourcePath", path);
+					ContentFixture.resource(m, "demo.nested").put("sourcePath", path);
 				}
-				case "generatedInputs" -> ((ObjectNode) generated.get(0)).putArray("inputResourceIds").add("demo-nested");
+				case "generatedInputs" -> ((ObjectNode) generated.get(0)).putArray("inputResourceIds").add("demo.nested");
 				case "missingGenerated" -> generated.remove(0);
 				case "extraGenerated" -> generated.addObject().put("localPath", "demo/extra.zip");
 				case "duplicateGenerated" -> generated.add(generated.get(0).deepCopy());
 				case "generatedHash" -> ((ObjectNode) generated.get(0)).put("copySha256", "0".repeat(64));
-				case "localCollision" -> zip.put("localPath", "demo/resources/demo-nested");
+				case "localCollision" -> zip.put("localPath", "demo/resources/demo.nested");
 				default -> throw new AssertionError(rule);
 			}
 		});
@@ -219,7 +219,7 @@ class ZipContentTest {
 		ContentFixture v1 = ContentFixture.copyInto(temp.resolve("v1"));
 		v1.editManifest(m -> {
 			ObjectNode target = field.equals("zipResourceId") ? ContentFixture.link(m, ZipFixture.FOLDER)
-				: ContentFixture.resource(m, "demo-01.01-r-hello");
+				: ContentFixture.resource(m, "demo.01.01-r-hello");
 			target.putNull(field);
 		});
 		fixture = v1;
@@ -234,7 +234,7 @@ class ZipContentTest {
 		var problems = assertThrows(ContentValidationException.class, fixture::load).problems();
 		assertThat(snapshot()).isEqualTo(before);
 		assertThat(problems).containsExactly(
-			"invalid ZIP metadata for demo-folder-zip",
+			"invalid ZIP metadata for demo.folder-zip",
 			"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
 	}
 
@@ -242,7 +242,7 @@ class ZipContentTest {
 		fixture.editManifest(m -> ContentFixture.resource(m, ZipFixture.ZIP).remove("memberResourceIds"));
 		Map<String, String> before = snapshot();
 		assertThat(assertThrows(ContentValidationException.class, fixture::load).problems()).containsExactly(
-			"invalid ZIP metadata for demo-folder-zip",
+			"invalid ZIP metadata for demo.folder-zip",
 			"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
 		assertThat(snapshot()).isEqualTo(before);
 	}
@@ -254,7 +254,7 @@ class ZipContentTest {
 			switch (rule) {
 				case "invalidFolder" -> ((ArrayNode) folder.get("resourceIds")).remove(2);
 				case "omittedMember" -> ((ArrayNode) ContentFixture.resource(m, ZipFixture.ZIP).get("memberResourceIds")).remove(2);
-				case "unknownArchive" -> folder.put("zipResourceId", "demo-unknown");
+				case "unknownArchive" -> folder.put("zipResourceId", "demo.unknown");
 				default -> throw new AssertionError(rule);
 			}
 		});
@@ -264,13 +264,13 @@ class ZipContentTest {
 		assertThat(snapshot()).isEqualTo(before);
 		switch (rule) {
 			case "invalidFolder" -> assertThat(problems).containsExactly(
-				"ZIP must decorate the folder that lists its members: demo-folder-zip",
+				"ZIP must decorate the folder that lists its members: demo.folder-zip",
 				"folder fase-01/codigo/hola/ does not list exactly its resources",
 				"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
 			case "omittedMember" -> assertThat(problems).containsExactly(
-				"ZIP does not match registered copied members: demo-folder-zip");
+				"ZIP does not match registered copied members: demo.folder-zip");
 			default -> assertThat(problems).containsExactly(
-				"ZIP must decorate the folder that lists its members: demo-folder-zip",
+				"ZIP must decorate the folder that lists its members: demo.folder-zip",
 				"folder ZIP does not match ordered members: fase-01/codigo/hola/");
 		}
 	}
@@ -299,14 +299,14 @@ class ZipContentTest {
 	void installSoloZip() {
 		fixture.editManifest(m -> {
 			String folder = "fase-01/codigo/solo/";
-			ContentFixture.link(m, folder).put("zipResourceId", "demo-solo-zip");
+			ContentFixture.link(m, folder).put("zipResourceId", "demo.solo-zip");
 			ObjectNode zip = ((ArrayNode) m.get("resources")).addObject();
-			zip.put("resourceId", "demo-solo-zip").put("lessonId", "demo-01.01").put("kind", "zip")
+			zip.put("resourceId", "demo.solo-zip").put("lessonId", "demo.01.01").put("kind", "zip")
 				.put("sourcePath", folder).put("localPath", "demo/resources/solo.zip").put("mediaType", "application/zip")
-				.put("fileName", "solo.zip").putArray("memberResourceIds").add("demo-01.01-r-solo");
+				.put("fileName", "solo.zip").putArray("memberResourceIds").add("demo.01.01-r-solo");
 			try (var output = Files.newOutputStream(fixture.root.resolve("demo/resources/solo.zip"))) {
 				Manifest manifest = tools.jackson.databind.json.JsonMapper.builder().build().treeToValue(m, Manifest.class);
-				FolderZip.write(manifest, fixture.root, "demo-solo-zip", output);
+				FolderZip.write(manifest, fixture.root, "demo.solo-zip", output);
 			}
 			catch (Exception ex) { throw new IllegalStateException(ex); }
 		});

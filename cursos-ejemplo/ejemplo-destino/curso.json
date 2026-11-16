@@ -1,0 +1,33 @@
+{
+  "formato": 1,
+  "tipo": "curso",
+  "id": "ejemplo-destino",
+  "titulo": "Curso de destino de ejemplo",
+  "descripcion": "Un curso pequeño al que enlaza el curso de ejemplo, para las pruebas del kit y de la academia.",
+  "version": "1.0.0",
+  "idioma": "es",
+  "repositorio": "https://github.com/myopenacademy/ejemplo-destino",
+  "conviene_saber_antes": [],
+  "fases": [
+    {
+      "id": "ejemplo-destino.fase.tu-primer-proyecto",
+      "carpeta": "fase-01-tu-primer-proyecto",
+      "titulo": "Tu primer proyecto",
+      "modulos": [
+        {
+          "id": "ejemplo-destino.mi-primer-repositorio",
+          "fichero": "fase-01-tu-primer-proyecto/01-mi-primer-repositorio.md",
+          "titulo": "Mi primer repositorio",
+          "ejercicios": [
+            { "id": "ejemplo-destino.mi-primer-repositorio.el-readme-del-proyecto", "titulo": "El README del proyecto" }
+          ]
+        }
+      ]
+    }
+  ],
+  "proyecto": {
+    "tipo": "modulo",
+    "modulo": "ejemplo-destino.mi-primer-repositorio"
+  },
+  "equivalencias": []
+}

@@ -13,10 +13,10 @@ import tools.jackson.databind.node.ObjectNode;
 /** Synthetic controlled v2 project beside a v1 course without a project; no source repository access. */
 final class StageFixture {
 
-	static final String FIRST = "demo-stage-first";
-	static final String PENDING = "demo-stage-pending";
-	static final String LAST = "demo-stage-last";
-	static final String IMAGE = "demo-stage-image";
+	static final String FIRST = "demo.stage-first";
+	static final String PENDING = "demo.stage-pending";
+	static final String LAST = "demo.stage-last";
+	static final String IMAGE = "demo.stage-image";
 	final ContentFixture content;
 
 	StageFixture(Path temp) throws Exception {
@@ -44,11 +44,11 @@ final class StageFixture {
 			stage(stages, LAST, "Last stage", 3, "last", true);
 			ArrayNode links = (ArrayNode) m.get("sourceToId");
 			for (String name : List.of("first", "pending", "last")) {
-				links.addObject().put("sourcePath", "project/" + name + ".md").put("stageId", "demo-stage-" + name);
+				links.addObject().put("sourcePath", "project/" + name + ".md").put("stageId", "demo.stage-" + name);
 			}
 			for (var resource : m.get("resources")) {
 				String id = resource.get("resourceId").asString();
-				if (List.of(IMAGE, ZipFixture.ZIP, "demo-nested", "demo-01.01-r-hello", "demo-01.01-r-other").contains(id)) {
+				if (List.of(IMAGE, ZipFixture.ZIP, "demo.nested", "demo.01.01-r-hello", "demo.01.01-r-other").contains(id)) {
 					var node = (ObjectNode) resource;
 					node.remove("lessonId");
 					node.put("stageId", FIRST);
@@ -63,12 +63,12 @@ final class StageFixture {
 				  "schemaVersion": 1,
 				  "source": {"name": "Synthetic", "versionRef": "0123456789abcdef0123456789abcdef01234567"},
 				  "course": {"id": "other", "namespace": "other", "title": "Other"},
-				  "phases": [{"id": "other-phase", "title": "Other phase", "position": 1}],
-				  "lessons": [{"id": "other-pending", "title": "Pending", "position": 1,
-				    "phaseId": "other-phase", "sourcePath": "pending.md", "sourceAvailable": false,
+				  "phases": [{"id": "other.phase", "title": "Other phase", "position": 1}],
+				  "lessons": [{"id": "other.pending", "title": "Pending", "position": 1,
+				    "phaseId": "other.phase", "sourcePath": "pending.md", "sourceAvailable": false,
 				    "available": false, "bodyPath": null, "exercises": []}],
 				  "resources": [],
-				  "sourceToId": [{"sourcePath": "pending.md", "lessonId": "other-pending"}]
+				  "sourceToId": [{"sourcePath": "pending.md", "lessonId": "other.pending"}]
 				}
 				""");
 	}

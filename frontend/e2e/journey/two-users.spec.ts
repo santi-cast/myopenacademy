@@ -5,24 +5,52 @@
 // confirms. Run with npm run test:e2e:journey (scripts/e2e-journey.mjs owns the environment).
 import { randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
+import { inflateRawSync } from 'node:zlib'
 import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test'
 
 const controlUrl = process.env.E2E_CONTROL_URL ?? ''
 const controlToken = process.env.E2E_CONTROL_TOKEN ?? ''
 const runDir = process.env.E2E_RUN_DIR ?? ''
 const screenshotDir = process.env.E2E_SCREENSHOT_DIR ?? ''
+const contentDir = process.env.E2E_CONTENT_DIR ?? ''
 
-const LESSON_ID = 'java-02.01'
-const LESSON_TITLE = 'Tu primer programa'
-const EXERCISES = Array.from({ length: 9 }, (_, index) => `${LESSON_ID}-e0${index + 1}`)
-const manifest = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../../content/java/manifest.json'), 'utf8')) as {
+// The available module of the kit's example course (cursos-ejemplo/bueno), installed by scripts/e2e-journey.mjs.
+const COURSE_ID = 'ejemplo'
+const COURSE_TITLE = 'Curso de ejemplo'
+const LESSON_ID = 'ejemplo.ficheros-json'
+const LESSON_TITLE = 'Ficheros JSON'
+const E01 = `${LESSON_ID}.un-pedido`
+const E02 = `${LESSON_ID}.la-coma-de-mas`
+const EXERCISES = [E01, E02]
+const manifest = JSON.parse(readFileSync(join(contentDir, COURSE_ID, 'manifest.json'), 'utf8')) as {
   lessons: { id: string; available: boolean }[]
+  source: { versionRef: string; versionTag: string | null; courseVersion: string }
 }
 const PLANNED = manifest.lessons.length
 const AVAILABLE = manifest.lessons.filter((lesson) => lesson.available).length
 
 /** PLAN §3, «Reglas de progreso»: «X de Y lecciones disponibles completadas · P % · Z previstas». */
+// The entries of a ZIP (name and bytes), read from its central directory: stored or deflated, as the academy writes them.
+function zipEntries(zip: Buffer): Map<string, Buffer> {
+  let end = zip.length - 22
+  while (end >= 0 && zip.readUInt32LE(end) !== 0x06054b50) end--
+  const entries = new Map<string, Buffer>()
+  let at = zip.readUInt32LE(end + 16)
+  for (let i = 0; i < zip.readUInt16LE(end + 10); i++) {
+    const method = zip.readUInt16LE(at + 10)
+    const size = zip.readUInt32LE(at + 20)
+    const nameLength = zip.readUInt16LE(at + 28)
+    const name = zip.toString('utf8', at + 46, at + 46 + nameLength)
+    const local = zip.readUInt32LE(at + 42)
+    const start = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28)
+    const raw = zip.subarray(start, start + size)
+    entries.set(name, method === 0 ? Buffer.from(raw) : inflateRawSync(raw))
+    at += 46 + nameLength + zip.readUInt16LE(at + 30) + zip.readUInt16LE(at + 32)
+  }
+  return entries
+}
+
 const progressLine = (completed: number, percentage: number) =>
   `${completed} de ${AVAILABLE} lecciones disponibles completadas · ${percentage}\u00a0% · ${PLANNED} previstas`
 
@@ -71,7 +99,7 @@ async function api(page: Page, method: 'GET' | 'PUT' | 'POST', path: string, bod
 }
 
 async function progressOf(page: Page): Promise<ProgressBody> {
-  const result = await api(page, 'GET', '/api/me/courses/java/progress')
+  const result = await api(page, 'GET', `/api/me/courses/${COURSE_ID}/progress`)
   expect(result.status).toBe(200)
   return result.body as ProgressBody
 }
@@ -131,7 +159,7 @@ async function logout(page: Page) {
 
 const mainNav = (page: Page, name: 'Mis cursos' | 'Catálogo') =>
   page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name, exact: true })
-// The lesson's only h1: the delivered HTML's own title («02.01 Tu primer programa») when the body starts with one.
+// The lesson's only h1: the delivered HTML's own title («01.01 Ficheros JSON») when the body starts with one.
 const lessonTitle = (page: Page) => page.locator('main').getByRole('heading', { level: 1 })
 const exerciseCard = (page: Page, exerciseId: string) => page.locator(`section.exercise[id="${exerciseId}"]`)
 const lessonGroup = (page: Page) => page.getByRole('group', { name: 'Estado de la lección' }).first()
@@ -199,7 +227,7 @@ async function expectSessionRejected(page: Page, navigation: Locator) {
   const response = await rejected
   expect(await response.json()).toMatchObject({ code: 'AUTHENTICATION_REQUIRED' })
   await expect(page).toHaveURL(/\/login$/)
-  await expect(page.getByRole('status').filter({ hasText: 'Tu sesión terminó. Iniciá sesión de nuevo.' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'Tu sesión terminó. Inicia sesión de nuevo.' })).toBeVisible()
   await expect(page.locator('.user-btn')).toHaveCount(0)
 }
 
@@ -232,43 +260,48 @@ test('two learners keep separate progress across a backend restart, without cros
     await pageA.getByRole('link', { name: 'Crear una cuenta' }).click()
     await register(pageA, bruno)
     await login(pageA, ana)
-    await expect(pageA.getByText('Todavía no añadiste ningún curso.')).toBeVisible()
+    await expect(pageA.getByText('Todavía no has añadido ningún curso.')).toBeVisible()
   })
 
-  await test.step('2a. CSRF: Ana writes right after login («Añadir Java a Mis cursos»)', async () => {
+  await test.step('2a. CSRF: Ana writes right after login («Añadir Curso de ejemplo a Mis cursos»)', async () => {
     await mainNav(pageA, 'Catálogo').click()
-    const added = pageA.waitForResponse((r) => r.url().endsWith('/api/me/courses/java') && r.request().method() === 'PUT')
-    await pageA.getByRole('button', { name: 'Añadir Java a Mis cursos' }).click()
+    const added = pageA.waitForResponse((r) => r.url().endsWith(`/api/me/courses/${COURSE_ID}`) && r.request().method() === 'PUT')
+    await pageA.getByRole('button', { name: `Añadir ${COURSE_TITLE} a Mis cursos` }).click()
     const response = await added
     expect(response.status()).toBe(200)
-    expect(await response.json()).toMatchObject({ courseId: 'java', added: true, continuation: { lastOpenedLessonId: null } })
-    await expect(pageA.getByText('Java está en Mis cursos.')).toBeVisible()
+    expect(await response.json()).toMatchObject({ courseId: COURSE_ID, added: true, continuation: { lastOpenedLessonId: null } })
+    await expect(pageA.getByText(`${COURSE_TITLE} está en Mis cursos.`)).toBeVisible()
     await shot(pageA, 'ana-catalog-added')
     expect(forbidden).toEqual([])
   })
 
-  await test.step('2b. CSRF: logout, Bruno signs in in the same browser and writes at once (e03 Resuelto)', async () => {
+  await test.step('2b. CSRF: logout, Bruno signs in in the same browser and writes at once (e02 Resuelto)', async () => {
     await logout(pageA)
     await login(pageA, bruno)
     // Nothing of Ana's enrollment: Bruno starts with no courses.
-    await expect(pageA.getByText('Todavía no añadiste ningún curso.')).toBeVisible()
+    await expect(pageA.getByText('Todavía no has añadido ningún curso.')).toBeVisible()
     const continuationCalls: string[] = []
     pageA.on('request', (request) => {
       if (request.url().endsWith('/continuation')) continuationCalls.push(request.url())
     })
     await mainNav(pageA, 'Catálogo').click()
-    await expect(pageA.getByRole('button', { name: 'Añadir Java a Mis cursos' })).toBeVisible()
-    await pageA.getByRole('link', { name: 'Java', exact: true }).click()
-    await expect(pageA.getByRole('heading', { level: 1, name: 'Java · Índice del curso' })).toBeVisible()
+    await expect(pageA.getByRole('button', { name: `Añadir ${COURSE_TITLE} a Mis cursos` })).toBeVisible()
+    // Description and «Conviene saber antes» from curso.json (H7, T6); «inicial» is not installed in this run.
+    const card = pageA.getByRole('article', { name: COURSE_TITLE, exact: true })
+    await expect(card.locator('.course-description')).toHaveText('Un curso pequeño que cumple FORMATO.md, para las pruebas del kit.')
+    await expect(card.locator('.course-recommended')).toHaveText('Conviene saber antes: inicial (no está instalado en esta academia)')
+    await expect(pageA.getByRole('article', { name: 'Curso de destino de ejemplo' }).locator('.course-recommended')).toHaveCount(0)
+    await pageA.getByRole('link', { name: COURSE_TITLE, exact: true }).click()
+    await expect(pageA.getByRole('heading', { level: 1, name: `${COURSE_TITLE} · Índice del curso` })).toBeVisible()
     await expect(pageA.locator('.index-head .summary')).toHaveText(progressLine(0, 0))
     await pageA.locator('.phase-grid').getByRole('link', { name: LESSON_TITLE }).click()
     await expect(lessonTitle(pageA)).toContainText(LESSON_TITLE)
     await expectExerciseBadges(pageA, {})
-    const result = await markExercise(pageA, `${LESSON_ID}-e03`, 'Resuelto', 'solved')
+    const result = await markExercise(pageA, E02, 'Resuelto', 'solved')
     // The first mark added the course: the server says so and the UI tells the learner.
     expect(result.courseAutoAdded).toBe(true)
-    await expect(pageA.locator('.toast')).toContainText('Java se añadió a Mis cursos')
-    await expect(pageA.locator('.lbar-ex')).toContainText('Ejercicios 1/9')
+    await expect(pageA.locator('.toast')).toContainText(`${COURSE_TITLE} se añadió a Mis cursos`)
+    await expect(pageA.locator('.lbar-ex')).toContainText(`Ejercicios 1/${EXERCISES.length}`)
     // Course not added when the lesson opened: no continuation call (docs/api.md).
     expect(continuationCalls).toEqual([])
     await shot(pageA, 'bruno-first-mark-toast')
@@ -277,34 +310,49 @@ test('two learners keep separate progress across a backend restart, without cros
   })
 
   let anaSnapshot: ProgressBody
-  await test.step('3. Ana opens java-02.01 from Mis cursos and the index, marks lesson, e01 and e02', async () => {
+  // The run installs the example course by its version tag (H7, A5): the copy records the tag and its version.
+  expect(manifest.source.versionTag).toBe(`v${manifest.source.courseVersion}`)
+  expect(manifest.source.versionRef).toMatch(/^[0-9a-f]{40}$/)
+
+  await test.step('3. Ana opens the module from Mis cursos and the index, marks lesson, e01 and e02', async () => {
     await login(pageA, ana)
     await pageA.getByRole('link', { name: 'Ver el índice del curso' }).click()
-    await expect(pageA.getByRole('heading', { level: 1, name: 'Java · Índice del curso' })).toBeVisible()
+    await expect(pageA.getByRole('heading', { level: 1, name: `${COURSE_TITLE} · Índice del curso` })).toBeVisible()
+    // Numbers come from the order of curso.json, never from the IDs (ejemplo.ficheros-json has none): the first
+    // phase is «Fase 01» and its modules «01.01» and «01.02», the pending one included (H7, T2).
+    const phaseTable = pageA.locator('.phase-grid').getByRole('table').first()
+    await expect(phaseTable.locator('caption')).toContainText('Fase 01 · Primeros pasos')
+    const codes = phaseTable.getByRole('row').filter({ has: pageA.getByRole('cell') })
+    await expect(codes.nth(0).getByRole('cell').first()).toHaveText('01.01')
+    await expect(codes.nth(0)).toContainText(LESSON_TITLE)
+    await expect(codes.nth(1).getByRole('cell').first()).toHaveText('01.02')
+    await expect(codes.nth(1)).toContainText('Ficheros YAML')
     await shot(pageA, 'ana-course-index')
-    const continuation = pageA.waitForResponse((r) => r.url().endsWith('/api/me/courses/java/continuation') && r.request().method() === 'PUT')
+    const continuation = pageA.waitForResponse((r) => r.url().endsWith(`/api/me/courses/${COURSE_ID}/continuation`) && r.request().method() === 'PUT')
     await pageA.locator('.phase-grid').getByRole('link', { name: LESSON_TITLE }).click()
-    await expect(pageA).toHaveURL(new RegExp(`/lessons/${LESSON_ID.replace('.', '\\.')}$`))
+    await expect(pageA).toHaveURL(new RegExp(`/lessons/${LESSON_ID.replaceAll('.', '\\.')}$`))
     const continued = await continuation
     expect(continued.status()).toBe(200)
-    expect(await continued.json()).toMatchObject({ courseId: 'java', added: true, continuation: { lastOpenedLessonId: LESSON_ID } })
+    expect(await continued.json()).toMatchObject({ courseId: COURSE_ID, added: true, continuation: { lastOpenedLessonId: LESSON_ID } })
 
     // The lesson as delivered, enhanced in a real browser.
     await expect(lessonTitle(pageA)).toContainText(LESSON_TITLE)
     await expect(pageA.locator('.lesson-body h2').first()).toBeVisible()
-    await expect(pageA.locator('section.exercise')).toHaveCount(9)
-    await expect(pageA.locator('.lesson-body figure.diagram svg')).toHaveCount(2)
+    await expect(pageA.locator('section.exercise')).toHaveCount(EXERCISES.length)
+    await expect(pageA.locator('.lesson-body figure.diagram svg')).toHaveCount(1)
     // Entities written for GitHub (&quot;) are shown as the characters they stand for, never literally.
     // Mermaid draws each word as its own <tspan>, so compare the label text without spaces.
     const firstDiagram = await pageA.locator('.lesson-body figure.diagram svg').first().evaluate((svg) =>
       Array.from(svg.querySelectorAll('text')).map((text) => text.textContent ?? '').join('|').replace(/\s/g, ''))
-    expect(firstDiagram).toContain('IO.println("Pedidorecibido")')
-    expect(firstDiagram).toContain('IO.println("Enpreparación")')
+    expect(firstDiagram).toContain('Objeto"cliente"')
     expect(firstDiagram).not.toContain('&quot;')
     await expect(pageA.locator('main').getByRole('heading', { level: 1 })).toHaveCount(1)
     await expect(pageA.locator('.diagram-error')).toHaveCount(0)
-    await expect(pageA.locator('.lesson-body code.language-java.hljs').first()).toBeVisible()
-    await expect(pageA.locator('.lesson-body code.language-java .hljs-keyword').first()).toBeVisible()
+    await expect(pageA.locator('.lesson-body code.language-json.hljs').first()).toBeVisible()
+    await expect(pageA.locator('.lesson-body code.language-json .hljs-attr').first()).toBeVisible()
+    // The lesson's image, served by the academy itself.
+    await expect(pageA.locator('.lesson-body img[alt="Estructura de un objeto JSON"]')).toHaveJSProperty('complete', true)
+    expect(await pageA.locator('.lesson-body img[alt="Estructura de un objeto JSON"]').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
     await expectExerciseBadges(pageA, {})
     await expect(pageA.locator('.lbar-lesson .badge')).toHaveText('No completada')
     await shot(pageA, 'ana-lesson-loaded')
@@ -312,14 +360,27 @@ test('two learners keep separate progress across a backend restart, without cros
     await shot(pageA, 'ana-lesson-mermaid')
 
     // Resource link: downloads with the original file name (S14).
-    const helloLink = pageA.locator('.lesson-files a.resource-link').filter({ hasText: /^Hello\.java$/ }).first()
-    await expect(helloLink).toBeVisible()
-    const [download] = await Promise.all([pageA.waitForEvent('download'), helloLink.click()])
-    expect(download.suggestedFilename()).toBe('Hello.java')
+    const scriptLink = pageA.locator('.lesson-files a.resource-link').filter({ hasText: /^contar\.sh$/ }).first()
+    await expect(scriptLink).toBeVisible()
+    const [download] = await Promise.all([pageA.waitForEvent('download'), scriptLink.click()])
+    expect(download.suggestedFilename()).toBe('contar.sh')
     const downloadDir = join(runDir, 'downloads')
     mkdirSync(downloadDir, { recursive: true })
-    await download.saveAs(join(downloadDir, 'Hello.java'))
-    expect(readFileSync(join(downloadDir, 'Hello.java'), 'utf8')).toMatch(/Hello|mundo/)
+    await download.saveAs(join(downloadDir, 'contar.sh'))
+    expect(readFileSync(join(downloadDir, 'contar.sh'), 'utf8')).toMatch(/Clientes de/)
+
+    // A folder link downloads the whole folder as a ZIP: the curl example (kit 27893e8) ships its verification files,
+    // servidor.json included, byte for byte as the course has them (FORMATO.md 7.1).
+    const curlFolder = pageA.locator('.lesson-body a').filter({ hasText: /2\.4-preguntar-a-una-api\/$/ }).first()
+    await expect(curlFolder).toBeVisible()
+    const [zipDownload] = await Promise.all([pageA.waitForEvent('download'), curlFolder.click()])
+    expect(zipDownload.suggestedFilename()).toBe('2.4-preguntar-a-una-api.zip')
+    await zipDownload.saveAs(join(downloadDir, '2.4-preguntar-a-una-api.zip'))
+    const curlEntries = zipEntries(readFileSync(join(downloadDir, '2.4-preguntar-a-una-api.zip')))
+    expect([...curlEntries.keys()].sort()).toEqual(['servidor.json', 'sesion.txt'])
+    const curlSource = join('..', 'cursos-ejemplo', 'bueno', 'fase-01-primeros-pasos', 'codigo', '01-ficheros-json', 'ejemplos',
+      '2.4-preguntar-a-una-api')
+    for (const [name, bytes] of curlEntries) expect(bytes.equals(readFileSync(join(curlSource, name))), name).toBe(true)
 
     // «✓ Guardado» only after the server confirms: the request is held, then sent unchanged.
     let releaseSave = () => {}
@@ -348,18 +409,18 @@ test('two learners keep separate progress across a backend restart, without cros
     await expect(pageA.locator('.lbar-lesson .badge')).toHaveText('Completada')
     await pageA.unroute('**/api/me/lessons/*/state')
 
-    expect((await markExercise(pageA, `${LESSON_ID}-e01`, 'Resuelto', 'solved')).courseAutoAdded).toBe(false)
-    expect((await markExercise(pageA, `${LESSON_ID}-e02`, 'En curso', 'in_progress')).courseAutoAdded).toBe(false)
+    expect((await markExercise(pageA, E01, 'Resuelto', 'solved')).courseAutoAdded).toBe(false)
+    expect((await markExercise(pageA, E02, 'En curso', 'in_progress')).courseAutoAdded).toBe(false)
     // The course was already added from the catalog: no toast for Ana.
     await expect(pageA.locator('.toast')).toHaveCount(0)
-    await expect(pageA.locator('.lbar-ex')).toContainText('Ejercicios 1/9')
-    await expect(pageA.locator('.ex-summary')).toHaveText('1 resueltos, 1 en curso, 7 pendientes')
+    await expect(pageA.locator('.lbar-ex')).toContainText(`Ejercicios 1/${EXERCISES.length}`)
+    await expect(pageA.locator('.ex-summary')).toHaveText('1 resueltos, 1 en curso, 0 pendientes')
     await shot(pageA, 'ana-lesson-marked')
 
     anaSnapshot = await progressOf(pageA)
     expect(statesOf(anaSnapshot)).toEqual({
       lessons: { [LESSON_ID]: 'completed' },
-      exercises: { [`${LESSON_ID}-e01`]: 'solved', [`${LESSON_ID}-e02`]: 'in_progress' },
+      exercises: { [E01]: 'solved', [E02]: 'in_progress' },
     })
     expect(anaSnapshot.continuation.lastOpenedLessonId).toBe(LESSON_ID)
     expect(anaSnapshot.progress).toEqual({ completedLessons: 1, availableLessons: AVAILABLE, plannedLessons: PLANNED, percentage: 100 })
@@ -370,16 +431,16 @@ test('two learners keep separate progress across a backend restart, without cros
     expect(forbidden).toEqual([])
   })
 
-  await test.step('4. Bruno, in his own browser, sees only his e03', async () => {
+  await test.step('4. Bruno, in his own browser, sees only his e02', async () => {
     await pageB.goto('/login')
     await login(pageB, bruno)
     await expect(pageB.locator('.course-card .summary')).toHaveText(progressLine(0, 0))
     await pageB.getByRole('link', { name: 'Continuar', exact: true }).click()
     await expect(lessonTitle(pageB)).toContainText(LESSON_TITLE)
     await expect(pageB.locator('.lbar-lesson .badge')).toHaveText('No completada')
-    await expectExerciseBadges(pageB, { [`${LESSON_ID}-e03`]: 'Resuelto' })
-    await expect(pageB.locator('.lbar-ex')).toContainText('Ejercicios 1/9')
-    await expect(pageB.locator('.ex-summary')).toHaveText('1 resueltos, 0 en curso, 8 pendientes')
+    await expectExerciseBadges(pageB, { [E02]: 'Resuelto' })
+    await expect(pageB.locator('.lbar-ex')).toContainText(`Ejercicios 1/${EXERCISES.length}`)
+    await expect(pageB.locator('.ex-summary')).toHaveText('1 resueltos, 0 en curso, 1 pendientes')
     await shot(pageB, 'bruno-lesson-own-states')
   })
 
@@ -392,19 +453,19 @@ test('two learners keep separate progress across a backend restart, without cros
     expect((brunoMe.body as { id: unknown }).id).not.toEqual(anaId)
 
     const own = await progressOf(pageB)
-    expect(statesOf(own)).toEqual({ lessons: {}, exercises: { [`${LESSON_ID}-e03`]: 'solved' } })
+    expect(statesOf(own)).toEqual({ lessons: {}, exercises: { [E02]: 'solved' } })
     // There is no user ID in the API: an ID in the query is ignored, never a way to pick the owner.
     const query = `userId=${encodeURIComponent(String(anaId))}&usuario_id=${encodeURIComponent(String(anaId))}&username=Ana`
-    const withAnaQuery = await api(pageB, 'GET', `/api/me/courses/java/progress?${query}`)
+    const withAnaQuery = await api(pageB, 'GET', `/api/me/courses/${COURSE_ID}/progress?${query}`)
     expect(withAnaQuery).toEqual({ status: 200, body: own })
     const myCourses = await api(pageB, 'GET', '/api/me/courses')
     expect(await api(pageB, 'GET', `/api/me/courses?${query}`)).toEqual(myCourses)
     expect(await api(pageB, 'GET', `/api/me?${query}`)).toEqual(brunoMe)
     // An ID in the body is an unknown field: rejected, nothing written.
     for (const [path, body] of [
-      [`/api/me/exercises/${LESSON_ID}-e01/state`, { state: 'pending', userId: anaId }],
+      [`/api/me/exercises/${E01}/state`, { state: 'pending', userId: anaId }],
       [`/api/me/lessons/${LESSON_ID}/state`, { state: 'not_completed', userId: anaId }],
-      ['/api/me/courses/java/continuation', { lessonId: LESSON_ID, userId: anaId }],
+      [`/api/me/courses/${COURSE_ID}/continuation`, { lessonId: LESSON_ID, userId: anaId }],
     ] as const) {
       const rejected = await api(pageB, 'PUT', path, body)
       expect(rejected.status).toBe(400)
@@ -414,18 +475,18 @@ test('two learners keep separate progress across a backend restart, without cros
     // With Ana's ID in the query a write lands on Bruno's own records, never on Ana's.
     const ownLesson = await api(pageB, 'PUT', `/api/me/lessons/${LESSON_ID}/state?${query}`, { state: 'not_completed' })
     expect(ownLesson.status).toBe(200)
-    const ownExercise = await api(pageB, 'PUT', `/api/me/exercises/${LESSON_ID}-e01/state?${query}`, { state: 'pending' })
+    const ownExercise = await api(pageB, 'PUT', `/api/me/exercises/${E01}/state?${query}`, { state: 'pending' })
     expect(ownExercise.status).toBe(200)
     expect(statesOf(await progressOf(pageB))).toEqual({
       lessons: { [LESSON_ID]: 'not_completed' },
-      exercises: { [`${LESSON_ID}-e01`]: 'pending', [`${LESSON_ID}-e03`]: 'solved' },
+      exercises: { [E01]: 'pending', [E02]: 'solved' },
     })
     // Ana's data, read from her own session, is exactly as she left it (updatedAt included).
     expect(await progressOf(pageA)).toEqual(anaSnapshot)
     await pageB.reload()
     await expect(lessonTitle(pageB)).toContainText(LESSON_TITLE)
     await expect(pageB.locator('.lbar-lesson .badge')).toHaveText('No completada')
-    await expectExerciseBadges(pageB, { [`${LESSON_ID}-e03`]: 'Resuelto' })
+    await expectExerciseBadges(pageB, { [E02]: 'Resuelto' })
     expect(forbidden).toEqual([])
   })
 
@@ -444,11 +505,11 @@ test('two learners keep separate progress across a backend restart, without cros
     await expect(pageA.locator('.course-card .summary')).toHaveText(progressLine(1, 100))
     await shot(pageA, 'ana-my-courses-after-restart')
     await pageA.getByRole('link', { name: 'Continuar', exact: true }).click()
-    await expect(pageA).toHaveURL(new RegExp(`/lessons/${LESSON_ID.replace('.', '\\.')}$`))
+    await expect(pageA).toHaveURL(new RegExp(`/lessons/${LESSON_ID.replaceAll('.', '\\.')}$`))
     await expect(pageA.locator('.lbar-lesson .badge')).toHaveText('Completada')
-    await expectExerciseBadges(pageA, { [`${LESSON_ID}-e01`]: 'Resuelto', [`${LESSON_ID}-e02`]: 'En curso' })
-    await expect(pageA.locator('.lbar-ex')).toContainText('Ejercicios 1/9')
-    await expect(pageA.locator('.ex-summary')).toHaveText('1 resueltos, 1 en curso, 7 pendientes')
+    await expectExerciseBadges(pageA, { [E01]: 'Resuelto', [E02]: 'En curso' })
+    await expect(pageA.locator('.lbar-ex')).toContainText(`Ejercicios 1/${EXERCISES.length}`)
+    await expect(pageA.locator('.ex-summary')).toHaveText('1 resueltos, 1 en curso, 0 pendientes')
     await shot(pageA, 'ana-lesson-after-restart')
     const anaAfter = await progressOf(pageA)
     expect(statesOf(anaAfter)).toEqual(statesOf(anaSnapshot))
@@ -459,13 +520,13 @@ test('two learners keep separate progress across a backend restart, without cros
     await expect(pageB.locator('.course-card .summary')).toHaveText(progressLine(0, 0))
     await pageB.getByRole('link', { name: 'Continuar', exact: true }).click()
     await expect(pageB.locator('.lbar-lesson .badge')).toHaveText('No completada')
-    await expectExerciseBadges(pageB, { [`${LESSON_ID}-e03`]: 'Resuelto' })
-    await expect(pageB.locator('.ex-summary')).toHaveText('1 resueltos, 0 en curso, 8 pendientes')
+    await expectExerciseBadges(pageB, { [E02]: 'Resuelto' })
+    await expect(pageB.locator('.ex-summary')).toHaveText('1 resueltos, 0 en curso, 1 pendientes')
     await shot(pageB, 'bruno-lesson-after-restart')
     const brunoAfter = await progressOf(pageB)
     expect(brunoAfter.progress).toEqual({ completedLessons: 0, availableLessons: AVAILABLE, plannedLessons: PLANNED, percentage: 0 })
     expect(brunoAfter.exerciseStates.filter((entry) => entry.state !== 'pending').map((entry) => [entry.exerciseId, entry.state]))
-      .toEqual([[`${LESSON_ID}-e03`, 'solved']])
+      .toEqual([[E02, 'solved']])
     expect(forbidden).toEqual([])
   })
 
@@ -481,7 +542,7 @@ test('two learners keep separate progress across a backend restart, without cros
     await expect(pageA.getByRole('button', { name: expectedLabel, exact: true })).toBeVisible()
     expect(await pageA.evaluate(() => document.documentElement.dataset.theme)).toBe(before === 'Modo oscuro' ? 'dark' : 'light')
     expect(await pageA.evaluate(() => document.documentElement.dataset.theme)).not.toBe(themeBefore)
-    await expect(pageA.locator('.lesson-body figure.diagram svg')).toHaveCount(2)
+    await expect(pageA.locator('.lesson-body figure.diagram svg')).toHaveCount(1)
     await shot(pageA, 'ana-lesson-theme-toggled')
     await pageA.getByRole('button', { name: expectedLabel, exact: true }).click()
     await expect(pageA.getByRole('button', { name: before ?? '', exact: true })).toBeVisible()
@@ -507,24 +568,30 @@ test('two learners keep separate progress across a backend restart, without cros
     const internalHref = await internal.getAttribute('href')
     await internal.click()
     await expect(pageA).toHaveURL(new RegExp(`${internalHref}$`))
-    await expect(pageA.getByRole('heading', { level: 1, name: 'Java · Índice del curso' })).toBeVisible()
+    await expect(pageA.getByRole('heading', { level: 1, name: `${COURSE_TITLE} · Índice del curso` })).toBeVisible()
     expect(await pageA.evaluate(() => (window as unknown as { __journeyMarker?: string }).__journeyMarker)).toBe('same-document')
     await pageA.goBack()
     await expect(lessonTitle(pageA)).toContainText(LESSON_TITLE)
     expect(await pageA.evaluate(() => (window as unknown as { __journeyMarker?: string }).__journeyMarker)).toBe('same-document')
 
     // Fragment link: scrolls to its heading, found by ID (IDs may start with a digit).
-    const fragment = pageA.locator('.lesson-body a[href^="#3-errores"]').first()
+    // The link of a review question, at the end of the body, back up to 1.2.
+    // The answer is folded: the learner unfolds «Ver respuesta» first, as anyone reading it would.
+    const fragment = pageA.locator('.lesson-body a[href^="#12-objetos"]').first()
     const fragmentHref = await fragment.getAttribute('href') ?? ''
     const targetId = decodeURIComponent(fragmentHref.slice(1))
+    await pageA.locator('.lesson-body details', { has: pageA.locator('a[href^="#12-objetos"]') }).locator('summary').first().click()
+    await expect(fragment).toBeVisible()
+    await fragment.scrollIntoViewIfNeeded()
+    const scrolledFrom = await pageA.evaluate(() => window.scrollY)
     await fragment.click()
     await expect.poll(() => pageA.evaluate(() => decodeURIComponent(window.location.hash.slice(1)))).toBe(targetId)
-    await expect.poll(() => pageA.evaluate((id) => {
+    await expect.poll(() => pageA.evaluate(({ id, from }) => {
       const target = document.getElementById(id)
-      if (!target || window.scrollY < 200) return false
+      if (!target || window.scrollY === from) return false
       const top = target.getBoundingClientRect().top
       return top >= -2 && top < window.innerHeight / 2
-    }, targetId)).toBe(true)
+    }, { id: targetId, from: scrolledFrom })).toBe(true)
     await shot(pageA, 'ana-fragment-scrolled')
 
     // Clipboard: «Copiar» puts the code block's text in the clipboard.
@@ -540,11 +607,11 @@ test('two learners keep separate progress across a backend restart, without cros
     for (const width of [1440, 720]) {
       await pageA.setViewportSize({ width, height: 900 })
       await pageA.goto(`/lessons/${LESSON_ID}`)
-      await expect(pageA.locator('.lesson-body figure.diagram svg')).toHaveCount(2)
+      await expect(pageA.locator('.lesson-body figure.diagram svg')).toHaveCount(1)
       await expectNoHorizontalScroll(pageA, `lesson at ${width}x900`)
       await shot(pageA, `ana-lesson-${width}x900`)
-      await pageA.goto('/courses/java')
-      await expect(pageA.getByRole('heading', { level: 1, name: 'Java · Índice del curso' })).toBeVisible()
+      await pageA.goto(`/courses/${COURSE_ID}`)
+      await expect(pageA.getByRole('heading', { level: 1, name: `${COURSE_TITLE} · Índice del curso` })).toBeVisible()
       await expectNoHorizontalScroll(pageA, `index at ${width}x900`)
       await shot(pageA, `ana-index-${width}x900`)
     }

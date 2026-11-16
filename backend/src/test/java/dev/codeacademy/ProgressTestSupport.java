@@ -28,6 +28,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import tools.jackson.databind.JsonNode;
 
 import dev.codeacademy.content.ContentFixture;
+import dev.codeacademy.content.ExampleContent;
 
 import static dev.codeacademy.ApiClient.credentials;
 import static dev.codeacademy.ApiClient.json;
@@ -36,24 +37,27 @@ import static dev.codeacademy.RegistrationApiTest.unique;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * One server for the progress tests, synchronized from a copy of the real Java course plus the synthetic demo course:
- * java has all 199 lessons available (java-02.01 keeps its 9 exercises); demo has demo-01.01 (2 exercises) and
- * demo-01.02 available and demo-02.01 pending, the one genuinely pending lesson. Subclasses share this context and its
+ * One server for the progress tests, synchronized from a copy of the kit's example course plus the synthetic demo
+ * course: ejemplo has ejemplo.ficheros-json available (2 exercises) and ejemplo.ficheros-yaml pending; demo has
+ * demo.01.01 (2 exercises) and demo.01.02 available and demo.02.01 pending. Subclasses share this context and its
  * database.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 abstract class ProgressTestSupport {
 
-	static final String JAVA_LESSON = "java-02.01";
-	static final String JAVA_PENDING = "java-02.02";
-	static final String INTRO = "demo-01.01";
-	static final String NEXT = "demo-01.02";
-	static final String PENDING = "demo-02.01";
-	static final String E01 = "demo-01.01-e01";
-	static final String E02 = "demo-01.01-e02";
+	static final String EJEMPLO = ExampleContent.COURSE;
+	static final String EJEMPLO_LESSON = ExampleContent.LESSON;
+	static final String EJEMPLO_PENDING = ExampleContent.PENDING;
+	static final String EJEMPLO_E01 = ExampleContent.E01;
+	static final String EJEMPLO_E02 = ExampleContent.E02;
+	static final String INTRO = "demo.01.01";
+	static final String NEXT = "demo.01.02";
+	static final String PENDING = "demo.02.01";
+	static final String E01 = "demo.01.01.e01";
+	static final String E02 = "demo.01.01.e02";
 
-	/** java and demo side by side, removed when the test JVM exits. */
+	/** ejemplo and demo side by side, removed when the test JVM exits. */
 	static final Path CONTENT_ROOT = copyContent();
 
 	@DynamicPropertySource
@@ -236,14 +240,7 @@ abstract class ProgressTestSupport {
 			Path temp = Files.createTempDirectory("code-academy-progress-");
 			Runtime.getRuntime().addShutdownHook(new Thread(() -> deleteTree(temp)));
 			Path root = ContentFixture.copyInto(temp).root;
-			Path java = CatalogApiTest.CONTENT.resolve("java");
-			try (Stream<Path> files = Files.walk(java)) {
-				for (Path source : files.toList()) {
-					Path target = root.resolve("java").resolve(java.relativize(source).toString());
-					if (Files.isDirectory(source)) Files.createDirectories(target);
-					else Files.copy(source, target);
-				}
-			}
+			ExampleContent.copyCourseInto(ExampleContent.COURSE, root);
 			return root;
 		}
 		catch (IOException ex) {

@@ -37,8 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ContentImportCliTest {
 
 	static final JsonMapper JSON = JsonMapper.builder().build();
-	static final String HELP = "Usage: content-import generate --active DIR --source GIT --commit SHA --output DIR --report FILE\n"
-		+ "Generate a new candidate copy offline; never applies it and never writes a database.\n";
+	static final String HELP = "Usage: content-import generate --active DIR --source GIT (--tag vX.Y.Z | --commit SHA)"
+		+ " --output DIR --report FILE\n"
+		+ "Generate a new candidate copy offline; never applies it and never writes a database.\n"
+		+ "--tag installs a published version: the tag is resolved to its commit and both are recorded.\n";
 	static final String INDEX = """
 		# Índice del curso
 
@@ -65,9 +67,33 @@ class ContentImportCliTest {
 		| ◆ 2 | [Etapa siguiente](proyecto/02-siguiente.md) | fase 02 | ✅ Disponible |
 		""";
 
-	/** Recorded on the unbatched generator: the same pinned tree must keep these exact bytes. */
+	/**
+	 * The course's own curso.json, committed with every tree: the identity the importer reads. It keeps the legacy
+	 * demo.… IDs of the accepted fixture.
+	 */
+	static final String CURSO = """
+		{
+		  "formato": 1, "tipo": "curso", "id": "demo", "titulo": "Demo", "version": "1.0.0",
+		  "fases": [
+		    { "id": "demo.phase-01", "carpeta": "fase-01", "titulo": "Primera fase", "modulos": [
+		      { "id": "demo.01.01", "fichero": "fase-01/01-intro.md", "titulo": "Introducción", "ejercicios": [
+		        { "id": "demo.01.01.e01", "titulo": "Primer ejercicio" },
+		        { "id": "demo.01.01.e02", "titulo": "Segundo ejercicio" } ] },
+		      { "id": "demo.01.02", "fichero": "fase-01/02-siguiente.md", "titulo": "Siguiente", "ejercicios": [] } ] },
+		    { "id": "demo.phase-02", "carpeta": "fase-02", "titulo": "Segunda fase", "modulos": [
+		      { "id": "demo.02.01", "fichero": "fase-02/01-pendiente.md", "titulo": "Pendiente", "disponible": false } ] } ],
+		  "proyecto": { "tipo": "etapas", "titulo": "Proyecto", "etapas": [
+		    { "id": "demo.stage-01", "fichero": "proyecto/01-inicial.md", "titulo": "Etapa inicial" },
+		    { "id": "demo.stage-02", "fichero": "proyecto/02-siguiente.md", "titulo": "Etapa siguiente" } ] }
+		}
+		""";
+
+	/**
+	 * Recorded on the unbatched generator: the same pinned tree must keep these exact bytes. The manifest was recorded
+	 * again in H7, when its identity started to come from curso.json (source.name is now the course's own title).
+	 */
 	static final String SHARED_MANIFEST_SHA =
-		"90c011e9a1454f6b01ba7aad621749a342769667f1465819832c7427762160f1";
+		"df268b7e5b3744b72282d1786772dc61ac0cb7a1f9e6c3bda79c6e5d6d5f6e58";
 	static final List<String> SHARED_ARCHIVE_SHA = List.of(
 		"a253f8f587fd349a355352d11015051ae223261e97e9b37734d837711b068eac",
 		"5a38b4b35047d1d7604d2e0dccf3d45f0b3372b465573e1098ee7b19af6cb2e5",
@@ -82,9 +108,11 @@ class ContentImportCliTest {
 	String base;
 	String commit;
 	Map<String, byte[]> files;
+	ObjectNode curso;
 
 	@BeforeEach void prepare() throws Exception {
 		active = ContentFixture.copyInto(temp.resolve("active"));
+		curso = (ObjectNode) JSON.readTree(CURSO);
 		source = Files.createDirectory(temp.resolve("source.git"));
 		git(null, "init", "--bare", "--quiet", source.toString());
 		// The accepted base commit holds exactly the copies of the accepted H4 copy, as the pinned H4 ref does.
@@ -153,11 +181,11 @@ class ContentImportCliTest {
 		}
 		JsonNode exercises = manifest.path("lessons").get(0).path("exercises");
 		assertThat(exercises).hasSize(2);
-		assertThat(exercises.get(0).path("id").asString()).isEqualTo("demo-01.01-e01");
+		assertThat(exercises.get(0).path("id").asString()).isEqualTo("demo.01.01.e01");
 		assertThat(exercises.get(0).path("title").asString()).isEqualTo(accepted.lessons().get(0).exercises().get(0).title());
 		// The accepted copied bodies and resource bytes stay literal copies of the pinned tree.
-		assertThat(Files.readAllBytes(output.resolve("demo/lessons/demo-01.01.md")))
-			.isEqualTo(Files.readAllBytes(active.root.resolve("demo/lessons/demo-01.01.md")));
+		assertThat(Files.readAllBytes(output.resolve("demo/lessons/demo.01.01.md")))
+			.isEqualTo(Files.readAllBytes(active.root.resolve("demo/lessons/demo.01.01.md")));
 		for (Manifest.Resource resource : accepted.resources()) {
 			JsonNode generated = resource(manifest, resource.sourcePath());
 			assertThat(generated.path("resourceId").asString()).isEqualTo(resource.resourceId());
@@ -167,12 +195,12 @@ class ContentImportCliTest {
 		}
 		JsonNode stages = manifest.path("projectStages");
 		assertThat(stages).hasSize(2);
-		assertThat(stages.get(0).path("id").asString()).isEqualTo("demo-stage-01");
+		assertThat(stages.get(0).path("id").asString()).isEqualTo("demo.stage-01");
 		assertThat(stages.get(0).path("title").asString()).isEqualTo("Etapa inicial");
 		assertThat(stages.get(0).path("sourcePath").asString()).isEqualTo("proyecto/01-inicial.md");
-		assertThat(stages.get(0).path("bodyPath").asString()).isEqualTo("demo/project/demo-stage-01.md");
+		assertThat(stages.get(0).path("bodyPath").asString()).isEqualTo("demo/project/demo.stage-01.md");
 		assertThat(stages.get(0).path("available").asBoolean()).isTrue();
-		assertThat(Files.readString(output.resolve("demo/project/demo-stage-01.md")))
+		assertThat(Files.readString(output.resolve("demo/project/demo.stage-01.md")))
 			.isEqualTo("# Etapa 1\n\nContenido de la etapa.\n");
 		// The course landing page is recorded so every link to the index resolves without importing it.
 		assertThat(link(manifest, "00-indice.md").path("courseId").asString()).isEqualTo("demo");
@@ -194,33 +222,145 @@ class ContentImportCliTest {
 		var result = ContentUpdateComparison.compare(
 			new ContentUpdateCli.Paths(active.root, output, source, comparison));
 		assertThat(result.conflicts()).isEmpty();
-		assertThat(result.report()).contains("addition demo-stage-01", "fase-01/codigo/hola/.gitignore");
+		assertThat(result.report()).contains("addition demo.stage-01", "fase-01/codigo/hola/.gitignore");
 	}
 
-	@Test void inventoryDiscrepanciesAreReportedWithoutWriting() throws Exception {
-		files.put("00-indice.md", INDEX.replace("| 01.02 | [Siguiente](fase-01/02-siguiente.md) | Básico · Núcleo | 2 h | ✅ Disponible |\n", "")
-			.getBytes(StandardCharsets.UTF_8));
-		String changed = commit(files, "no row\n");
+	@Test void aDeclaredModuleWithoutItsFileIsReportedWithoutWriting() throws Exception {
+		// curso.json, not the index, says which modules exist: one that is declared available needs its file.
+		files.remove("fase-01/02-siguiente.md");
+		String changed = commit(files, "missing module\n");
 		Map<String, String> activeBefore = snapshot(active.root);
 		Map<String, String> sourceBefore = snapshot(source);
-		assertThat(generate("--commit", changed)).isEqualTo(new Result(3, "Candidate not written; findings: 3\n", ""));
-		assertThat(findings()).containsExactly(
-			"demo-01.01: unresolved link 02-siguiente.md#sección-b",
-			"lesson demo-01.02 has no source index row: fase-01/02-siguiente.md",
-			"unsupported destination fase-01/01-intro.md:7: 02-siguiente.md#sección-b (source document without identity)");
+		assertThat(generate("--commit", changed).code()).isEqualTo(3);
+		assertThat(findings()).contains("source body unavailable fase-01/02-siguiente.md");
 		assertThat(Files.exists(output)).isFalse();
 		assertThat(JSON.readTree(Files.readString(report)).path("written").asBoolean()).isFalse();
 		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
 	}
 
-	@Test void retitledInventoryRowsAreConflicts() throws Exception {
-		files.put("00-indice.md", INDEX.replace("[Siguiente](fase-01/02-siguiente.md)",
-			"[Otro título](fase-01/02-siguiente.md)").getBytes(StandardCharsets.UTF_8));
-		String changed = commit(files, "retitle\n");
-		assertThat(generate("--commit", changed)).isEqualTo(new Result(3, "Candidate not written; findings: 1\n", ""));
-		assertThat(findings()).containsExactly("lesson demo-01.02 would be retitled: «Otro título»");
+	@Test void anEmailLinkIsReportedAndKeepsItsTextWithoutBlocking() throws Exception {
+		String body = new String(files.get("fase-01/02-siguiente.md"), StandardCharsets.UTF_8)
+			+ "\nLa identidad es «Ana García <ana@example.com>».\n";
+		files.put("fase-01/02-siguiente.md", body.getBytes(StandardCharsets.UTF_8));
+		active.write("demo/lessons/demo.01.02.md", body);
+		assertThat(generate("--commit", commit(files, "email\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(Files.exists(output)).isTrue();
+		assertThat(reported()).singleElement().asString()
+			.startsWith("email link kept as text fase-01/02-siguiente.md:").endsWith(": mailto:ana@example.com");
+		assertThat(ContentLoader.loadAll(output).getFirst().lessons().get("demo.01.02").bodyHtml())
+			.contains("Ana García ana&#64;example.com").doesNotContain("mailto");
+	}
+
+	@Test void theSourceMayBeRelativeAndClimbWithDotDot() throws Exception {
+		// The common plan keeps the courses beside the academy (../Cursos/curso-inicial): the source is only read, so
+		// it is normalized and then checked like any other path (H7, T5).
+		Path relative = Path.of("").toAbsolutePath().relativize(source);
+		assertThat(relative.toString()).startsWith("..");
+		assertThat(generate("--source", relative.toString()).code()).isZero();
+		assertThat(JSON.readTree(Files.readString(report)).path("source").asString()).isEqualTo(source.toString());
+	}
+
+	@Test void aNormalizedSourceIsStillCheckedAndWrittenPathsStayStrict() throws Exception {
+		Path link = Files.createSymbolicLink(temp.resolve("enlace"), source);
+		assertThat(generate("--source", temp.resolve("otra/../enlace").toString()))
+			.isEqualTo(new Result(2, "", "content-import: symbolic links are not allowed\n"));
+		Files.createDirectory(temp.resolve(".env.local"));
+		assertThat(generate("--source", temp.resolve("otra/../.env.local").toString()))
+			.isEqualTo(new Result(2, "", "content-import: protected paths are not allowed\n"));
+		assertThat(generate("--source", output.resolve("../source.git").toString(), "--output",
+				temp.resolve("x/../candidate").toString()))
+			.isEqualTo(new Result(2, "", "content-import: path escapes are not allowed\n"));
+		assertThat(generate("--source", active.root.resolve("demo/..").toString()))
+			.isEqualTo(new Result(2, "", "content-import: paths must not overlap\n"));
 		assertThat(Files.exists(output)).isFalse();
+		assertThat(Files.exists(link)).isTrue();
+	}
+
+	@Test void aVersionTagIsResolvedToItsCommitAndBothAreRecorded() throws Exception {
+		// FORMATO.md 11.1: what the academy installs is the tag of a published version (H7, A5).
+		git(null, "tag", "v1.0.0", commit);
+		assertThat(generate("--commit", null, "--tag", "v1.0.0").code()).isZero();
+		JsonNode source = manifest().path("source");
+		assertThat(source.path("versionRef").asString()).isEqualTo(commit);
+		assertThat(source.path("versionTag").asString()).isEqualTo("v1.0.0");
+		assertThat(source.path("courseVersion").asString()).isEqualTo("1.0.0");
+		JsonNode written = JSON.readTree(Files.readString(report));
+		assertThat(written.path("tag").asString()).isEqualTo("v1.0.0");
+		assertThat(written.path("commit").asString()).isEqualTo(commit);
+		assertThat(ContentLoader.loadAll(output)).hasSize(1);
+		// The comparison shows which version replaces which: the accepted copy predates tags, the candidate has one.
+		var comparison = JSON.readTree(ContentUpdateComparison.compare(
+			new ContentUpdateCli.Paths(active.root, output, this.source, temp.resolve("comparison.json"))).report());
+		assertThat(comparison.path("baseVersions").path("demo").isEmpty()).isTrue();
+		assertThat(comparison.path("candidateVersions").path("demo").path("tag").asString()).isEqualTo("v1.0.0");
+		assertThat(comparison.path("candidateVersions").path("demo").path("version").asString()).isEqualTo("1.0.0");
+	}
+
+	@Test void anAnnotatedTagIsResolvedToTheCommitItNames() throws Exception {
+		git(null, "tag", "-a", "-m", "Versión 1.0.0", "v1.0.0", commit);
+		assertThat(generate("--commit", null, "--tag", "v1.0.0").code()).isZero();
+		assertThat(manifest().path("source").path("versionRef").asString()).isEqualTo(commit);
+	}
+
+	@Test void installingFromACommitRecordsTheCourseVersionAndNoTag() throws Exception {
+		assertThat(generate().code()).isZero();
+		JsonNode source = manifest().path("source");
+		assertThat(source.path("versionTag").isNull()).isTrue();
+		assertThat(source.path("courseVersion").asString()).isEqualTo("1.0.0");
+		assertThat(JSON.readTree(Files.readString(report)).has("tag")).isFalse();
+	}
+
+	@Test void aTagThatDoesNotNameTheVersionOfCursoJsonIsAFinding() throws Exception {
+		git(null, "tag", "v1.1.0", commit);
+		assertThat(generate("--commit", null, "--tag", "v1.1.0").code()).isEqualTo(3);
+		assertThat(findings()).contains("tag v1.1.0 points to a curso.json with version 1.0.0");
+		assertThat(Files.exists(output)).isFalse();
+	}
+
+	@Test void onlyAnExistingVersionTagIsAccepted() throws Exception {
+		String invalid = "content-import: invalid arguments; use --help\n";
+		assertThat(generate("--tag", "v1.0.0")).as("--commit and --tag together").isEqualTo(new Result(2, "", invalid));
+		for (String malformed : List.of("1.0.0", "v1.0", "v01.0.0", "v1.0.0-beta", "main", "HEAD")) {
+			assertThat(generate("--commit", null, "--tag", malformed)).as(malformed)
+				.isEqualTo(new Result(2, "", "content-import: --tag must be a version tag like v1.2.3\n"));
+		}
+		assertThat(generate("--commit", null, "--tag", "v9.9.9"))
+			.isEqualTo(new Result(2, "", "content-import: source tag unavailable v9.9.9\n"));
+		// A branch with a tag's name is not a tag.
+		git(null, "branch", "v1.0.0", commit);
+		assertThat(generate("--commit", null, "--tag", "v1.0.0"))
+			.isEqualTo(new Result(2, "", "content-import: source tag unavailable v1.0.0\n"));
+		assertThat(Files.exists(output)).isFalse();
+		assertThat(Files.exists(report)).isFalse();
+	}
+
+	@Test void onlyDottedIdsInTheCourseNamespaceAreAccepted() throws Exception {
+		// FORMATO.md 3.3: <course>.<name>; the <course>-<name> form of the old importer is gone (H7, T2).
+		module("demo.01.02").put("id", "demo-01.02");
+		((ObjectNode) module("demo.01.01").withArray("ejercicios").get(0)).put("id", "demo.01.01-e01");
+		String changed = commit(files, "hyphen ids\n");
+		assertThat(generate("--commit", changed).code()).isEqualTo(3);
+		assertThat(findings()).contains(
+			"curso.json: modulo id demo-01.02 does not start with demo.",
+			"curso.json: ejercicio demo.01.01-e01 does not belong to demo.01.01");
+		assertThat(Files.exists(output)).isFalse();
+	}
+
+	@Test void aRetitleInCursoJsonKeepsTheIdAndIsLeftToTheComparison() throws Exception {
+		// The title comes from curso.json and the ID does not change with it (FORMATO.md 3.3).
+		module("demo.01.02").put("titulo", "Otro título");
+		String changed = commit(files, "retitle\n");
+		assertThat(generate("--commit", changed).code()).isZero();
+		JsonNode lesson = manifest().path("lessons").get(1);
+		assertThat(lesson.path("id").asString()).isEqualTo("demo.01.02");
+		assertThat(lesson.path("title").asString()).isEqualTo("Otro título");
+		// The comparison shows it as a change to review, not a conflict (FORMATO.md 11.2).
+		var result = ContentUpdateComparison.compare(
+			new ContentUpdateCli.Paths(active.root, output, source, temp.resolve("comparison.json")));
+		assertThat(result.conflicts()).isEmpty();
+		assertThat(result.report()).contains("retitle demo.01.02: «Siguiente» -> «Otro título»");
 	}
 
 	@Test void fragmentsFollowTheSharedHeadingRule() throws Exception {
@@ -237,11 +377,11 @@ class ContentImportCliTest {
 		assertThat(fragments(manifest, "00-indice.md")).isEmpty();
 		// Exercise association is the shared exact-title rule of LessonPipeline, not a second parser.
 		CourseContent loaded = ContentLoader.loadAll(output).getFirst();
-		assertThat(loaded.lessons().get("demo-01.01").exercises())
+		assertThat(loaded.lessons().get("demo.01.01").exercises())
 			.extracting(ExerciseContent::id, ExerciseContent::title)
 			.containsExactly(
-				org.assertj.core.groups.Tuple.tuple("demo-01.01-e01", "Primer ejercicio"),
-				org.assertj.core.groups.Tuple.tuple("demo-01.01-e02", "Segundo ejercicio"));
+				org.assertj.core.groups.Tuple.tuple("demo.01.01.e01", "Primer ejercicio"),
+				org.assertj.core.groups.Tuple.tuple("demo.01.01.e02", "Segundo ejercicio"));
 	}
 
 	@Test void stageDocumentsExposeTheirOwnAndCrossStageFragments() throws Exception {
@@ -269,8 +409,7 @@ class ContentImportCliTest {
 			""".getBytes(StandardCharsets.UTF_8));
 		// A lesson that becomes available in the pinned tree may point at a stage fragment too: the same mapping
 		// answers both directions, and the accepted copy holds no body for it, so nothing is an adaptation.
-		files.put("00-indice.md", INDEX.replace("| 2 h | ⏳ Pendiente |", "| 2 h | ✅ Disponible |")
-			.getBytes(StandardCharsets.UTF_8));
+		module("demo.02.01").put("disponible", true);
 		files.put("fase-02/01-pendiente.md", """
 			# 02.01 Pendiente
 
@@ -279,8 +418,8 @@ class ContentImportCliTest {
 			Ver [las decisiones](../proyecto/01-inicial.md#decisiones-de-diseño).
 			""".getBytes(StandardCharsets.UTF_8));
 		// The accepted intro already points at that pending lesson, so its fragment must now name a real heading.
-		active.replace("demo/lessons/demo-01.01.md", "#algo-que-no-existe", "#sección-nueva");
-		files.put("fase-01/01-intro.md", Files.readAllBytes(active.root.resolve("demo/lessons/demo-01.01.md")));
+		active.replace("demo/lessons/demo.01.01.md", "#algo-que-no-existe", "#sección-nueva");
+		files.put("fase-01/01-intro.md", Files.readAllBytes(active.root.resolve("demo/lessons/demo.01.01.md")));
 		String changed = commit(files, "stage fragments\n");
 		assertThat(generate("--commit", changed))
 			.isEqualTo(new Result(0, "Candidate written; lessons: 3; stages: 2; resources: 4\n", ""));
@@ -293,12 +432,12 @@ class ContentImportCliTest {
 		assertThat(fragments(manifest, "proyecto/02-siguiente.md"))
 			.containsOnly(Map.entry("qué-hace-la-v2", "qué-hace-la-v2"));
 		CourseContent loaded = ContentLoader.loadAll(output).getFirst();
-		assertThat(loaded.stages().get("demo-stage-01").bodyHtml()).contains(
+		assertThat(loaded.stages().get("demo.stage-01").bodyHtml()).contains(
 			"<a href=\"#el-código\">su propia sección</a>",
 			"<a href=\"#paso-5-el-arranque-y-los-datos-de-la-v10\">el arranque</a>",
-			"<a href=\"/stages/demo-stage-02#qué-hace-la-v2\">la etapa siguiente</a>");
-		assertThat(loaded.lessons().get("demo-02.01").bodyHtml())
-			.contains("<a href=\"/stages/demo-stage-01#decisiones-de-diseño\">las decisiones</a>");
+			"<a href=\"/stages/demo.stage-02#qué-hace-la-v2\">la etapa siguiente</a>");
+		assertThat(loaded.lessons().get("demo.02.01").bodyHtml())
+			.contains("<a href=\"/stages/demo.stage-01#decisiones-de-diseño\">las decisiones</a>");
 	}
 
 	@Test void aStageFragmentWithoutAHeadingStillFails() throws Exception {
@@ -313,7 +452,7 @@ class ContentImportCliTest {
 		Map<String, String> sourceBefore = snapshot(source);
 		assertThat(generate("--commit", changed)).isEqualTo(new Result(3, "Candidate not written; findings: 2\n", ""));
 		assertThat(findings()).containsExactly(
-			"demo-stage-01: unresolved link 02-siguiente.md#no-existe",
+			"demo.stage-01: unresolved link 02-siguiente.md#no-existe",
 			"unsupported destination proyecto/01-inicial.md:3: 02-siguiente.md#no-existe (no heading «no-existe» in proyecto/02-siguiente.md)");
 		assertThat(Files.exists(output)).isFalse();
 		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
@@ -337,20 +476,20 @@ class ContentImportCliTest {
 
 			</details>
 			""";
-		String acceptedBody = active.read("demo/lessons/demo-01.02.md") + exercise;
-		active.write("demo/lessons/demo-01.02.md", acceptedBody);
-		active.editManifest(manifest -> ((tools.jackson.databind.node.ArrayNode) ContentFixture.lesson(manifest, "demo-01.02")
-			.path("exercises")).addObject().put("id", "demo-01.02-e01").put("lessonId", "demo-01.02")
+		String acceptedBody = active.read("demo/lessons/demo.01.02.md") + exercise;
+		active.write("demo/lessons/demo.01.02.md", acceptedBody);
+		active.editManifest(manifest -> ((tools.jackson.databind.node.ArrayNode) ContentFixture.lesson(manifest, "demo.01.02")
+			.path("exercises")).addObject().put("id", "demo.01.02.e01").put("lessonId", "demo.01.02")
 			.put("title", "Título exacto"));
 		files.put("fase-01/02-siguiente.md",
 			acceptedBody.replace("Ejercicio 1 · Título exacto", "Ejercicio 1 · Título cambiado").getBytes(StandardCharsets.UTF_8));
 		String changed = commit(files, "retitled exercise\n");
-		// A retitled heading is a new exercise heading, so the accepted exercise is no longer associated: the identity
-		// is reported instead of silently retitled, and the local body keeps its own adaptation report.
+		// A retitled heading is an exercise curso.json does not declare: it is reported, never given a new identity,
+		// and the local body keeps its own adaptation report.
 		assertThat(generate("--commit", changed)).isEqualTo(new Result(3, "Candidate not written; findings: 2\n", ""));
 		assertThat(findings()).containsExactly(
-			"demo-01.02: exercise demo-01.02-e01 «Título exacto» has no heading with that title in the lesson",
-			"local adaptation would be replaced demo/lessons/demo-01.02.md");
+			"demo.01.02: exercise heading «Título cambiado» has no exercise with that title in the manifest",
+			"local adaptation would be replaced demo/lessons/demo.01.02.md");
 		assertThat(Files.exists(output)).isFalse();
 	}
 
@@ -395,17 +534,17 @@ class ContentImportCliTest {
 
 			Nota que sigue a la solución.
 			""";
-		accept("demo-01.02", "fase-01/02-siguiente.md", body, "Detalles anidados");
+		accept("demo.01.02", "fase-01/02-siguiente.md", body, "Detalles anidados");
 		String changed = commit(files, "nested solution\n");
 		assertThat(generate("--commit", changed))
 			.isEqualTo(new Result(0, "Candidate written; lessons: 3; stages: 2; resources: 4\n", ""));
-		ExerciseContent exercise = ContentLoader.loadAll(output).getFirst().lessons().get("demo-01.02").exercises()
+		ExerciseContent exercise = ContentLoader.loadAll(output).getFirst().lessons().get("demo.01.02").exercises()
 			.getFirst();
 		// The statement keeps its own hint block; only the solution leaves it.
 		assertThat(exercise.statementHtml()).contains("Pista inicial").doesNotContain("Solución con", "Ampliar");
 		assertThat(exercise.solutionHtml()).contains("<summary>Ver solución</summary>", "Solución con un bloque anidado",
 			"Más detalle de la solución", "Cierre de la solución", "Nota que sigue a la solución");
-		assertThat(ContentLoader.loadAll(output).getFirst().lessons().get("demo-01.02").bodyHtml())
+		assertThat(ContentLoader.loadAll(output).getFirst().lessons().get("demo.01.02").bodyHtml())
 			.doesNotContain("Solución con", "Pista inicial");
 	}
 
@@ -432,13 +571,13 @@ class ContentImportCliTest {
 
 			</details>
 			""";
-		accept("demo-01.02", "fase-01/02-siguiente.md", body, "Con lead-in");
+		accept("demo.01.02", "fase-01/02-siguiente.md", body, "Con lead-in");
 		String changed = commit(files, "lead-in\n");
 		assertThat(generate("--commit", changed))
 			.isEqualTo(new Result(0, "Candidate written; lessons: 3; stages: 2; resources: 4\n", ""));
-		LessonContent lesson = ContentLoader.loadAll(output).getFirst().lessons().get("demo-01.02");
+		LessonContent lesson = ContentLoader.loadAll(output).getFirst().lessons().get("demo.01.02");
 		assertThat(lesson.bodyHtml()).contains("Antes de empezar, repasa",
-			"<a href=\"/lessons/demo-01.01#qué-aprenderás\">la teoría</a>");
+			"<a href=\"/lessons/demo.01.01#qué-aprenderás\">la teoría</a>");
 		assertThat(lesson.exercises().getFirst().statementHtml()).doesNotContain("Antes de empezar");
 	}
 
@@ -464,16 +603,16 @@ class ContentImportCliTest {
 
 			</details>
 			""";
-		accept("demo-01.02", "fase-01/02-siguiente.md", body, "Fragmento extraído");
+		accept("demo.01.02", "fase-01/02-siguiente.md", body, "Fragmento extraído");
 		active.editManifest(manifest -> ((tools.jackson.databind.node.ObjectNode)
 			ContentFixture.link(manifest, "fase-01/02-siguiente.md").get("fragments"))
 			.put("5-ejercicios-prácticos-resueltos", "5-ejercicios-prácticos-resueltos"));
 		String changed = commit(files, "entry fragments\n");
 		assertThat(generate("--commit", changed))
 			.isEqualTo(new Result(0, "Candidate written; lessons: 3; stages: 2; resources: 4\n", ""));
-		assertThat(ContentLoader.loadAll(output).getFirst().lessons().get("demo-01.02").bodyHtml())
+		assertThat(ContentLoader.loadAll(output).getFirst().lessons().get("demo.01.02").bodyHtml())
 			.contains("<a href=\"/courses/demo\">la sección del proyecto</a>",
-				"<a href=\"/lessons/demo-01.02\">los ejercicios</a>");
+				"<a href=\"/lessons/demo.01.02\">los ejercicios</a>");
 		assertThat(fragments(manifest(), "00-indice.md")).isEmpty();
 	}
 
@@ -488,7 +627,7 @@ class ContentImportCliTest {
 		assertThat(reported()).containsExactly("proyecto/01-inicial.md: sanitizer removed <span>",
 			"proyecto/01-inicial.md: sanitizer removed <u>");
 		assertThat(data.path("written").asBoolean()).isTrue();
-		String html = ContentLoader.loadAll(output).getFirst().stages().get("demo-stage-01").bodyHtml();
+		String html = ContentLoader.loadAll(output).getFirst().stages().get("demo.stage-01").bodyHtml();
 		assertThat(html).contains("Nota con subrayado").doesNotContain("<span", "<u>");
 	}
 
@@ -504,24 +643,24 @@ class ContentImportCliTest {
 		assertThat(findings()).isEmpty();
 		assertThat(reported()).containsExactly("proyecto/01-inicial.md: sanitizer removed <a>",
 			"proyecto/01-inicial.md: sanitizer removed attribute [href] on <a>");
-		assertThat(ContentLoader.loadAll(output).getFirst().stages().get("demo-stage-01").bodyHtml())
+		assertThat(ContentLoader.loadAll(output).getFirst().stages().get("demo.stage-01").bodyHtml())
 			.contains("texto del enlace").doesNotContain("<a", "href", "ejemplo.invalid");
 		// An anchor that also carries an event handler keeps failing: only the href of an anchor is inert.
 		assertBlocked("<a href=\"#inicio\" onclick=\"x()\">x</a>", 1, header,
-			"demo-stage-01: sanitizer removed attribute [href, onclick] on <a>");
+			"demo.stage-01: sanitizer removed attribute [href, onclick] on <a>");
 	}
 
 	@Test void scriptsFramesHandlersRawImagesAndUnknownIdsKeepBlocking() throws Exception {
 		String header = "# Etapa 1\n\nContenido.\n\n";
-		assertBlocked("<script>alert(1)</script>", 1, header, "demo-stage-01: sanitizer removed <script>");
+		assertBlocked("<script>alert(1)</script>", 1, header, "demo.stage-01: sanitizer removed <script>");
 		assertBlocked("<iframe src=\"https://evil.example/\"></iframe>", 1, header,
-			"demo-stage-01: sanitizer removed <iframe>");
+			"demo.stage-01: sanitizer removed <iframe>");
 		assertBlocked("<p onclick=\"x()\">x</p>", 1, header,
-			"demo-stage-01: sanitizer removed attribute [onclick] on <p>");
+			"demo.stage-01: sanitizer removed attribute [onclick] on <p>");
 		assertBlocked("<h2 id=\"evil\">t</h2>", 1, header,
-			"demo-stage-01: sanitizer removed attribute [id] on <h2>");
-		assertBlocked("<img src=\"x\" onerror=\"x()\">", 2, header, "demo-stage-01: raw HTML images are not allowed",
-			"demo-stage-01: sanitizer removed <img>");
+			"demo.stage-01: sanitizer removed attribute [id] on <h2>");
+		assertBlocked("<img src=\"x\" onerror=\"x()\">", 2, header, "demo.stage-01: raw HTML images are not allowed",
+			"demo.stage-01: sanitizer removed <img>");
 	}
 
 	@Test void aPathClaimedByALessonAndAStageYieldsOneResourcePerOwner() throws Exception {
@@ -539,11 +678,11 @@ class ContentImportCliTest {
 		assertThat(shared).extracting(resource -> resource.path("resourceId").asString()).doesNotHaveDuplicates();
 		assertThat(shared).extracting(resource -> resource.path("localPath").asString()).doesNotHaveDuplicates();
 		assertThat(shared.stream().filter(resource -> !resource.path("lessonId").isNull()).count()).isEqualTo(1);
-		assertThat(shared.stream().filter(resource -> "demo-01.01".equals(resource.path("lessonId").asString()))
+		assertThat(shared.stream().filter(resource -> "demo.01.01".equals(resource.path("lessonId").asString()))
 			.count()).isEqualTo(1);
-		assertThat(shared.stream().filter(resource -> "demo-stage-01".equals(resource.path("stageId").asString()))
+		assertThat(shared.stream().filter(resource -> "demo.stage-01".equals(resource.path("stageId").asString()))
 			.count()).isEqualTo(1);
-		byte[] accepted = Files.readAllBytes(active.root.resolve("demo/resources/demo-01.01-r-hello.java"));
+		byte[] accepted = Files.readAllBytes(active.root.resolve("demo/resources/demo.01.01-r-hello.java"));
 		for (JsonNode resource : shared) {
 			assertThat(Files.readAllBytes(output.resolve(resource.path("localPath").asString()))).isEqualTo(accepted);
 		}
@@ -554,7 +693,7 @@ class ContentImportCliTest {
 		assertThat(folder.path("resourceIds")).hasSize(6);
 		JsonNode archive = resource(manifest, "fase-01/codigo/hola/");
 		assertThat(archive.path("resourceId").asString()).isEqualTo(folder.path("zipResourceId").asString());
-		assertThat(archive.path("lessonId").asString()).isEqualTo("demo-01.01");
+		assertThat(archive.path("lessonId").asString()).isEqualTo("demo.01.01");
 		assertThat(archive.path("stageId").isNull()).isTrue();
 		// The archive belongs to the sorted-first owner, so it holds that owner's copy of every shared path.
 		assertThat(archive.path("memberResourceIds")).hasSize(3);
@@ -572,23 +711,23 @@ class ContentImportCliTest {
 		byte[] main = "public class Main {}\n".getBytes(StandardCharsets.UTF_8);
 		byte[] book = "public class Book {}\n".getBytes(StandardCharsets.UTF_8);
 		byte[] loan = "public class Loan {}\n".getBytes(StandardCharsets.UTF_8);
-		active.addResource("demo-01.01-r-main", "fase-01/codigo/hola/src/app/Main.java", "text/plain; charset=utf-8",
+		active.addResource("demo.01.01-r-main", "fase-01/codigo/hola/src/app/Main.java", "text/plain; charset=utf-8",
 			main);
-		active.addResource("demo-01.01-r-book", "fase-01/codigo/hola/src/model/Book.java", "text/plain; charset=utf-8",
+		active.addResource("demo.01.01-r-book", "fase-01/codigo/hola/src/model/Book.java", "text/plain; charset=utf-8",
 			book);
-		active.addResource("demo-01.01-r-loan", "fase-01/codigo/hola/src/model/Loan.java", "text/plain; charset=utf-8",
+		active.addResource("demo.01.01-r-loan", "fase-01/codigo/hola/src/model/Loan.java", "text/plain; charset=utf-8",
 			loan);
-		String intro = active.read("demo/lessons/demo-01.01.md").replace(
+		String intro = active.read("demo/lessons/demo.01.01.md").replace(
 			"📁 **Código:** [`codigo/hola/`](codigo/hola/)",
 			"📁 **Código:** [`codigo/hola/src/app/`](codigo/hola/src/app/), "
 				+ "[`codigo/hola/src/model/`](codigo/hola/src/model/)");
-		active.write("demo/lessons/demo-01.01.md", intro);
+		active.write("demo/lessons/demo.01.01.md", intro);
 		active.editManifest(manifest -> {
 			// The accepted folder of the exercise lists every file once, as its own strict rule requires.
 			((ArrayNode) ContentFixture.link(manifest, "fase-01/codigo/hola/").get("resourceIds"))
-				.add("demo-01.01-r-main").add("demo-01.01-r-book").add("demo-01.01-r-loan");
-			folder(manifest, "fase-01/codigo/hola/src/app/", "demo-01.01-r-main");
-			folder(manifest, "fase-01/codigo/hola/src/model/", "demo-01.01-r-book", "demo-01.01-r-loan");
+				.add("demo.01.01-r-main").add("demo.01.01-r-book").add("demo.01.01-r-loan");
+			folder(manifest, "fase-01/codigo/hola/src/app/", "demo.01.01-r-main");
+			folder(manifest, "fase-01/codigo/hola/src/model/", "demo.01.01-r-book", "demo.01.01-r-loan");
 		});
 		files.put("fase-01/01-intro.md", intro.getBytes(StandardCharsets.UTF_8));
 		files.put("fase-01/codigo/hola/src/app/Main.java", main);
@@ -627,7 +766,7 @@ class ContentImportCliTest {
 				beneath++;
 			}
 			// At most one lesson and one stage claim a folder: only that dual ownership is approved.
-			assertThat(owners).isSubsetOf("demo-01.01", "demo-stage-01");
+			assertThat(owners).isSubsetOf("demo.01.01", "demo.stage-01");
 			listed.put(folder, beneath);
 		}
 		assertThat(listed).containsOnly(
@@ -668,21 +807,21 @@ class ContentImportCliTest {
 			Map.entry("fase-01/codigo/solo/", 1));
 		JsonNode rootFolder = link(manifest, "fase-01/codigo/hola/");
 		JsonNode rootArchive = resource(manifest, "fase-01/codigo/hola/");
-		assertThat(rootArchive.path("stageId").asString()).isEqualTo("demo-stage-01");
+		assertThat(rootArchive.path("stageId").asString()).isEqualTo("demo.stage-01");
 		List<String> rootMembers = ids(rootArchive.path("memberResourceIds"));
 		assertThat(rootMembers).hasSize(6);
 		for (String id : rootMembers) {
 			assertThat(ids(rootFolder.path("resourceIds"))).contains(id);
-			assertThat(resourceById(manifest, id).path("stageId").asString()).isEqualTo("demo-stage-01");
+			assertThat(resourceById(manifest, id).path("stageId").asString()).isEqualTo("demo.stage-01");
 			assertThat(resourceById(manifest, id).path("sourcePath").asString()).startsWith("fase-01/codigo/hola/");
 		}
 		JsonNode nestedArchive = resource(manifest, "fase-01/codigo/hola/src/model/");
-		assertThat(nestedArchive.path("lessonId").asString()).isEqualTo("demo-01.01");
+		assertThat(nestedArchive.path("lessonId").asString()).isEqualTo("demo.01.01");
 		assertThat(ids(nestedArchive.path("memberResourceIds"))).hasSize(2).allSatisfy(id -> assertThat(
 			resourceById(manifest, id).path("sourcePath").asString())
 			.startsWith("fase-01/codigo/hola/src/model/"));
 		CourseContent loaded = ContentLoader.loadAll(output).getFirst();
-		assertThat(loaded.stages().get("demo-stage-01").bodyHtml())
+		assertThat(loaded.stages().get("demo.stage-01").bodyHtml())
 			.contains("/api/resources/" + rootArchive.path("resourceId").asString());
 		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
@@ -693,11 +832,11 @@ class ContentImportCliTest {
 			.isEqualTo(new Result(0, "Candidate written; lessons: 3; stages: 2; resources: 12\n", ""));
 		JsonNode manifest = manifest();
 		JsonNode folder = link(manifest, "fase-01/codigo/solo/");
-		assertThat(ids(folder.path("resourceIds"))).containsExactly("demo-01.01-r-solo");
+		assertThat(ids(folder.path("resourceIds"))).containsExactly("demo.01.01-r-solo");
 		JsonNode archive = resource(manifest, "fase-01/codigo/solo/");
-		assertThat(archive.path("lessonId").asString()).isEqualTo("demo-01.01");
+		assertThat(archive.path("lessonId").asString()).isEqualTo("demo.01.01");
 		assertThat(archive.path("resourceId").asString()).isEqualTo(folder.path("zipResourceId").asString());
-		assertThat(ids(archive.path("memberResourceIds"))).containsExactly("demo-01.01-r-solo");
+		assertThat(ids(archive.path("memberResourceIds"))).containsExactly("demo.01.01-r-solo");
 	}
 
 	/**
@@ -793,12 +932,12 @@ class ContentImportCliTest {
 		listed.remove(listed.size() - 1);
 		assertRefusedBeforeWriting(JSON.treeToValue(omitted, Manifest.class), archives,
 			// The omitted file breaks the folder entry and, with it, the archive that decorates that folder.
-			"ZIP must decorate the folder that lists its members: demo-stage-01-zip-hola-d34d1a2a",
+			"ZIP must decorate the folder that lists its members: demo.stage-01-zip-hola-d34d1a2a",
 			"folder fase-01/codigo/hola/ does not list exactly its resources",
 			"folder ZIP members must be a subset of its folder files: fase-01/codigo/hola/");
 		// A folder that lists a file nobody claims beneath it is refused by the same single validation.
 		ObjectNode unclaimed = (ObjectNode) manifest();
-		((ArrayNode) link(unclaimed, "fase-01/codigo/hola/").get("resourceIds")).add("demo-01.01-r-solo");
+		((ArrayNode) link(unclaimed, "fase-01/codigo/hola/").get("resourceIds")).add("demo.01.01-r-solo");
 		assertRefusedBeforeWriting(JSON.treeToValue(unclaimed, Manifest.class), archives,
 			"folder fase-01/codigo/hola/ does not list exactly its resources");
 	}
@@ -886,7 +1025,7 @@ class ContentImportCliTest {
 		List<String> kept = new ArrayList<>();
 		String omitted = null;
 		for (JsonNode id : listed) {
-			if (omitted == null && "demo-01.01".equals(resourceById(generated, id.asString()).path("lessonId").asString())) {
+			if (omitted == null && "demo.01.01".equals(resourceById(generated, id.asString()).path("lessonId").asString())) {
 				omitted = id.asString();
 				continue;
 			}
@@ -904,8 +1043,8 @@ class ContentImportCliTest {
 	@Test void aSharedFolderThatListsAFileNobodyClaimsIsStillRejected() throws Exception {
 		assertThat(generate("--commit", sharedTree()).code()).isZero();
 		ObjectNode generated = (ObjectNode) manifest();
-		// demo-01.01-r-solo is a registered file of another folder: it claims nothing beneath this one.
-		((ArrayNode) link(generated, "fase-01/codigo/hola/").get("resourceIds")).add("demo-01.01-r-solo");
+		// demo.01.01-r-solo is a registered file of another folder: it claims nothing beneath this one.
+		((ArrayNode) link(generated, "fase-01/codigo/hola/").get("resourceIds")).add("demo.01.01-r-solo");
 		rewrite(generated);
 		assertThat(assertThrows(ContentValidationException.class, () -> ContentLoader.loadAll(output)).problems())
 			.containsExactly("folder fase-01/codigo/hola/ does not list exactly its resources");
@@ -919,14 +1058,13 @@ class ContentImportCliTest {
 		Path comparison = temp.resolve("shared-comparison.json");
 		var result = ContentUpdateComparison.compare(new ContentUpdateCli.Paths(active.root, output, source, comparison));
 		assertThat(result.conflicts()).isEmpty();
-		assertThat(result.report()).contains("addition demo-stage-01");
+		assertThat(result.report()).contains("addition demo.stage-01");
 	}
 
-	@Test void newExerciseHeadingsGetDeterministicIdsAndExistingOnesStayUntouched() throws Exception {
-		// The pending lesson becomes available in the pinned tree only, with two new headings: the accepted copy
-		// holds no body for it, so nothing is an adaptation and every new ID is generated here.
-		files.put("00-indice.md", INDEX.replace("| 2 h | ⏳ Pendiente |", "| 2 h | ✅ Disponible |")
-			.getBytes(StandardCharsets.UTF_8));
+	@Test void exerciseIdsComeOnlyFromCursoJsonAndAreNeverInvented() throws Exception {
+		// The pending lesson becomes available in the pinned tree only, with two exercise headings: the accepted copy
+		// holds no body for it, so nothing is an adaptation. Their IDs can only come from curso.json.
+		module("demo.02.01").put("disponible", true);
 		files.put("fase-02/01-pendiente.md", """
 			# 02.01 Pendiente
 
@@ -959,8 +1097,20 @@ class ContentImportCliTest {
 			</details>
 			""".getBytes(StandardCharsets.UTF_8));
 		// The accepted intro already points at the new lesson, so its fragment must now name a real heading.
-		active.replace("demo/lessons/demo-01.01.md", "#algo-que-no-existe", "#sección-nueva");
-		files.put("fase-01/01-intro.md", Files.readAllBytes(active.root.resolve("demo/lessons/demo-01.01.md")));
+		active.replace("demo/lessons/demo.01.01.md", "#algo-que-no-existe", "#sección-nueva");
+		files.put("fase-01/01-intro.md", Files.readAllBytes(active.root.resolve("demo/lessons/demo.01.01.md")));
+		String undeclared = commit(files, "undeclared exercises\n");
+		assertThat(generate("--commit", undeclared)).isEqualTo(new Result(3, "Candidate not written; findings: 3\n", ""));
+		assertThat(findings()).containsExactly(
+			"demo.02.01: exercise heading «Entrega el informe» has no exercise with that title in the manifest",
+			"demo.02.01: exercise heading «Redacta el informe» has no exercise with that title in the manifest",
+			"demo.02.01: unresolved link #ejercicio-1--redacta-el-informe");
+		assertThat(Files.exists(output)).isFalse();
+		Files.delete(report);
+		// Once the course declares them, they keep exactly the declared IDs.
+		tools.jackson.databind.node.ArrayNode declared = module("demo.02.01").putArray("ejercicios");
+		declared.addObject().put("id", "demo.02.01.redacta").put("titulo", "Redacta el informe");
+		declared.addObject().put("id", "demo.02.01.entrega").put("titulo", "Entrega el informe");
 		String changed = commit(files, "new exercise\n");
 		Result result = generate("--commit", changed);
 		assertThat(findings()).as("findings of the real run").isEmpty();
@@ -969,17 +1119,17 @@ class ContentImportCliTest {
 		JsonNode generated = manifest.path("lessons").get(2).path("exercises");
 		assertThat(generated).hasSize(2);
 		assertThat(generated).extracting(node -> node.path("id").asString())
-			.containsExactly("demo-02.01-e01", "demo-02.01-e02");
+			.containsExactly("demo.02.01.redacta", "demo.02.01.entrega");
 		assertThat(generated).extracting(node -> node.path("lessonId").asString())
-			.containsOnly("demo-02.01");
+			.containsOnly("demo.02.01");
 		assertThat(generated).extracting(node -> node.path("title").asString())
 			.containsExactly("Redacta el informe", "Entrega el informe");
 		assertThat(manifest.path("lessons").get(0).path("exercises"))
-			.extracting(node -> node.path("id").asString()).containsExactly("demo-01.01-e01", "demo-01.01-e02");
+			.extracting(node -> node.path("id").asString()).containsExactly("demo.01.01.e01", "demo.01.01.e02");
 		assertThat(fragments(manifest, "fase-02/01-pendiente.md"))
 			.containsEntry("ejercicio-1--redacta-el-informe", "ejercicio-1--redacta-el-informe");
-		assertThat(ContentLoader.loadAll(output).getFirst().lessons().get("demo-02.01").bodyHtml())
-			.contains("<a href=\"#demo-02.01-e01\">el primer ejercicio</a>");
+		assertThat(ContentLoader.loadAll(output).getFirst().lessons().get("demo.02.01").bodyHtml())
+			.contains("<a href=\"#demo.02.01.redacta\">el primer ejercicio</a>");
 		// Rerun stability: the same pinned tree and accepted copy produce the same candidate.
 		Path second = temp.resolve("candidate-rerun");
 		Path secondReport = temp.resolve("report-rerun.json");
@@ -1000,7 +1150,7 @@ class ContentImportCliTest {
 		String changed = commit(files, "broken fragment\n");
 		assertThat(generate("--commit", changed)).isEqualTo(new Result(3, "Candidate not written; findings: 2\n", ""));
 		assertThat(findings()).containsExactly(
-			"demo-stage-01: unresolved link ../fase-01/01-intro.md#no-existe",
+			"demo.stage-01: unresolved link ../fase-01/01-intro.md#no-existe",
 			"unsupported destination proyecto/01-inicial.md:3: ../fase-01/01-intro.md#no-existe (no heading «no-existe» in fase-01/01-intro.md)");
 		assertThat(Files.exists(output)).isFalse();
 	}
@@ -1017,7 +1167,7 @@ class ContentImportCliTest {
 		assertThat(archive.path("mediaType").asString()).isEqualTo("application/zip");
 		assertThat(archive.path("fileName").asString()).isEqualTo("hola.zip");
 		assertThat(archive.path("memberResourceIds")).isEqualTo(members);
-		assertThat(archive.path("lessonId").asString()).isEqualTo("demo-01.01");
+		assertThat(archive.path("lessonId").asString()).isEqualTo("demo.01.01");
 		assertThat(archive.path("resourceId").asString()).isEqualTo(zipId);
 		// Every reachable member is copied, including dotfiles, and never silently skipped.
 		String dotfileId = null;
@@ -1057,7 +1207,7 @@ class ContentImportCliTest {
 			"Candidate written; lessons: 3; stages: 2; resources: 4; reported: 1\n", ""));
 		assertThat(findings()).isEmpty();
 		assertThat(reported()).containsExactly("protected source path excluded by policy: fase-01/codigo/hola/.env");
-		String html = ContentLoader.loadAll(output).getFirst().stages().get("demo-stage-01").bodyHtml();
+		String html = ContentLoader.loadAll(output).getFirst().stages().get("demo.stage-01").bodyHtml();
 		assertThat(html).contains("la configuración").doesNotContain(".env", "<a");
 		try (var all = Files.walk(output)) {
 			for (Path path : all.filter(Files::isRegularFile).toList()) {
@@ -1072,17 +1222,19 @@ class ContentImportCliTest {
 	@Test void protectedSourcePathsAreExcludedAndReportedWithoutSerializingTheirBytes() throws Exception {
 		// Policy: a protected source path is never read nor serialized. The folder ships without that example file and
 		// the omission is reported with its source path; nothing is substituted for it and the run is not aborted.
+		// The exact name .env.example is the one exception (author's decision, 16 November 2026): it ships as is.
 		files.put("fase-01/codigo/hola/.env", "SECRETO_DIDACTICO=uno\n".getBytes(StandardCharsets.UTF_8));
-		files.put("fase-01/codigo/hola/.env.example", "OTRO_SECRETO=dos\n".getBytes(StandardCharsets.UTF_8));
+		files.put("fase-01/codigo/hola/.env.local", "OTRO_SECRETO=dos\n".getBytes(StandardCharsets.UTF_8));
+		files.put("fase-01/codigo/hola/.env.example", "PLANTILLA=sin-secretos\n".getBytes(StandardCharsets.UTF_8));
 		String changed = commit(files, "protected members\n");
 		Map<String, String> activeBefore = snapshot(active.root);
 		Map<String, String> sourceBefore = snapshot(source);
 		assertThat(generate("--commit", changed)).isEqualTo(new Result(0,
-			"Candidate written; lessons: 3; stages: 2; resources: 4; reported: 2\n", ""));
+			"Candidate written; lessons: 3; stages: 2; resources: 5; reported: 2\n", ""));
 		assertThat(findings()).isEmpty();
 		assertThat(reported()).containsExactly(
 			"protected source path excluded by policy: fase-01/codigo/hola/.env",
-			"protected source path excluded by policy: fase-01/codigo/hola/.env.example");
+			"protected source path excluded by policy: fase-01/codigo/hola/.env.local");
 		assertThat(JSON.readTree(Files.readString(report)).path("written").asBoolean()).isTrue();
 		// Never serialized: no path, manifest entry or stored ZIP copy carries the protected name or its bytes.
 		List<String> paths = new ArrayList<>();
@@ -1096,15 +1248,46 @@ class ContentImportCliTest {
 				}
 			}
 		}
-		assertThat(paths).noneMatch(path -> path.contains(".env"));
 		JsonNode manifest = manifest();
-		assertThat(manifest.path("resources")).noneMatch(resource -> resource.path("sourcePath").asString().contains(".env"));
-		assertThat(manifest.path("sourceToId")).noneMatch(entry -> entry.path("sourcePath").asString().contains(".env"));
-		// The claimed folder keeps the three files it may copy, so the example file is absent, not replaced.
-		assertThat(link(manifest, "fase-01/codigo/hola/").path("resourceIds")).hasSize(3);
+		assertThat(manifest.path("resources")).noneMatch(resource -> resource.path("sourcePath").asString().endsWith("/.env")
+			|| resource.path("sourcePath").asString().contains(".env.local"));
+		// The claimed folder keeps the three files it already had plus .env.example; .env and .env.local are absent.
+		assertThat(link(manifest, "fase-01/codigo/hola/").path("resourceIds")).hasSize(4);
+		JsonNode template = resource(manifest, "fase-01/codigo/hola/.env.example");
+		assertThat(Files.readString(output.resolve(template.path("localPath").asString()))).isEqualTo("PLANTILLA=sin-secretos\n");
+		assertThat(template.path("mediaType").asString()).isEqualTo("text/plain; charset=utf-8");
 		assertThat(ContentLoader.loadAll(output)).hasSize(1);
 		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
+	}
+
+	@Test void aCsvTakesTheCharsetItsFolderDeclaresInCodificacionTxt() throws Exception {
+		// FORMATO.md 7.1: codificacion.txt names, as iconv does, the encoding of the folder's CSV files. The bytes ship
+		// untouched and the charset is declared (author's decision, 16 November 2026); every other text file is UTF-8.
+		byte[] windows1252 = "nombre\nMaría Núñez\n".getBytes(java.nio.charset.Charset.forName("windows-1252"));
+		files.put("fase-01/codigo/hola/socios.csv", windows1252);
+		files.put("fase-01/codigo/hola/codificacion.txt", "WINDOWS-1252\n".getBytes(StandardCharsets.UTF_8));
+		assertThat(generate("--commit", commit(files, "windows-1252 csv\n")).code()).isZero();
+		JsonNode manifest = manifest();
+		JsonNode csv = resource(manifest, "fase-01/codigo/hola/socios.csv");
+		assertThat(csv.path("mediaType").asString()).isEqualTo("text/plain; charset=windows-1252");
+		assertThat(Files.readAllBytes(output.resolve(csv.path("localPath").asString()))).isEqualTo(windows1252);
+		assertThat(resource(manifest, "fase-01/codigo/hola/codificacion.txt").path("mediaType").asString())
+			.isEqualTo("text/plain; charset=utf-8");
+	}
+
+	@Test void aCsvWithoutCodificacionTxtIsUtf8() throws Exception {
+		files.put("fase-01/codigo/hola/socios.csv", "nombre\nMaría\n".getBytes(StandardCharsets.UTF_8));
+		assertThat(generate("--commit", commit(files, "utf-8 csv\n")).code()).isZero();
+		assertThat(resource(manifest(), "fase-01/codigo/hola/socios.csv").path("mediaType").asString())
+			.isEqualTo("text/plain; charset=utf-8");
+	}
+
+	@Test void anUnknownEncodingInCodificacionTxtIsAFinding() throws Exception {
+		files.put("fase-01/codigo/hola/socios.csv", "nombre\nMaría\n".getBytes(StandardCharsets.UTF_8));
+		files.put("fase-01/codigo/hola/codificacion.txt", "KLINGON-1\n".getBytes(StandardCharsets.UTF_8));
+		assertThat(generate("--commit", commit(files, "unknown encoding\n")).code()).isEqualTo(3);
+		assertThat(findings()).contains("fase-01/codigo/hola/codificacion.txt: unknown encoding «KLINGON-1»");
 	}
 
 	@Test void resourceOwnershipStaysExactPerOwner() throws Exception {
@@ -1120,11 +1303,11 @@ class ContentImportCliTest {
 			Vuelve a [la introducción](01-intro.md#qué-aprenderás).
 			""";
 		files.put("fase-01/02-siguiente.md", body.getBytes(StandardCharsets.UTF_8));
-		active.write("demo/lessons/demo-01.02.md", body);
+		active.write("demo/lessons/demo.01.02.md", body);
 		String changed = commit(files, "shared file\n");
 		assertThat(generate("--commit", changed)).isEqualTo(new Result(3, "Candidate not written; findings: 1\n", ""));
 		assertThat(findings())
-			.containsExactly("resource fase-01/codigo/solo/Solo.java is claimed by demo-01.01 and demo-01.02");
+			.containsExactly("resource fase-01/codigo/solo/Solo.java is claimed by demo.01.01 and demo.01.02");
 		assertThat(Files.exists(output)).isFalse();
 	}
 
@@ -1133,7 +1316,7 @@ class ContentImportCliTest {
 		Map<String, String> activeBefore = snapshot(active.root);
 		Map<String, String> sourceBefore = snapshot(source);
 		assertThat(generate()).isEqualTo(new Result(3, "Candidate not written; findings: 1\n", ""));
-		assertThat(findings()).containsExactly("local adaptation would be replaced demo/lessons/demo-01.01.md");
+		assertThat(findings()).containsExactly("local adaptation would be replaced demo/lessons/demo.01.01.md");
 		assertThat(Files.exists(output)).isFalse();
 		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
@@ -1218,10 +1401,15 @@ class ContentImportCliTest {
 			tools.jackson.databind.node.ArrayNode exercises =
 				(tools.jackson.databind.node.ArrayNode) ContentFixture.lesson(manifest, lessonId).path("exercises");
 			for (int i = 0; i < titles.length; i++) {
-				exercises.addObject().put("id", lessonId + "-e%02d".formatted(i + 1)).put("lessonId", lessonId)
+				exercises.addObject().put("id", lessonId + ".e%02d".formatted(i + 1)).put("lessonId", lessonId)
 					.put("title", titles[i]);
 			}
 		});
+		// The course declares the same exercises in its curso.json: that is the identity the importer reads.
+		tools.jackson.databind.node.ArrayNode declared = module(lessonId).putArray("ejercicios");
+		for (int i = 0; i < titles.length; i++) {
+			declared.addObject().put("id", lessonId + ".e%02d".formatted(i + 1)).put("titulo", titles[i]);
+		}
 		files.put(sourcePath, body.getBytes(StandardCharsets.UTF_8));
 	}
 
@@ -1279,7 +1467,17 @@ class ContentImportCliTest {
 	}
 
 	String commit(Map<String, byte[]> content, String message) throws Exception {
-		return git(message.getBytes(StandardCharsets.UTF_8), "commit-tree", tree(content)).strip();
+		Map<String, byte[]> withCourse = new TreeMap<>(content);
+		withCourse.put("curso.json", JSON.writeValueAsBytes(curso));
+		return git(message.getBytes(StandardCharsets.UTF_8), "commit-tree", tree(withCourse)).strip();
+	}
+
+	/** The module of curso.json with this ID, to change what the course declares in one test. */
+	ObjectNode module(String id) {
+		for (JsonNode phase : curso.path("fases")) for (JsonNode module : phase.path("modulos")) {
+			if (id.equals(module.path("id").asString())) return (ObjectNode) module;
+		}
+		throw new IllegalArgumentException(id);
 	}
 
 	String tree(Map<String, byte[]> content) throws Exception {
@@ -1330,7 +1528,11 @@ class ContentImportCliTest {
 		Map<String, String> options = new TreeMap<>(Map.of("--active", active.root.toString(),
 			"--source", source.toString(), "--commit", commit, "--output", output.toString(),
 			"--report", report.toString()));
-		for (int i = 0; i < overrides.length; i += 2) options.put(overrides[i], overrides[i + 1]);
+		// A null value drops the option (to install by --tag instead of --commit).
+		for (int i = 0; i < overrides.length; i += 2) {
+			if (overrides[i + 1] == null) options.remove(overrides[i]);
+			else options.put(overrides[i], overrides[i + 1]);
+		}
 		List<String> args = new ArrayList<>(List.of("generate"));
 		options.forEach((name, value) -> {
 			args.add(name);

@@ -37,8 +37,8 @@ class StageRejectionTest extends StageTestSupport {
 	@NullAndEmptySource
 	@ValueSource(strings = {"{}", "null", "[]", "true", "{", "{\"stageId\":null}", "{\"stageId\":1}",
 		"{\"stageId\":true}", "{\"stageId\":[]}", "{\"stageId\":{}}",
-		"{\"stageId\":\"demo-stage-first\",\"stageId\":\"demo-stage-last\"}",
-		"{\"stageId\":\"demo-stage-first\",\"lessonId\":\"demo-01.01\"}"})
+		"{\"stageId\":\"demo.stage-first\",\"stageId\":\"demo.stage-last\"}",
+		"{\"stageId\":\"demo.stage-first\",\"lessonId\":\"demo.01.01\"}"})
 	void invalidContinuationShapeChangesNothingOnAnExistingEnrollment(String body) throws Exception {
 		var browser = learner();
 		ok(mark(browser, FIRST, "completed"));
@@ -66,7 +66,7 @@ class StageRejectionTest extends StageTestSupport {
 	@Test
 	void unknownIdsAndCourseMismatchNeverCreateOrChangePersonalData() throws Exception {
 		var browser = learner();
-		for (String id : List.of("demo-stage-missing", "DEMO-stage-first", "demo-stage-first%20", "demo-01.01")) {
+		for (String id : List.of("demo.stage-missing", "DEMO-stage-first", "demo.stage-first%20", "demo.01.01")) {
 			rejected(browser, 404, "NOT_FOUND", () -> browser.get("/api/stages/" + id));
 			rejected(browser, 404, "NOT_FOUND", () -> mark(browser, id, "completed"));
 			rejected(browser, 404, "NOT_FOUND", () -> open(browser, "demo", id));
@@ -96,7 +96,7 @@ class StageRejectionTest extends StageTestSupport {
 		for (String csrf : new String[] {null, "wrong-token"}) {
 			rejected(browser, 403, "CSRF_REJECTED", () -> browser.send("PUT", "/api/me/stages/" + FIRST + "/state", state("completed"), csrf));
 			rejected(browser, 403, "CSRF_REJECTED", () -> browser.send("PUT", "/api/me/courses/demo/stage-continuation",
-				"{\"stageId\":\"demo-stage-first\"}", csrf));
+				"{\"stageId\":\"demo.stage-first\"}", csrf));
 		}
 	}
 
@@ -113,7 +113,7 @@ class StageRejectionTest extends StageTestSupport {
 		rejected(browser, 406, "NOT_ACCEPTABLE", () -> browser.sendAccepting("PUT", "/api/me/stages/" + FIRST + "/state", state("completed"), "text/html"));
 		ok(mark(browser, FIRST, "completed"));
 		rejected(browser, 406, "NOT_ACCEPTABLE", () -> browser.sendAccepting("PUT", "/api/me/courses/demo/stage-continuation",
-			"{\"stageId\":\"demo-stage-last\"}", "application/xml"));
+			"{\"stageId\":\"demo.stage-last\"}", "application/xml"));
 	}
 
 	@Test
@@ -138,7 +138,7 @@ class StageRejectionTest extends StageTestSupport {
 			rejected(visitor, 400, "INVALID_REQUEST", () -> visitor.send("PUT", "/api/me/stages/" + FIRST + "/state",
 				"{\"state\":\"completed\",\"" + field + "\":\"" + foreign + "\"}"));
 			rejected(visitor, 400, "INVALID_REQUEST", () -> visitor.send("PUT", "/api/me/courses/demo/stage-continuation",
-				"{\"stageId\":\"demo-stage-first\",\"" + field + "\":\"" + foreign + "\"}"));
+				"{\"stageId\":\"demo.stage-first\",\"" + field + "\":\"" + foreign + "\"}"));
 		}
 		ok(mark(visitor, FIRST, "not_completed"));
 		ok(open(visitor, "demo", FIRST));

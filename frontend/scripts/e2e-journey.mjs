@@ -8,7 +8,7 @@
 // The owner's Compose project (service db, volume code-academy_postgres_data) is never used.
 import { spawn, execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { createWriteStream, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { createServer as createTcpServer } from 'node:net'
 import { dirname, join, resolve } from 'node:path'
@@ -20,7 +20,10 @@ const frontendDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repoDir = resolve(frontendDir, '..')
 const backendDir = join(repoDir, 'backend')
 const jar = join(backendDir, 'target', 'backend-0.0.1-SNAPSHOT.jar')
-const contentDir = join(repoDir, 'content')
+// The kit's two example courses, installed for this run by the real offline importer (content-import),
+// in install order: «bueno» links to «ejemplo-destino». The academy's own content/ is never read.
+const exampleCourses = join(repoDir, 'cursos-ejemplo')
+const exampleFolders = ['bueno', 'ejemplo-destino']
 const image = 'postgres:18.6'
 const database = 'code_academy'
 // Not «code_academy»: with PostgreSQL's default search_path ("$user", public) a role named like
@@ -33,6 +36,7 @@ const stamp = new Date().toISOString().replace(/[:.]/g, '-')
 const runDir = join(frontendDir, 'test-results', 'journey', stamp)
 const logDir = join(runDir, 'logs')
 const screenshotDir = join(runDir, 'screenshots')
+const contentDir = join(runDir, 'content')
 const container = `code-academy-e2e-${randomBytes(4).toString('hex')}`
 // Generated per run, passed only through child environments, never printed or written.
 const dbPassword = randomBytes(24).toString('hex')
@@ -116,6 +120,42 @@ function backendEnvironment(dbPort) {
     SPRING_DATASOURCE_URL: `jdbc:postgresql://127.0.0.1:${dbPort}/${database}`,
     SPRING_DATASOURCE_USERNAME: dbUser,
     SPRING_DATASOURCE_PASSWORD: dbPassword,
+  }
+}
+
+/** Fixed identity and dates, and nothing from the machine's Git configuration: the same commits on every run. */
+const gitEnvironment = {
+  ...process.env,
+  GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1',
+  GIT_AUTHOR_NAME: 'Fixture', GIT_AUTHOR_EMAIL: 'fixture@example.invalid',
+  GIT_COMMITTER_NAME: 'Fixture', GIT_COMMITTER_EMAIL: 'fixture@example.invalid',
+  GIT_AUTHOR_DATE: '2026-01-01T00:00:00 +0000', GIT_COMMITTER_DATE: '2026-01-01T00:00:00 +0000',
+}
+
+/**
+ * Installs the example courses the way an academy does: each one committed, as it is, to a repository of its own
+ * (the folder itself is never touched) and generated with content-import on top of the previous copy.
+ */
+async function installExampleCourses() {
+  const work = join(runDir, 'content-import')
+  let active = join(work, 'empty')
+  mkdirSync(active, { recursive: true })
+  for (const [index, folder] of exampleFolders.entries()) {
+    const repository = join(work, `${folder}.git`)
+    const git = (...args) => run('git', [`--git-dir=${repository}`, ...args], { env: gitEnvironment })
+    await run('git', ['init', '--bare', '--quiet', repository], { env: gitEnvironment })
+    await git(`--work-tree=${join(exampleCourses, folder)}`, 'add', '--all')
+    await git(`--work-tree=${join(exampleCourses, folder)}`, 'commit', '--quiet', '--message=ejemplo')
+    // Installed the way an academy installs a published version: by its tag, v + the version of curso.json.
+    const version = JSON.parse(readFileSync(join(exampleCourses, folder, 'curso.json'), 'utf8')).version
+    const tag = `v${version}`
+    await git('tag', tag)
+    const output = index === exampleFolders.length - 1 ? contentDir : join(work, `content-${index + 1}`)
+    const { stdout } = await run('java', ['-Dloader.main=dev.codeacademy.content.ContentImportCli', '-cp', jar,
+      'org.springframework.boot.loader.launch.PropertiesLauncher', 'generate', '--active', active, '--source', repository,
+      '--tag', tag, '--output', output, '--report', join(logDir, `content-import-${folder}.json`)])
+    log(`${folder}: ${stdout.trim()}`)
+    active = output
   }
 }
 
@@ -235,6 +275,7 @@ async function main() {
   process.once('SIGTERM', interrupt)
 
   try {
+    await timed('content', installExampleCourses)
     databaseStarted = true
     await timed('database', () => startDatabase(dbPort))
     log('postgres ready')
@@ -249,6 +290,7 @@ async function main() {
       E2E_CONTROL_URL: `http://127.0.0.1:${control.port}`,
       E2E_CONTROL_TOKEN: controlToken,
       E2E_RUN_DIR: runDir,
+      E2E_CONTENT_DIR: contentDir,
       E2E_SCREENSHOT_DIR: screenshotDir,
     })
     exitCode = await timed('playwright', () => playwright(env))

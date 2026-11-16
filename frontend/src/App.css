@@ -350,6 +350,16 @@
   font-size: var(--text-xl);
 }
 
+.course-description {
+  margin: 0 0 var(--space-2);
+}
+
+.course-recommended {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 .empty p {
   margin: 0 0 var(--space-4);
 }

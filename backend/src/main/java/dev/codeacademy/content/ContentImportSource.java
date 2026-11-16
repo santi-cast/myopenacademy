@@ -47,6 +47,25 @@ final class ContentImportSource implements AutoCloseable {
 		this.replies = new BufferedInputStream(batch.getInputStream(), 1 << 16);
 	}
 
+	/** FORMATO.md 11.1: a published version is tagged v + MAJOR.MINOR.PATCH, e.g. v2.1.0. */
+	static final java.util.regex.Pattern VERSION_TAG =
+		java.util.regex.Pattern.compile("v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)");
+
+	/**
+	 * The full commit a version tag names, lightweight or annotated. Only refs/tags/ is read, so a branch with the same
+	 * name never answers, and the repository is only read (Git objects and refs).
+	 */
+	static String resolveTag(Path repository, String tag) throws IOException {
+		if (tag == null || !VERSION_TAG.matcher(tag).matches()) {
+			throw new IllegalArgumentException("--tag must be a version tag like v1.2.3");
+		}
+		byte[] resolved = ContentUpdateComparison.git(repository, "rev-parse", "--verify", "--quiet",
+			"refs/tags/" + tag + "^{commit}");
+		String commit = resolved == null ? "" : new String(resolved, StandardCharsets.UTF_8).strip();
+		if (!COMMIT.matcher(commit).matches()) throw new IllegalArgumentException("source tag unavailable " + tag);
+		return commit;
+	}
+
 	static ContentImportSource open(Path repository, String commit) throws IOException {
 		if (commit == null || !COMMIT.matcher(commit).matches()) {
 			throw new IllegalArgumentException("--commit must be a full 40-character commit hash");

@@ -44,6 +44,15 @@ public final class ContentLoader {
 	 * IDs must also be unique across courses; any problem in any course aborts the whole load.
 	 */
 	public static List<CourseContent> loadAll(Path contentRoot) {
+		return loadAll(contentRoot, false);
+	}
+
+	/** The courses installed in a content root, which may hold none yet: an academy starts with no course. */
+	static List<CourseContent> loadInstalled(Path contentRoot) {
+		return loadAll(contentRoot, true);
+	}
+
+	private static List<CourseContent> loadAll(Path contentRoot, boolean allowEmpty) {
 		Path root = realRoot(contentRoot);
 		List<String> manifests;
 		try (Stream<Path> entries = Files.list(root)) {
@@ -53,6 +62,7 @@ public final class ContentLoader {
 		catch (IOException ex) {
 			throw new ContentValidationException("content root " + contentRoot + " cannot be read");
 		}
+		if (manifests.isEmpty() && allowEmpty) return List.of();
 		if (manifests.isEmpty()) throw new ContentValidationException("content root " + contentRoot + " has no course");
 		List<CourseContent> courses = manifests.stream().map(manifest -> load(root, manifest)).toList();
 		List<String> problems = new ArrayList<>();

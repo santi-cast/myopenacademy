@@ -22,14 +22,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Hostile snippets from the independent Part 2 verification, inserted into a copy of the real lesson body, the first
- * statement and the first solution: each is either rejected by validation or loads with no dangerous tag, attribute
+ * Hostile snippets from the independent Part 2 verification, inserted into a copy of the example course's lesson body,
+ * its first statement and its first solution: each is either rejected by validation or loads with no dangerous tag, attribute
  * or scheme between its markers and no repeated id.
  */
 class MaliciousContentTest {
 
-	private static final Path CONTENT = Path.of("../content");
-	private static final String LESSON = "java/lessons/java-02.01.md";
+	private static final String LESSON = "ejemplo/lessons/" + ExampleContent.LESSON + ".md";
 	private static final Pattern DANGER = Pattern.compile(
 			"(?is)<script|<[^>]*\\son[a-z]+\\s*=|javascript:|vbscript:|data:|<svg|<math|<iframe|<object|<embed|<style|style=|<img|href=\"//|<!--|cdata|<form|<input|<base|<meta|<link|<template|<noscript|<textarea|<select|<button|xlink|<\\?|<!doctype|title=|id=\"evil\"");
 	private static final Pattern ID = Pattern.compile("\\sid=\"([^\"]*)\"");
@@ -111,13 +110,13 @@ class MaliciousContentTest {
 		c.put("textarea", "<textarea><script>alert(1)</script></textarea>");
 		c.put("template", "<template><script>alert(1)</script></template>");
 		c.put("select-style", "<select><style><img src=x onerror=alert(1)>");
-		c.put("raw-internal-a", "<a href=\"/lessons/java-02.01#1-teoría\">x</a>");
+		c.put("raw-internal-a", "<a href=\"/lessons/" + ExampleContent.LESSON + "#1-teoría\">x</a>");
 		c.put("md-internal-fragment-ok", "[x](#1-teoría)");
-		c.put("md-pending-with-fragment", "[x](02-variables-y-tipos.md#algo-inventado)");
+		c.put("md-pending-with-fragment", "[x](02-ficheros-yaml.md#algo-inventado)");
 		c.put("md-unknown-fragment", "[x](#no-existe)");
 		c.put("md-unknown-file", "[x](no-existe.md)");
 		c.put("md-traversal", "[x](../../../../etc/passwd)");
-		c.put("md-query", "[x](02-variables-y-tipos.md?x=1)");
+		c.put("md-query", "[x](02-ficheros-yaml.md?x=1)");
 		return c;
 	}
 
@@ -134,7 +133,7 @@ class MaliciousContentTest {
 	@ParameterizedTest(name = "{0} in {1}")
 	@MethodSource("placements")
 	void isRejectedOrLoadsWithoutDanger(String name, String where, String snippet) throws IOException {
-		Path root = copyOfTheRealCourse();
+		Path root = ExampleContent.copyInto(tempDir.resolve("content"));
 		Path lesson = root.resolve(LESSON);
 		String markdown = Files.readString(lesson, StandardCharsets.UTF_8);
 		String block = "\n\nMARKA\n\n" + snippet + "\n\nMARKB\n\n";
@@ -145,15 +144,17 @@ class MaliciousContentTest {
 				yield markdown.substring(0, eol) + block + markdown.substring(eol + 1);
 			}
 			default -> {
-				int close = markdown.indexOf("</details>");
-				yield markdown.substring(0, close) + block + markdown.substring(close);
+				int eol = markdown.indexOf('\n', markdown.indexOf("<summary>Ver solución</summary>"));
+				yield markdown.substring(0, eol) + block + markdown.substring(eol + 1);
 			}
 		};
 		Files.writeString(lesson, markdown, StandardCharsets.UTF_8);
 
 		LessonContent loaded;
 		try {
-			loaded = ContentLoader.loadAll(root).get(0).lessons().get("java-02.01");
+			loaded = ContentLoader.loadAll(root).stream()
+				.filter(course -> course.lessons().containsKey(ExampleContent.LESSON)).findFirst().orElseThrow()
+				.lessons().get(ExampleContent.LESSON);
 		}
 		catch (ContentValidationException rejected) {
 			return;
@@ -176,17 +177,5 @@ class MaliciousContentTest {
 			Matcher id = ID.matcher(field);
 			while (id.find()) assertThat(ids.add(id.group(1))).as("repeated id " + id.group(1)).isTrue();
 		}
-	}
-
-	private Path copyOfTheRealCourse() throws IOException {
-		Path root = tempDir.resolve("content");
-		try (Stream<Path> files = Files.walk(CONTENT.resolve("java"))) {
-			for (Path source : files.toList()) {
-				Path target = root.resolve(CONTENT.relativize(source).toString());
-				if (Files.isDirectory(source)) Files.createDirectories(target);
-				else Files.copy(source, target);
-			}
-		}
-		return root;
 	}
 }

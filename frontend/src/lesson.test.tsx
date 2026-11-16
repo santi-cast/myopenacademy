@@ -253,9 +253,9 @@ describe('exercises (S21)', () => {
     const card = document.getElementById('java-02.01-e08')!
     const summary = card.querySelector('summary')!
     expect(summary).toHaveTextContent('Ver solución')
-    expect(summary).toHaveTextContent('Antes de abrirla, intentá explicar la solución con tus palabras.')
+    expect(summary).toHaveTextContent('Antes de abrirla, intenta explicar la solución con tus palabras.')
     expect(card.querySelectorAll('details')).toHaveLength(1)
-    expect(within(card).getByText('Marcá vos el estado: la academia no corrige los ejercicios.')).toBeVisible()
+    expect(within(card).getByText('Marca tú el estado: la academia no corrige los ejercicios.')).toBeVisible()
 
     const before = backend.calls.length
     fireEvent.click(summary)
@@ -305,7 +305,7 @@ describe('lesson state (PLAN §3 rules 5–8)', () => {
     const [top] = screen.getAllByRole('group', { name: 'Estado de la lección' })
     fireEvent.click(within(top).getByRole('radio', { name: 'Completada' }))
 
-    expect(await within(top).findByText('Algo salió mal. Intentá de nuevo en unos minutos.')).toBeVisible()
+    expect(await within(top).findByText('Algo salió mal. Inténtalo de nuevo en unos minutos.')).toBeVisible()
     expect(within(top).getByRole('radio', { name: 'No completada' })).toBeChecked()
     expect(screen.queryByText(/Guardado ·/)).toBeNull()
     expect(apiCalls(backend).filter((call) => call.startsWith('PUT /api/me/lessons'))).toHaveLength(1)

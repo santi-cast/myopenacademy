@@ -119,7 +119,8 @@ final class ContentImportDocuments {
 		String name = sourcePath.substring(sourcePath.lastIndexOf('/') + 1).toLowerCase(Locale.ROOT);
 		int dot = name.lastIndexOf('.');
 		String extension = dot < 0 ? name : name.substring(dot + 1);
-		if (TEXT.contains(extension)) return "text/plain; charset=utf-8";
+		// .env.example, the one .env.* name the policy lets through, is a plain text template.
+		if (TEXT.contains(extension) || name.equals(".env.example")) return "text/plain; charset=utf-8";
 		return switch (extension) {
 			case "png" -> "image/png";
 			case "jpg", "jpeg" -> "image/jpeg";

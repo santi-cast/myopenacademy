@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import dev.codeacademy.content.ExampleContent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +23,8 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,6 +39,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ExtendWith(OutputCaptureExtension.class)
 class CodeAcademyApplicationTest {
+	/** The kit's example courses: these tests need an academy that starts, not any particular content. */
+	@DynamicPropertySource
+	static void content(DynamicPropertyRegistry registry) {
+		registry.add("code-academy.content-dir", () -> ExampleContent.root().toString());
+	}
+
 
 	@Autowired ApplicationContext context;
 	@Autowired JdbcTemplate jdbc;
@@ -66,9 +75,9 @@ class CodeAcademyApplicationTest {
 	void denyApi401WithoutBasicChallengeOrLoginForm() throws Exception {
 		var before = databaseSnapshot();
 		String genericBody = null;
-		for (String path : List.of("/api/me", "/api/courses", "/api/courses/java",
+		for (String path : List.of("/api/me", "/api/courses", "/api/courses/ejemplo",
 				"/api/lessons/unknown", "/api/resources/unknown", "/api/me/courses",
-				"/api/me/courses/java/progress", "/api/future-route", "/login",
+				"/api/me/courses/ejemplo/progress", "/api/future-route", "/login",
 				"/actuator", "/actuator/env", "/actuator/health/db", "/outside-api")) {
 			var response = request("GET", path, null);
 			assertError(response, 401, "AUTHENTICATION_REQUIRED");
@@ -85,7 +94,7 @@ class CodeAcademyApplicationTest {
 			assertError(request("POST", path, null), 403, "CSRF_REJECTED");
 		}
 		for (String method : List.of("PUT", "PATCH", "DELETE")) {
-			assertError(request(method, "/api/me/courses/java", null), 403, "CSRF_REJECTED");
+			assertError(request(method, "/api/me/courses/ejemplo", null), 403, "CSRF_REJECTED");
 		}
 
 		// The official SPA integration must materialize a readable token on a safe request.
@@ -101,7 +110,7 @@ class CodeAcademyApplicationTest {
 			assertError(request("POST", path, token.orElseThrow().getValue()), 400, "INVALID_REQUEST");
 		}
 		for (String method : List.of("PUT", "PATCH", "DELETE")) {
-			assertError(request(method, "/api/me/courses/java", token.orElseThrow().getValue()),
+			assertError(request(method, "/api/me/courses/ejemplo", token.orElseThrow().getValue()),
 					401, "AUTHENTICATION_REQUIRED");
 		}
 		assertThat(request("POST", "/api/auth/logout", token.orElseThrow().getValue()).statusCode()).isEqualTo(204);

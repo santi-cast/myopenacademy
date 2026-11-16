@@ -28,7 +28,7 @@ export function ProjectPage() {
       {last && <Link className="btn btn-end" to={`/stages/${encodeURIComponent(last.id)}`}>Retomar proyecto</Link>}
     </div>
     <p><Link to={`/courses/${encodeURIComponent(courseId)}`}>Índice del curso</Link></p>
-    <p>Progreso independiente de las lecciones. Marcá vos cada etapa como completada o no completada.</p>
+    <p>Progreso independiente de las lecciones. Marca tú cada etapa como completada o no completada.</p>
     <p hidden id="pending-stage-description">Etapa pendiente: todavía no disponible, no se puede abrir.</p>
     {index.stages.length === 0 ? <p>Todavía no hay etapas en este curso.</p> : <table className="phase-table">
       <caption>Etapas del proyecto</caption>

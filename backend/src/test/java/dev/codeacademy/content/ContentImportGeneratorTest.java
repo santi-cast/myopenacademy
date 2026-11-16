@@ -129,18 +129,18 @@ class ContentImportGeneratorTest {
 	@Test
 	void folderMembershipIsOnePassOverTheClaimedResources() {
 		Counting claimed = new Counting();
-		claimed.put("carpeta/a/Uno.java", List.of("demo-01.01-r-uno"));
-		claimed.put("carpeta/a/src/Dos.java", List.of("demo-01.01-r-dos", "demo-stage-01-r-dos"));
-		claimed.put("carpeta/ab/Tres.java", List.of("demo-01.01-r-tres"));
-		claimed.put("carpeta/c/Cuatro.java", List.of("demo-stage-01-r-cuatro"));
+		claimed.put("carpeta/a/Uno.java", List.of("demo.01.01-r-uno"));
+		claimed.put("carpeta/a/src/Dos.java", List.of("demo.01.01-r-dos", "demo.stage-01-r-dos"));
+		claimed.put("carpeta/ab/Tres.java", List.of("demo.01.01-r-tres"));
+		claimed.put("carpeta/c/Cuatro.java", List.of("demo.stage-01-r-cuatro"));
 		Map<String, List<String>> members = ContentImportGenerator.folderMembers(claimed,
 			List.of("carpeta/a/", "carpeta/a/src/", "carpeta/c/"), Function.identity());
 		assertThat(members).containsOnly(
-			Map.entry("carpeta/a/", List.of("demo-01.01-r-uno", "demo-01.01-r-dos", "demo-stage-01-r-dos")),
-			Map.entry("carpeta/a/src/", List.of("demo-01.01-r-dos", "demo-stage-01-r-dos")),
-			Map.entry("carpeta/c/", List.of("demo-stage-01-r-cuatro")));
+			Map.entry("carpeta/a/", List.of("demo.01.01-r-uno", "demo.01.01-r-dos", "demo.stage-01-r-dos")),
+			Map.entry("carpeta/a/src/", List.of("demo.01.01-r-dos", "demo.stage-01-r-dos")),
+			Map.entry("carpeta/c/", List.of("demo.stage-01-r-cuatro")));
 		// A prefix that is not a folder component is not containment: carpeta/ab/ is not below carpeta/a/.
-		assertThat(members.get("carpeta/a/")).doesNotContain("demo-01.01-r-tres");
+		assertThat(members.get("carpeta/a/")).doesNotContain("demo.01.01-r-tres");
 		assertThat(claimed.scans).as("passes over the claimed resources").isEqualTo(1);
 	}
 
@@ -148,7 +148,7 @@ class ContentImportGeneratorTest {
 	@Test
 	void folderMembershipIgnoresUnclaimedFoldersAndUncontainedClaims() {
 		Map<String, List<String>> members = ContentImportGenerator.folderMembers(
-			new TreeMap<>(Map.of("carpeta/a/Uno.java", List.of("demo-01.01-r-uno"))),
+			new TreeMap<>(Map.of("carpeta/a/Uno.java", List.of("demo.01.01-r-uno"))),
 			List.of("carpeta/b/"), Function.identity());
 		assertThat(members).containsOnly(Map.entry("carpeta/b/", List.of()));
 	}

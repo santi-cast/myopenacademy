@@ -1,0 +1,3 @@
+# Lo que se teclea en la terminal
+ls
+cat cliente.json

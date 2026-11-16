@@ -17,7 +17,7 @@ export function MyCoursesPage() {
       {loaded.status === 'failed' && <LoadFailure error={loaded.error} />}
       {loaded.status === 'ready' && loaded.data.courses.length === 0 && (
         <div className="empty">
-          <p>Todavía no añadiste ningún curso.</p>
+          <p>Todavía no has añadido ningún curso.</p>
           <Link className="btn" to="/courses">Explorar el catálogo</Link>
         </div>
       )}

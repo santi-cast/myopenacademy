@@ -1,10 +1,13 @@
 package dev.codeacademy;
 
+import dev.codeacademy.content.ExampleContent;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import dev.codeacademy.account.AccountPrincipal;
 import dev.codeacademy.account.CurrentCredentials;
@@ -15,6 +18,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CredentialsCheckFailureTest {
+	/** The kit's example courses: these tests need an academy that starts, not any particular content. */
+	@DynamicPropertySource
+	static void content(DynamicPropertyRegistry registry) {
+		registry.add("code-academy.content-dir", () -> ExampleContent.root().toString());
+	}
+
 	@MockitoSpyBean CurrentCredentials credentials;
 	@LocalServerPort int port;
 

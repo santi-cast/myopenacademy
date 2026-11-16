@@ -42,7 +42,7 @@ public final class ContentUpdateCli {
                 || args[i + 1].isBlank() || options.putIfAbsent(args[i], args[i + 1]) != null) throw invalid();
         }
         Paths paths = new Paths(checked(Path.of(options.get("--active"))), checked(Path.of(options.get("--candidate"))),
-            checked(Path.of(options.get("--source"))), checked(Path.of(options.get("--report"))));
+            checkedSource(Path.of(options.get("--source"))), checked(Path.of(options.get("--report"))));
         List<Path> distinct = List.of(paths.active(), paths.candidate(), paths.source(), paths.report());
         for (int i = 0; i < distinct.size(); i++) for (int j = i + 1; j < distinct.size(); j++) {
             if (overlaps(distinct.get(i), distinct.get(j))) throw new IllegalArgumentException("paths must not overlap");
@@ -73,6 +73,15 @@ public final class ContentUpdateCli {
     }
 
     static boolean overlaps(Path a, Path b) { return a.startsWith(b) || b.startsWith(a); }
+
+    /**
+     * The source repository may be given relative and with {@code ..} ({@code ../Cursos/curso-inicial}, the layout of the
+     * common plan): it is only read, through Git objects, so the path is normalized first and then gets every other check
+     * (no protected names, no symbolic links, no overlap with the other paths). The paths that are written stay strict.
+     */
+    static Path checkedSource(Path input) throws IOException {
+        return checked(input.toAbsolutePath().normalize());
+    }
 
     /** Reject lexical escapes and symlink ancestors even when the final file does not yet exist. */
     static Path checked(Path input) throws IOException {

@@ -1,0 +1,8 @@
+# Saltos de línea LF en todos los ficheros de texto, en el repositorio y en cualquier clon, también en
+# Windows (con core.autocrlf=true, lo normal en Git for Windows, llegarían con CRLF). Con CRLF, bash
+# falla ($'\r': orden no encontrada) y grep, cut o read ven un \r al final de cada línea de los datos.
+# Los binarios (imágenes, ZIP…) Git los reconoce solo y no los toca.
+* text=auto eol=lf
+
+# Si un fichero tiene CRLF a propósito (para enseñar el error), márcalo así y el kit no avisa:
+# fase-NN-nombre/codigo/NN-modulo/ejemplos/N.N-nombre/fichero.sh -text

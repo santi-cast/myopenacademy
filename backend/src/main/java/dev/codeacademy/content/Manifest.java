@@ -27,10 +27,25 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 	public record GeneratedFile(String localPath, String copySha256, List<String> inputResourceIds) {
 	}
 
-	public record Source(String name, String versionRef) {
+	/**
+	 * Where the copy comes from: the pinned commit ({@code versionRef}) and, when it was installed from a version tag,
+	 * that tag and the {@code version} of curso.json it names (FORMATO.md 11.1; H7, A5). {@code repository} is the
+	 * {@code repositorio} of curso.json: with the commit and the tag, what the list of installed courses records (T7).
+	 */
+	public record Source(String name, String versionRef, String versionTag, String courseVersion, String repository) {
+		public Source(String name, String versionRef) {
+			this(name, versionRef, null, null, null);
+		}
 	}
 
-	public record Course(String id, String namespace, String title) {
+	/**
+	 * The course as the catalog shows it: {@code description} and {@code recommended} (the course IDs it is worth doing
+	 * first, never a requirement) come from curso.json ({@code descripcion}, {@code conviene_saber_antes}; H7, T6).
+	 */
+	public record Course(String id, String namespace, String title, String description, List<String> recommended) {
+		public Course(String id, String namespace, String title) {
+			this(id, namespace, title, null, null);
+		}
 	}
 
 	/** A permanent group of lessons; its title is taken verbatim from the source course index. */

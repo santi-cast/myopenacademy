@@ -7,7 +7,7 @@ export type SaveStatus =
 
 export type SaveState<S extends string> = { pending: S | null; status: SaveStatus }
 
-export const STATE_HELP = 'Marcá vos el estado: la academia no corrige los ejercicios.'
+export const STATE_HELP = 'Marca tú el estado: la academia no corrige los ejercicios.'
 
 const twoDigits = (value: number) => String(value).padStart(2, '0')
 

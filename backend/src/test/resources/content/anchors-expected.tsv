@@ -1,71 +1,11 @@
-# GitHub-compatible heading IDs, frozen from ancla() in herramientas/comprobar_enlaces.py
-# of Curso Java Completo at commit 0c2df357c6628784df6b537df8950da540096a8c, run with python3 -I.
-# Duplicates follow GitHub (github-slugger): base, base-1, base-2... skipping IDs already used.
+# GitHub-compatible heading IDs. Duplicates follow GitHub (github-slugger): base, base-1, base-2... skipping IDs already used.
 # Each section is one document in order. Columns: section<TAB>heading text (Markdown)<TAB>expected id.
-real	02.01 Tu primer programa	0201-tu-primer-programa
-real	Qué aprenderás	qué-aprenderás
-real	1. Teoría	1-teoría
-real	1.1. Qué es un programa Java	11-qué-es-un-programa-java
-real	1.2. El programa más pequeño posible	12-el-programa-más-pequeño-posible
-real	1.3. El método `main`: la puerta de entrada	13-el-método-main-la-puerta-de-entrada
-real	1.4. Instrucciones y orden de ejecución	14-instrucciones-y-orden-de-ejecución
-real	1.5. Mostrar información en pantalla	15-mostrar-información-en-pantalla
-real	1.6. Textos y números	16-textos-y-números
-real	1.7. Caracteres especiales dentro de un texto	17-caracteres-especiales-dentro-de-un-texto
-real	1.8. Comentarios: notas para las personas	18-comentarios-notas-para-las-personas
-real	1.9. Las reglas de escritura de Java	19-las-reglas-de-escritura-de-java
-real	1.10. La forma clásica de un programa	110-la-forma-clásica-de-un-programa
-real	1.11. Cómo se ejecuta tu programa	111-cómo-se-ejecuta-tu-programa
-real	1.12. Los tres tipos de errores	112-los-tres-tipos-de-errores
-real	1.13. *(Ampliación)* Qué es por dentro un fichero compacto	113-ampliación-qué-es-por-dentro-un-fichero-compacto
-real	1.14. *(Ampliación)* Cómo elige Java qué `main` ejecutar	114-ampliación-cómo-elige-java-qué-main-ejecutar
-real	2. Ejemplos de código	2-ejemplos-de-código
-real	2.1. Hola, mundo	21-hola-mundo
-real	2.2. Varias instrucciones, en orden	22-varias-instrucciones-en-orden
-real	2.3. El mismo programa, con la forma clásica	23-el-mismo-programa-con-la-forma-clásica
-real	2.4. Comentarios	24-comentarios
-real	2.5. Unir textos y números	25-unir-textos-y-números
-real	2.6. Caracteres especiales	26-caracteres-especiales
-real	2.7. Ejemplo realista: el ticket de una librería	27-ejemplo-realista-el-ticket-de-una-librería
-real	2.8. *(Ampliación)* Qué `main` se ejecuta	28-ampliación-qué-main-se-ejecuta
-real	3. Errores típicos	3-errores-típicos
-real	3.1. Olvidar el punto y coma	31-olvidar-el-punto-y-coma
-real	3.2. Mayúsculas y minúsculas	32-mayúsculas-y-minúsculas
-real	3.3. Unas comillas sin cerrar	33-unas-comillas-sin-cerrar
-real	3.4. Una llave sin cerrar	34-una-llave-sin-cerrar
-real	3.5. Comillas tipográficas copiadas de un documento	35-comillas-tipográficas-copiadas-de-un-documento
-real	3.6. Un nombre mal escrito	36-un-nombre-mal-escrito
-real	3.7. Instrucciones fuera de `main`	37-instrucciones-fuera-de-main
-real	3.8. Una barra invertida suelta	38-una-barra-invertida-suelta
-real	3.9. Un nombre de fichero no válido	39-un-nombre-de-fichero-no-válido
-real	3.10. Un comentario sin cerrar	310-un-comentario-sin-cerrar
-real	3.11. Ejecutar con un nombre equivocado	311-ejecutar-con-un-nombre-equivocado
-real	4. Buenas prácticas	4-buenas-prácticas
-real	5. Ejercicios prácticos resueltos	5-ejercicios-prácticos-resueltos
-real	🟢 Básico	-básico
-real	Ejercicio 1 · La ficha de la tienda	ejercicio-1--la-ficha-de-la-tienda
-real	Ejercicio 2 · Predice la salida	ejercicio-2--predice-la-salida
-real	Ejercicio 3 · Arregla el aviso	ejercicio-3--arregla-el-aviso
-real	🟡 Intermedio	-intermedio
-real	Ejercicio 4 · El aviso de la copia de seguridad	ejercicio-4--el-aviso-de-la-copia-de-seguridad
-real	Ejercicio 5 · De compacto a clásico	ejercicio-5--de-compacto-a-clásico
-real	Ejercicio 6 · Comentarios que ayudan	ejercicio-6--comentarios-que-ayudan
-real	🔴 Avanzado	-avanzado
-real	Ejercicio 7 · Diagnóstico a distancia	ejercicio-7--diagnóstico-a-distancia
-real	Ejercicio 8 · ¿Qué `main` se ejecuta?	ejercicio-8--qué-main-se-ejecuta
-real	🏆 Caso real	-caso-real
-real	Ejercicio 9 · La pantalla de inicio de «Mi Biblioteca»	ejercicio-9--la-pantalla-de-inicio-de-mi-biblioteca
-real	6. Chuleta	6-chuleta
-real	Estructura de un programa	estructura-de-un-programa
-real	Mostrar en pantalla	mostrar-en-pantalla
-real	Textos y números	textos-y-números
-real	Secuencias de escape	secuencias-de-escape
-real	Comentarios	comentarios
-real	Reglas de escritura	reglas-de-escritura
-real	Ejecutar	ejecutar
-real	Plantillas de IntelliJ	plantillas-de-intellij
-real	Tipos de errores	tipos-de-errores
-real	Errores frecuentes	errores-frecuentes
+# synthetic: frozen from ancla() in herramientas/comprobar_enlaces.py of Curso Java Completo at commit
+#   0c2df357c6628784df6b537df8950da540096a8c, run with python3 -I.
+# real: the module of the kit's example course (cursos-ejemplo/bueno/fase-01-primeros-pasos/01-ficheros-json.md),
+#   frozen from ancla() in herramientas/formato_academia.py of kit-cursos at commit
+#   4a79c20fcd28d6049c52ee12fe5c5d6393b314a2, run with python3 -I (the same rule; no heading repeats); the 2.4
+#   heading, added by the kit in 27893e81b46d4a1a250a8a399f19a2929071b0d9, frozen with ancla() of that commit.
 synthetic	Qué aprenderás	qué-aprenderás
 synthetic	Qué aprenderás	qué-aprenderás-1
 synthetic	Qué aprenderás	qué-aprenderás-2
@@ -106,3 +46,26 @@ synthetic	ẞ ß straße	ß-ß-straße
 synthetic	Setext heading	setext-heading
 synthetic	En cita	en-cita
 synthetic	En lista	en-lista
+real	01.01 Ficheros JSON	0101-ficheros-json
+real	Qué aprenderás	qué-aprenderás
+real	1. Teoría	1-teoría
+real	1.1. Qué es JSON	11-qué-es-json
+real	1.2. Objetos y listas	12-objetos-y-listas
+real	2. Ejemplos de código	2-ejemplos-de-código
+real	2.1. Un cliente	21-un-cliente
+real	2.2. Contar clientes	22-contar-clientes
+real	2.3. Ver un fichero en la terminal	23-ver-un-fichero-en-la-terminal
+real	2.4. Preguntar a una API con curl	24-preguntar-a-una-api-con-curl
+real	3. Errores típicos	3-errores-típicos
+real	3.1. La coma de más	31-la-coma-de-más
+real	4. Buenas prácticas	4-buenas-prácticas
+real	5. Ejercicios prácticos resueltos	5-ejercicios-prácticos-resueltos
+real	🟢 Básico	-básico
+real	Ejercicio 1 · Un pedido de la tienda	ejercicio-1--un-pedido-de-la-tienda
+real	🟡 Intermedio	-intermedio
+real	Ejercicio 2 · La coma de más	ejercicio-2--la-coma-de-más
+real	🔴 Avanzado	-avanzado
+real	🏆 Caso real	-caso-real
+real	6. Chuleta	6-chuleta
+real	Tipos de valores	tipos-de-valores
+real	7. Preguntas de repaso	7-preguntas-de-repaso

@@ -7,6 +7,7 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,10 +30,21 @@ import dev.codeacademy.content.Manifest.Lesson;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 class CatalogController {
 
-	record CourseView(String id, String title) {
-		static CourseView of(Manifest.Course course) {
-			return new CourseView(course.id(), course.title());
-		}
+	/**
+	 * A course of the catalog with what curso.json says about it (H7, T6). Each recommendation keeps its ID; its title
+	 * comes only from an installed course, so a recommended course that is not installed has a null title.
+	 */
+	record CourseView(String id, String title, String description, List<RecommendedView> recommended) {
+	}
+
+	record RecommendedView(String id, String title) {
+	}
+
+	CourseView view(Manifest.Course course) {
+		List<RecommendedView> recommended = course.recommended() == null ? List.of() : course.recommended().stream()
+			.map(id -> new RecommendedView(id, catalog.course(id).map(other -> other.manifest().course().title()).orElse(null)))
+			.toList();
+		return new CourseView(course.id(), course.title(), course.description(), recommended);
 	}
 
 	record PhaseView(String id, String title, int position) {
@@ -88,21 +100,24 @@ class CatalogController {
 	private static final Logger log = LoggerFactory.getLogger(CatalogController.class);
 
 	private final Catalog catalog;
+	private final String firstCourse;
 
-	CatalogController(Catalog catalog) {
+	CatalogController(Catalog catalog, @Value("${code-academy.first-course:}") String firstCourse) {
 		this.catalog = catalog;
+		this.firstCourse = firstCourse;
 	}
 
 	@GetMapping(path = "/api/courses", produces = MediaType.APPLICATION_JSON_VALUE)
 	CoursesView courses() {
-		return new CoursesView(catalog.courses().stream().map(course -> CourseView.of(course.manifest().course()))
-				.toList());
+		// The same order as «Mis cursos» (CourseOrder).
+		return new CoursesView(catalog.courses().stream().map(course -> view(course.manifest().course()))
+				.sorted(CourseOrder.of(firstCourse, CourseView::id, CourseView::title)).toList());
 	}
 
 	@GetMapping(path = "/api/courses/{courseId}", produces = MediaType.APPLICATION_JSON_VALUE)
 	SyllabusView course(@PathVariable String courseId) {
 		CourseContent course = catalog.course(courseId).orElseThrow(CatalogController::notFound);
-		return new SyllabusView(CourseView.of(course.manifest().course()),
+		return new SyllabusView(view(course.manifest().course()),
 				Catalog.phases(course).stream().map(PhaseView::of).toList(), Catalog.syllabus(course).stream()
 					.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList());
 	}

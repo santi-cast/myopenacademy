@@ -1,0 +1,4 @@
+curl -i http://localhost:8080/clientes/1
+curl -s http://localhost:8080/clientes/7
+curl -s -o clientes.json http://localhost:8080/clientes
+ls
