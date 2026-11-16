@@ -260,7 +260,7 @@ test('two learners keep separate progress across a backend restart, without cros
     await pageA.getByRole('link', { name: 'Crear una cuenta' }).click()
     await register(pageA, bruno)
     await login(pageA, ana)
-    await expect(pageA.getByText('Todavía no añadiste ningún curso.')).toBeVisible()
+    await expect(pageA.getByText('Todavía no has añadido ningún curso.')).toBeVisible()
   })
 
   await test.step('2a. CSRF: Ana writes right after login («Añadir Curso de ejemplo a Mis cursos»)', async () => {
@@ -279,7 +279,7 @@ test('two learners keep separate progress across a backend restart, without cros
     await logout(pageA)
     await login(pageA, bruno)
     // Nothing of Ana's enrollment: Bruno starts with no courses.
-    await expect(pageA.getByText('Todavía no añadiste ningún curso.')).toBeVisible()
+    await expect(pageA.getByText('Todavía no has añadido ningún curso.')).toBeVisible()
     const continuationCalls: string[] = []
     pageA.on('request', (request) => {
       if (request.url().endsWith('/continuation')) continuationCalls.push(request.url())
