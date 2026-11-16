@@ -1261,6 +1261,22 @@ class ContentImportCliTest {
 		assertThat(snapshot(source)).isEqualTo(sourceBefore);
 	}
 
+	@Test void aGithubFolderIsNotProtectedAndShipsByteForByteInTheZip() throws Exception {
+		// Only the exact name .git is protected: .github (issue templates, workflows) is course material (phase 7 of
+		// the base course), installed and in the learner's ZIP like any other file of the folder.
+		byte[] template = "---\nname: Error\nabout: Algo no funciona\n---\n\n## Qué pasa\n".getBytes(StandardCharsets.UTF_8);
+		files.put("fase-01/codigo/hola/.github/ISSUE_TEMPLATE/error.md", template);
+		assertThat(generate("--commit", commit(files, "github folder\n")).code()).isZero();
+		assertThat(reported()).isEmpty();
+		JsonNode manifest = manifest();
+		JsonNode file = resource(manifest, "fase-01/codigo/hola/.github/ISSUE_TEMPLATE/error.md");
+		assertThat(Files.readAllBytes(output.resolve(file.path("localPath").asString()))).isEqualTo(template);
+		JsonNode zip = resource(manifest, "fase-01/codigo/hola/");
+		try (var archive = new java.util.zip.ZipFile(output.resolve(zip.path("localPath").asString()).toFile(), StandardCharsets.UTF_8)) {
+			assertThat(archive.getInputStream(archive.getEntry(".github/ISSUE_TEMPLATE/error.md")).readAllBytes()).isEqualTo(template);
+		}
+	}
+
 	@Test void aCsvTakesTheCharsetItsFolderDeclaresInCodificacionTxt() throws Exception {
 		// FORMATO.md 7.1: codificacion.txt names, as iconv does, the encoding of the folder's CSV files. The bytes ship
 		// untouched and the charset is declared (author's decision, 16 November 2026); every other text file is UTF-8.

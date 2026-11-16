@@ -82,7 +82,8 @@ public final class ContentLoader {
 				.forEach(id -> problems.add("id " + id + " is used by more than one course"));
 		}
 		failIfAny(problems);
-		return courses;
+		// Links to the other installed courses become internal links (FORMATO.md 10.2; H8, T5).
+		return CrossCourseLinks.resolve(courses);
 	}
 
 	/**
