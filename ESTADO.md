@@ -29,7 +29,7 @@ Lo que ya existe en los otros proyectos:
 5. ~~T5~~ **Hecho** (L19): `--source ../Cursos/curso-inicial` funciona.
 6. ~~T6~~ **Hecho** (L20): catálogo con descripción y «Conviene saber antes».
 7. ~~T7~~ **Hecho** (L21): `cursos-instalados.json` y `content-courses list|reinstall`.
-8. T8 y la revisión del autor.
+8. **T8, pendiente** (16 de noviembre de 2026, sin empezar): reescribir `docs/manifiesto.md` (sigue hablando de v1/H4/H5 y de las filas del índice) y `docs/actualizacion-contenido.md` (partes de H4/H5 y del índice; ya tienen al día la lista de cursos, `--tag`, `--source` con `..`, `.env.example` y el `charset`), repasar `docs/desarrollo-local.md` (voseo; instalar cursos), decidir qué hacer con `tools/curso_a_manifiesto.py` (obsoleto), prueba en el navegador con el curso inicial en una base desechable y cierre. Después, parar para la revisión del autor.
 
 **Preguntas abiertas para el autor:**
 
