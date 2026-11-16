@@ -37,6 +37,10 @@ describe('Administración (H9)', () => {
     expect(screen.getByText('1.0.0 · v1.0.0')).toBeVisible()
     // Nobody deactivates themselves: no button on one's own row.
     expect(screen.queryByRole('button', { name: 'Desactivar a Ana' })).not.toBeInTheDocument()
+    // A temporary password is for others; one's own changes in «Mi perfil».
+    expect(screen.getByRole('button', { name: 'Contraseña temporal para Bruno' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Contraseña temporal para Ana' })).not.toBeInTheDocument()
+    expect(screen.getByText('Vacío: MyOpenAcademy.')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Desactivar a Bruno' }))
     expect(await screen.findByRole('button', { name: 'Reactivar a Bruno' })).toBeVisible()
     expect(apiCalls(backend)).toContain('PUT /api/admin/users/b-1/active')

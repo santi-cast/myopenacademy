@@ -18,7 +18,7 @@ public class CreateAdminCommand {
 
 	static final String INVALID_USERNAME = "El usuario debe tener entre 3 y 32 letras sin tildes, cifras o guiones bajos. "
 			+ "No se cambió nada.";
-	static final String CREATED = "Administrador creado. Ya puede entrar en la academia con ese usuario.";
+	static final String CREATED = "Administrador creado. Ya puedes entrar en la academia con ese usuario.";
 	static final String PROMOTED = "El usuario ya existía: ahora es administrador y conserva su contraseña. "
 			+ "Sus sesiones abiertas se cerrarán en su próxima solicitud.";
 	static final String ALREADY_ADMIN = "El usuario ya era administrador. No se cambió nada.";

@@ -78,12 +78,12 @@ describe('login', () => {
     expect(backend.user).toBeNull()
   })
 
-  it('explains the local console recovery in one line', async () => {
+  it('tells a learner who forgot the password to ask for a temporary one', async () => {
     installFakeBackend()
     renderApp('/login')
 
-    expect(await screen.findByText(/se restablece desde una consola local/)).toHaveTextContent(
-      '¿Olvidaste la contraseña? No hay recuperación por la web: se restablece desde una consola local con la herramienta --reset-password del backend (ver «Recuperar una contraseña» en docs/desarrollo-local.md).',
+    expect(await screen.findByText(/Pide una contraseña temporal/)).toHaveTextContent(
+      '¿Olvidaste la contraseña? Pide una contraseña temporal a quien administra la academia: al entrar con ella, elegirás una nueva.',
     )
   })
 

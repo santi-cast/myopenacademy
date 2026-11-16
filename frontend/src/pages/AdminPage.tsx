@@ -50,7 +50,7 @@ function SettingsForm({ initial }: { initial: AdminSettings }) {
       <div className="field">
         <label htmlFor="admin-name">Nombre de la academia</label>
         <input id="admin-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
-        <p className="field-hint">Vacío: el nombre de siempre.</p>
+        <p className="field-hint">Vacío: MyOpenAcademy.</p>
       </div>
       <button type="submit" className="btn" disabled={busy}>{busy ? 'Guardando…' : 'Guardar los ajustes'}</button>
       {failure && <p className="form-error" role="alert">{failure}</p>}
@@ -103,10 +103,11 @@ function UserRow({ user, self, onChange }: { user: AdminUser; self: boolean; onC
         {!self && <button type="button" className="btn btn-quiet" onClick={toggle} disabled={busy}>
           {user.active ? `Desactivar a ${user.username}` : `Reactivar a ${user.username}`}
         </button>}{' '}
-        <button type="button" className="btn btn-quiet" onClick={() => setResetting(!resetting)} disabled={busy}>
-          Contraseña temporal
-        </button>
-        {resetting && (
+        {/* One's own password is changed in «Mi perfil», never as a temporary one. */}
+        {!self && <button type="button" className="btn btn-quiet" onClick={() => setResetting(!resetting)} disabled={busy}>
+          Contraseña temporal para {user.username}
+        </button>}
+        {resetting && !self && (
           <form onSubmit={reset} noValidate aria-label={`Contraseña nueva para ${user.username}`}>
             <div className="field">
               <label htmlFor={`reset-${user.id}`}>Contraseña temporal</label>

@@ -46,7 +46,7 @@ class CreateAdminCommandTest {
 		var terminal = new ScriptedTerminal(PASSWORD, PASSWORD);
 		var result = run(username, Optional.of(terminal));
 		assertThat(result.exit()).isZero();
-		assertThat(result.out()).isEqualTo("Administrador creado. Ya puede entrar en la academia con ese usuario." + NL);
+		assertThat(result.out()).isEqualTo("Administrador creado. Ya puedes entrar en la academia con ese usuario." + NL);
 		assertThat(terminal.prompts).containsExactly("Contraseña del administrador: ", "Repite la contraseña: ");
 		terminal.assertWiped();
 		assertThat(jdbc.queryForObject("select role from code_academy.users where username = ?", String.class, username))
