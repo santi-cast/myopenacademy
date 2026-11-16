@@ -27,7 +27,7 @@ RUN for tool in content-import:ContentImportCli content-update:ContentUpdateCli 
       chmod 755 "/usr/local/bin/${tool%%:*}"; \
     done
 WORKDIR /app
-COPY --from=backend /build/backend/target/backend-0.0.1-SNAPSHOT.jar /app/myopenacademy.jar
+COPY --from=backend /build/backend/target/backend.jar /app/myopenacademy.jar
 COPY --from=frontend /build/frontend/dist /app/frontend
 # Inside the container: every interface (who may reach it is decided by APP_BIND in compose.yaml), the frontend it
 # serves, and the courses mounted at /content.

@@ -114,7 +114,7 @@ El script crea un contenedor `code-academy-e2e-<aleatorio>` con datos en memoria
 La academia no trae ningún usuario ni contraseña por defecto. El administrador (que ve «Administración»: registro abierto o cerrado, nombre de la academia, usuarios y cursos instalados) se crea desde una consola local, igual que se recupera una contraseña: con la base sana y el jar construido, **en una terminal real** y desde `backend/`:
 
 ```sh
-java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --create-admin=<usuario>
+java -jar target/backend.jar --spring.profiles.active=local --create-admin=<usuario>
 ```
 
 Si el usuario no existe, se crea como administrador y la herramienta pide su contraseña dos veces, sin mostrarla (la misma regla que el registro). Si ya existe, pasa a ser administrador y conserva su contraseña; sus sesiones abiertas se cierran y la próxima vez que entre ya lo será. Sin una terminal interactiva no hace nada, y nunca arranca el servidor web.
@@ -131,7 +131,7 @@ cd backend
 Después, **en una terminal real** y desde `backend/`, para que el perfil `local` encuentre `../.env`:
 
 ```sh
-java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --reset-password=<usuario>
+java -jar target/backend.jar --spring.profiles.active=local --reset-password=<usuario>
 ```
 
 El usuario no distingue mayúsculas. La herramienta pide la contraseña nueva dos veces sin mostrarla; nunca la pases como argumento. Debe tener entre 15 y 128 caracteres y se guarda tal cual, con sus espacios. Si las dos no coinciden, la contraseña no cumple la regla o el usuario no existe, no cambia nada y termina con error.

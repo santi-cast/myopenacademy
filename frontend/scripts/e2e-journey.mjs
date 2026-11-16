@@ -19,7 +19,7 @@ const run = promisify(execFile)
 const frontendDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repoDir = resolve(frontendDir, '..')
 const backendDir = join(repoDir, 'backend')
-const jar = join(backendDir, 'target', 'backend-0.0.1-SNAPSHOT.jar')
+const jar = join(backendDir, 'target', 'backend.jar')
 // The kit's two example courses, installed for this run by the real offline importer (content-import),
 // in install order: «bueno» links to «ejemplo-destino». The academy's own content/ is never read.
 const exampleCourses = join(repoDir, 'cursos-ejemplo')

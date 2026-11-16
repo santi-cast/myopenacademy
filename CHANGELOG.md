@@ -8,7 +8,11 @@ Qué cambia en cada versión de la academia, de la más nueva a la más antigua.
 
 ## Sin publicar
 
-La **versión 1.0.0**, el pack base: la academia más el curso inicial, «Fundamentos para programar».
+Nada todavía.
+
+## 1.0.0 — 16 de noviembre de 2026
+
+El **pack base**: la academia más el curso inicial, «Fundamentos para programar» (su versión 1.0.0).
 
 - **Cursos como DLC.** La academia arranca sin cursos y se instalan desde su repositorio, por su etiqueta de versión (o un commit), con el importador sin conexión. Cada curso trae su identidad en `curso.json`; ninguno está escrito en el código. Se comparan los cambios antes de aplicarlos, y el progreso de los alumnos se conserva.
 - **Contenido según el formato de los cursos:** módulos con ejercicios, pistas y soluciones, preguntas de repaso, retos de cada fase, glosario, ruta de aprendizaje, chuleta global y proyecto (por etapas o como módulo). Diagramas Mermaid (12.3.0), código resaltado, imágenes y carpetas de código descargables como ZIP. Los enlaces entre cursos instalados son internos, y cada lección lleva «Mejorar esta lección» a su repositorio.

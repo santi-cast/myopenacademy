@@ -6,7 +6,7 @@ Academia de programación **libre, gratuita y de código abierto**, pensada como
 
 El **pack base 1.0** es la academia más el curso inicial, «Fundamentos para programar»: lo que conviene saber antes de cualquier curso (qué es programar, tu ordenador, la terminal, Git y GitHub, los formatos de datos, internet y cómo aprender).
 
-**Estado:** versión 1.0.0 en preparación. Ver el [registro de cambios](CHANGELOG.md).
+**Estado:** versión 1.0.0, el pack base. Ver el [registro de cambios](CHANGELOG.md).
 
 ![Índice del curso inicial, con el avance de una alumna, las fases y la ruta de aprendizaje](docs/capturas/indice.png)
 
