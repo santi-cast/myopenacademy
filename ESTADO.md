@@ -2,6 +2,8 @@
 
 > Actualízalo al terminar cada tarea. Es la memoria entre sesiones: lo que no esté aquí o en `PLAN.md` no lo sabrá la sesión siguiente.
 
+> **⚠️ Historial reescrito el 16 de noviembre de 2026 (H11, T2):** se quitó `content/java` de todo el historial. **Los identificadores de commit citados en este fichero, en `PLAN.md` y en `odd/tasks/` con fecha anterior a ese día son los de antes de la reescritura**: no existen en el repositorio actual. La tabla de equivalencias (antiguo → nuevo) está en `../../copias-myopenacademy/equivalencias-commits.txt`, y el repositorio de antes, entero, en `../../copias-myopenacademy/` (espejo, `.tar.gz` y el `.git` apartado), fuera de Git y solo en este equipo.
+
 ## Dónde estamos
 
 **8 de noviembre de 2026:** repositorio creado desde la sesión de la raíz **clonando Code Academy con su historial** (82 commits, hitos H1 a H5 cerrados; ver `PLAN.md`) y sin remoto. Añadidos `CLAUDE.md` y este `ESTADO.md`. El código y el resto de la documentación son, de momento, los de Code Academy.
