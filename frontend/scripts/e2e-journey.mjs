@@ -23,7 +23,12 @@ const jar = join(backendDir, 'target', 'backend.jar')
 // The kit's two example courses, installed for this run by the real offline importer (content-import),
 // in install order: «bueno» links to «ejemplo-destino». The academy's own content/ is never read.
 const exampleCourses = join(repoDir, 'cursos-ejemplo')
-const exampleFolders = ['bueno', 'ejemplo-destino']
+// Then the academy's own fixture «partes» (H12, T5): two parts and three phases, which no kit example has.
+const exampleFolders = [
+  { folder: 'bueno', dir: join(exampleCourses, 'bueno') },
+  { folder: 'ejemplo-destino', dir: join(exampleCourses, 'ejemplo-destino') },
+  { folder: 'curso-partes', dir: join(frontendDir, 'e2e', 'fixtures', 'curso-partes') },
+]
 const image = 'postgres:18.6'
 const database = 'code_academy'
 // Not «code_academy»: with PostgreSQL's default search_path ("$user", public) a role named like
@@ -140,14 +145,14 @@ async function installExampleCourses() {
   const work = join(runDir, 'content-import')
   let active = join(work, 'empty')
   mkdirSync(active, { recursive: true })
-  for (const [index, folder] of exampleFolders.entries()) {
+  for (const [index, { folder, dir }] of exampleFolders.entries()) {
     const repository = join(work, `${folder}.git`)
     const git = (...args) => run('git', [`--git-dir=${repository}`, ...args], { env: gitEnvironment })
     await run('git', ['init', '--bare', '--quiet', repository], { env: gitEnvironment })
-    await git(`--work-tree=${join(exampleCourses, folder)}`, 'add', '--all')
-    await git(`--work-tree=${join(exampleCourses, folder)}`, 'commit', '--quiet', '--message=ejemplo')
+    await git(`--work-tree=${dir}`, 'add', '--all')
+    await git(`--work-tree=${dir}`, 'commit', '--quiet', '--message=ejemplo')
     // Installed the way an academy installs a published version: by its tag, v + the version of curso.json.
-    const version = JSON.parse(readFileSync(join(exampleCourses, folder, 'curso.json'), 'utf8')).version
+    const version = JSON.parse(readFileSync(join(dir, 'curso.json'), 'utf8')).version
     const tag = `v${version}`
     await git('tag', tag)
     const output = index === exampleFolders.length - 1 ? contentDir : join(work, `content-${index + 1}`)
@@ -236,9 +241,10 @@ function controlServer(backend) {
   return new Promise((done) => server.listen(0, '127.0.0.1', () => done({ server, port: server.address().port, restarts })))
 }
 
+// Extra arguments go to Playwright, to run some specs only: npm run test:e2e -- parts.spec.ts
 function playwright(env) {
   return new Promise((done) => {
-    const child = spawn(join(frontendDir, 'node_modules', '.bin', 'playwright'), ['test', '--config', 'playwright.config.ts'], {
+    const child = spawn(join(frontendDir, 'node_modules', '.bin', 'playwright'), ['test', '--config', 'playwright.config.ts', ...process.argv.slice(2)], {
       cwd: frontendDir, env, stdio: 'inherit',
     })
     child.once('exit', (code, signal) => done(code ?? (signal ? 1 : 0)))
