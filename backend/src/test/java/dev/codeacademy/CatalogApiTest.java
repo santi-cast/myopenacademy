@@ -150,8 +150,14 @@ class CatalogApiTest {
 
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
 		var body = json(response);
-		assertThat(body.propertyNames()).containsExactlyInAnyOrder("course", "phases", "lessons", "documents", "project");
+		assertThat(body.propertyNames()).containsExactlyInAnyOrder("course", "phases", "lessons", "documents", "project",
+				"parts");
 		assertThat(body.path("course").path("id").asString()).isEqualTo(COURSE);
+		// H12, T3: the parts of curso.json (the kit's example course has one); a course without parts has none.
+		assertThat(body.path("parts")).isEqualTo(ApiClient.JSON.readTree("[{\"id\":\"ejemplo.parte.basico\","
+				+ "\"title\":\"Lo básico\",\"position\":1,\"phaseIds\":[\"ejemplo.fase.primeros-pasos\"]}]"));
+		assertThat(json(browser.get("/api/courses/ejemplo-destino")).path("parts").isArray()).isTrue();
+		assertThat(json(browser.get("/api/courses/ejemplo-destino")).path("parts")).isEmpty();
 		// H8, T4: the course project, by stages here (its own page).
 		assertThat(body.path("project").path("kind").asString()).isEqualTo("etapas");
 		assertThat(body.path("project").path("lessonId").isNull()).isTrue();

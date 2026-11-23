@@ -21,6 +21,9 @@ export type Course = { id: string; title: string; description?: string | null; r
 
 export type Phase = { id: string; title: string; position: number }
 
+// A part of a course (H12): its phases, in the order of the course. A course without parts has none.
+export type Part = { id: string; title: string; position: number; phaseIds: string[] }
+
 export type LessonEntry = {
   id: string
   courseId: string
@@ -71,7 +74,7 @@ export type DocumentView = {
 }
 // The course project (H8, T4): by stages (its own page) or a module that is the project.
 export type ProjectInfo = { kind: 'etapas' | 'modulo'; title: string | null; lessonId: string | null }
-export type Syllabus = { course: Course; phases: Phase[]; lessons: LessonEntry[]; documents?: DocumentEntry[]; project?: ProjectInfo | null }
+export type Syllabus = { course: Course; phases: Phase[]; lessons: LessonEntry[]; documents?: DocumentEntry[]; project?: ProjectInfo | null; parts: Part[] }
 
 export type Exercise = {
   id: string

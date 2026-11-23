@@ -41,7 +41,10 @@ class StageApiTest extends StageTestSupport {
 		assertThat(ok(browser.get("/api/courses/other/stages"))).isEqualTo(ApiClient.JSON.readTree(
 			"{\"courseId\":\"other\",\"stages\":[]}"));
 		JsonNode course = ok(browser.get("/api/courses/demo"));
-		assertThat(course.propertyNames()).containsExactlyInAnyOrder("course", "phases", "lessons", "documents", "project");
+		assertThat(course.propertyNames()).containsExactlyInAnyOrder("course", "phases", "lessons", "documents", "project",
+			"parts");
+		assertThat(course.path("parts").isArray()).isTrue();
+		assertThat(course.path("parts")).isEmpty();
 		assertThat(course.path("lessons").size()).isEqualTo(3);
 		assertCounts(ok(progress(browser, "demo")).path("progress"), 0, 2, 3, 0.0);
 		assertThat(TestDatabase.snapshot(jdbc)).isEqualTo(before);

@@ -122,6 +122,12 @@ public final class Catalog {
 		return course.manifest().phases().stream().sorted(Comparator.comparing(Manifest.Phase::position)).toList();
 	}
 
+	/** The course's parts by position (H12); none for a course without parts. */
+	static List<Manifest.Part> parts(CourseContent course) {
+		List<Manifest.Part> parts = course.manifest().parts();
+		return parts == null ? List.of() : parts.stream().sorted(Comparator.comparing(Manifest.Part::position)).toList();
+	}
+
 	/** The course's lessons in syllabus order. */
 	static List<Lesson> syllabus(CourseContent course) {
 		return course.manifest().lessons().stream().sorted(Comparator.comparing(Lesson::position)).toList();
