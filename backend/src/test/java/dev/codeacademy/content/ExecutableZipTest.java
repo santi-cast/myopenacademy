@@ -2,6 +2,7 @@ package dev.codeacademy.content;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -12,6 +13,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -19,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -196,6 +200,127 @@ class ExecutableZipTest {
 		assertThat(conflicts).containsExactly("candidate: source mode differs " + local + " at " + executable);
 	}
 
+	/**
+	 * H12, T8 (S10, R3-mode-check-carried-course): a copy installed before 1.1.0 has no flag and plain ZIPs even where
+	 * the pinned commit has a 100755 file. A course carried from it unchanged is not what the update installs, so it is
+	 * not failed for lacking the flag: it keeps its old bytes until it is updated or reinstalled.
+	 */
+	@Test
+	void aCourseCarriedUnchangedFromACopyOfBefore110IsNotAModeConflict() throws Exception {
+		Path active = generate(commit(true), "activa");
+		before110(active);
+		assertThat(ContentLoader.loadAll(active)).hasSize(1);
+		Path candidate = copy(active, temp.resolve("candidata"));
+		Path report = temp.resolve("informe-actualizacion.json");
+		assertThat(update("compare", active, candidate, report)).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+		assertThat(JSON.readTree(report.toFile()).path("conflicts")).isEmpty();
+		// Applying it leaves the carried course as it was: its ZIP still has no mode.
+		assertThat(update("apply", active, candidate, report).code()).isZero();
+		assertThat(central(zip(active, manifest(active))).get("mvnw").external()).isZero();
+		assertThat(ContentLoader.loadAll(active)).hasSize(1);
+	}
+
+	/** H12, T8 (S10): the reverse disagreement, a flag on a file that is 100644 in the pinned commit. */
+	@Test
+	void aCandidateFlagOnAFileThatIsNotExecutableInItsCommitIsAConflict() throws Exception {
+		Path empty = Files.createDirectory(temp.resolve("vacio"));
+		String executable = commit(true);
+		String plain = commit(false);
+		Path active = generate(plain, empty, "activa");
+		// A copy made from the commit with the bit that claims to be the one without it: same bytes, other mode.
+		Path candidate = generate(executable, active, "candidata");
+		edit(candidate, manifest -> ((ObjectNode) manifest.path("source")).put("versionRef", plain));
+		String local = resource(manifest(candidate), WRAPPER).path("localPath").asString();
+		Path report = temp.resolve("informe-actualizacion.json");
+		assertThat(update("compare", active, candidate, report)).isEqualTo(new Result(3, "Comparison written; conflicts: 1\n", ""));
+		List<String> conflicts = new ArrayList<>();
+		JSON.readTree(report.toFile()).path("conflicts").forEach(conflict -> conflicts.add(conflict.asString()));
+		assertThat(conflicts).containsExactly("candidate: source mode differs " + local + " at " + plain);
+	}
+
+	/**
+	 * H12, T8 (S10): two executables in one ZIP, the first one not the last record, with a plain entry between them and
+	 * another after them. Only their two central records change; the rest, end record included, is java.util.zip's.
+	 */
+	@Test
+	void twoExecutablesInOneZipChangeOnlyTheirOwnCentralRecords() throws Exception {
+		String args = FOLDER + "args.txt";
+		git(repository, "--work-tree=" + tree, "add", "--all");
+		git(repository, "--work-tree=" + tree, "update-index", "--chmod=+x", "--", args, SCRIPT);
+		git(repository, "--work-tree=" + tree, "update-index", "--chmod=-x", "--", WRAPPER);
+		git(repository, "--work-tree=" + tree, "commit", "--quiet", "--message=dos ejecutables");
+		Path output = generate(git(repository, "rev-parse", "HEAD").strip(), "contenido");
+		JsonNode manifest = manifest(output);
+		assertThat(resource(manifest, args).path("executable").asBoolean()).isTrue();
+		assertThat(resource(manifest, SCRIPT).path("executable").asBoolean()).isTrue();
+		assertThat(resource(manifest, WRAPPER).has("executable")).isFalse();
+		byte[] zip = zip(output, manifest);
+		byte[] today = plain(output, manifest);
+		assertThat(zip).hasSameSizeAs(today);
+
+		Path file = Files.write(temp.resolve("dos.zip"), zip);
+		List<String> order = new ArrayList<>();
+		try (var archive = new ZipFile(file.toFile())) {
+			archive.stream().forEach(entry -> order.add(entry.getName()));
+			for (String name : order) {
+				try (var input = archive.getInputStream(archive.getEntry(name))) {
+					assertThat(input.readAllBytes()).isEqualTo(Files.readAllBytes(tree.resolve(FOLDER + name)));
+				}
+			}
+		}
+		assertThat(order).containsExactly("args.txt", "clientes.json", "contar.sh", "mvnw");
+		List<String> streamed = new ArrayList<>();
+		try (var input = new ZipInputStream(new ByteArrayInputStream(zip))) {
+			for (ZipEntry entry; (entry = input.getNextEntry()) != null;) streamed.add(entry.getName());
+		}
+		assertThat(streamed).isEqualTo(order);
+
+		Map<String, Central> entries = central(zip);
+		Map<String, Central> before = central(today);
+		byte[] patched = zip.clone();
+		for (String name : List.of("args.txt", "contar.sh")) {
+			Central entry = entries.get(name);
+			assertThat(entry.offset()).isEqualTo(before.get(name).offset());
+			assertThat(entry.madeBy() >> 8).as(name).isEqualTo(UNIX);
+			assertThat(entry.madeBy() & 0xff).as(name).isEqualTo(before.get(name).madeBy() & 0xff);
+			assertThat(entry.external()).as(name).isEqualTo(0100755L << 16);
+			System.arraycopy(today, entry.offset() + 4, patched, entry.offset() + 4, 2);
+			System.arraycopy(today, entry.offset() + 38, patched, entry.offset() + 38, 4);
+		}
+		for (String name : List.of("clientes.json", "mvnw")) assertThat(entries.get(name)).as(name).isEqualTo(before.get(name));
+		// Everything else, local headers, data, the other records and the end record, is byte for byte java.util.zip's.
+		assertThat(patched).isEqualTo(today);
+		assertThat(Arrays.copyOfRange(zip, zip.length - 22, zip.length))
+			.isEqualTo(Arrays.copyOfRange(today, today.length - 22, today.length));
+		assertThat(ContentLoader.loadAll(output)).hasSize(1);
+	}
+
+	/** Turns a copy into what academy 1.0.0 wrote: no executable flag and every ZIP as plain java.util.zip. */
+	static void before110(Path root) throws Exception {
+		edit(root, manifest -> ((ObjectNode) resource(manifest, WRAPPER)).remove("executable"));
+		byte[] zip = plain(root, manifest(root));
+		String local = resource(manifest(root), FOLDER).path("localPath").asString();
+		Files.write(root.resolve(local), zip);
+		edit(root, manifest -> {
+			for (JsonNode generated : manifest.path("provenance").path("generated")) {
+				if (local.equals(generated.path("localPath").asString())) {
+					((ObjectNode) generated).put("copySha256", ContentUpdateComparison.sha(zip));
+				}
+			}
+		});
+	}
+
+	static Path copy(Path from, Path to) throws Exception {
+		try (Stream<Path> files = Files.walk(from)) {
+			for (Path file : files.toList()) {
+				Path target = to.resolve(from.relativize(file).toString());
+				if (Files.isDirectory(file)) Files.createDirectories(target);
+				else Files.copy(file, target);
+			}
+		}
+		return to;
+	}
+
 	@Test
 	void reinstallingTheListKeepsTheMode() throws Exception {
 		String commit = commit(true);
@@ -273,7 +398,10 @@ class ExecutableZipTest {
 		return plain(root, manifest, resource(manifest, FOLDER));
 	}
 
-	/** The archive as FolderZip wrote it before T7: java.util.zip with fixed metadata and nothing else. */
+	/**
+	 * The archive as FolderZip wrote it before T7: java.util.zip with fixed metadata and nothing else. It is the oracle
+	 * for the bytes these tests do not mark; the real 1.0.0 bytes are checked by {@link StarterCourseGoldenTest}.
+	 */
 	static byte[] plain(Path root, JsonNode manifest, JsonNode archive) throws Exception {
 		Map<String, JsonNode> byId = new TreeMap<>();
 		manifest.path("resources").forEach(resource -> byId.put(resource.path("resourceId").asString(), resource));

@@ -47,7 +47,9 @@ final class ContentUpdateComparison {
         // changes. A course from another repository can only be carried byte for byte: nothing here can verify it.
         Set<String> updated = updatedCourses(base, next, conflicts);
         verifySource(base, paths.source(), "active", updated, false, conflicts);
-        // The executable bit is checked on what is about to be installed: it must be the mode of the pinned tree (H12, T7).
+        // The executable bit is checked on what the update installs: it must be the mode of the pinned tree (H12, T7).
+        // A course carried unchanged is not installed again, so a copy from before 1.1.0, without the flag, stays
+        // updatable; it keeps its ZIPs until it is updated or reinstalled (H12, T8).
         verifySource(next, paths.source(), "candidate", updated, true, conflicts);
         List<String> changes = new ArrayList<>();
         for (var entry : base.entities().entrySet()) {
@@ -310,6 +312,7 @@ final class ContentUpdateComparison {
             Map<String, Boolean> executable = new TreeMap<>();
             m.resources().stream().filter(r -> !"zip".equals(r.kind()))
                 .forEach(r -> executable.put(r.localPath(), Boolean.TRUE.equals(r.executable())));
+            boolean checkModes = modes && updated.contains(m.course().id());
             for (var file : sources.entrySet()) {
                 byte[] listing = git(source, "ls-tree", "-z", "--full-tree", ref, "--", file.getValue());
                 String entry = listing == null ? "" : new String(listing, StandardCharsets.UTF_8);
@@ -323,7 +326,7 @@ final class ContentUpdateComparison {
                 if (bytes == null || !sha(bytes).equals(copy.files().get(file.getKey()))) {
                     conflicts.add(label + ": source bytes differ " + file.getKey() + " at " + ref);
                 }
-                else if (modes && executable.containsKey(file.getKey())
+                else if (checkModes && executable.containsKey(file.getKey())
                     && executable.get(file.getKey()) != entry.startsWith("100755 blob ")) {
                     conflicts.add(label + ": source mode differs " + file.getKey() + " at " + ref);
                 }
