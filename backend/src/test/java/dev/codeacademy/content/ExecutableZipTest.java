@@ -309,7 +309,10 @@ class ExecutableZipTest {
 	@Test
 	void aCourseInstalledBefore110GainsTheModeWhenItIsUpdatedToANewCommit() throws Exception {
 		String first = commit(true);
-		gainsTheMode(first, commit(true));
+		String next = commit(true);
+		// H12, T12 (S14): really a new commit, or this would only repeat the same-commit case.
+		assertThat(next).isNotEqualTo(first);
+		gainsTheMode(first, next);
 	}
 
 	void gainsTheMode(String installed, String next) throws Exception {

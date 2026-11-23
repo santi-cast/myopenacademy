@@ -15,7 +15,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -52,7 +54,7 @@ class StarterCourseGoldenTest {
 
 	@Test
 	void theStarterCourseV100IsRegeneratedWithTheBytesAcademy100Installed() throws Exception {
-		Path source = source(setting(PROPERTY, VARIABLE), projectRoot());
+		Path source = source(setting(PROPERTY, VARIABLE), StarterCourseGoldenTest::projectRoot);
 		boolean required = Boolean.parseBoolean(setting(REQUIRED_PROPERTY, REQUIRED_VARIABLE));
 		requireOrSkip(isRepository(source), required, "starter course repository not found at " + source
 			+ " (set -D" + PROPERTY + " or " + VARIABLE + "): byte comparison with v1.0.0 not run");
@@ -75,8 +77,8 @@ class StarterCourseGoldenTest {
 	void theDefaultRepositoryIsFoundFromMavensBasedirNotFromTheWorkingDirectory() throws Exception {
 		Path module = Files.createDirectories(temp.resolve("proyecto/backend"));
 		Path elsewhere = Files.createDirectories(temp.resolve("otro/target/test-classes"));
-		assertThat(projectRoot(module.toString(), elsewhere)).isEqualTo(temp.resolve("proyecto"));
-		assertThat(source(null, projectRoot(module.toString(), elsewhere)))
+		assertThat(projectRoot(module.toString(), elsewhere, temp)).isEqualTo(temp.resolve("proyecto"));
+		assertThat(source(null, () -> projectRoot(module.toString(), elsewhere, temp)))
 			.isEqualTo(temp.resolve("Cursos/curso-inicial"));
 	}
 
@@ -85,10 +87,38 @@ class StarterCourseGoldenTest {
 		Path module = Files.createDirectories(temp.resolve("proyecto/backend"));
 		Files.writeString(module.resolve("pom.xml"), "<project/>");
 		Path classes = Files.createDirectories(module.resolve("target/test-classes"));
-		assertThat(projectRoot(null, classes)).isEqualTo(temp.resolve("proyecto"));
-		assertThat(projectRoot(" ", classes)).isEqualTo(temp.resolve("proyecto"));
-		assertThatThrownBy(() -> projectRoot(null, Files.createDirectories(temp.resolve("suelta/clases"))))
-			.hasMessageStartingWith("no pom.xml above ");
+		assertThat(projectRoot(null, classes, temp)).isEqualTo(temp.resolve("proyecto"));
+		assertThat(projectRoot(" ", classes, temp)).isEqualTo(temp.resolve("proyecto"));
+	}
+
+	/**
+	 * H12, T12 (S14): the upward walk stops at the given folder, so the negative case does not depend on whether some
+	 * folder above {@code @TempDir} happens to hold a pom.xml. A decoy pom.xml just above the bound proves it.
+	 */
+	@Test
+	void theWalkUpForAPomStopsAtTheBound() throws Exception {
+		Files.writeString(temp.resolve("pom.xml"), "<project/>");
+		Path bound = Files.createDirectories(temp.resolve("suelta"));
+		Path classes = Files.createDirectories(bound.resolve("clases"));
+		assertThatThrownBy(() -> projectRoot(null, classes, bound))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessage("no pom.xml above " + classes);
+		// The bound itself is still looked at; only what is above it is not.
+		assertThat(projectRoot(null, classes, temp)).isEqualTo(temp.getParent());
+		Files.writeString(bound.resolve("pom.xml"), "<project/>");
+		assertThat(projectRoot(null, classes, bound)).isEqualTo(temp);
+	}
+
+	/** H12, T12 (S14): with an explicit repository the project root is never looked for, so it need not exist. */
+	@Test
+	void anExplicitRepositoryWorksWhenTheProjectRootCannotBeFound() throws Exception {
+		Path configured = temp.resolve("mi-curso");
+		Callable<Path> missing = () -> {
+			throw new IllegalStateException("no pom.xml above nowhere");
+		};
+		assertThat(source(configured.toString(), missing)).isEqualTo(configured);
+		assertThatThrownBy(() -> source(null, missing))
+			.isInstanceOf(IllegalStateException.class).hasMessage("no pom.xml above nowhere");
 	}
 
 	@Test
@@ -96,13 +126,13 @@ class StarterCourseGoldenTest {
 		Path root = projectRoot();
 		assertThat(root.resolve("backend/pom.xml")).isRegularFile();
 		assertThat(root.resolve("backend/src/test/java/dev/codeacademy/content/StarterCourseGoldenTest.java")).isRegularFile();
-		assertThat(source(null, root)).isEqualTo(root.getParent().resolve("Cursos/curso-inicial"));
+		assertThat(source(null, () -> root)).isEqualTo(root.getParent().resolve("Cursos/curso-inicial"));
 	}
 
 	@Test
 	void aConfiguredRepositoryWinsOverTheDefault() throws Exception {
 		Path configured = temp.resolve("mi-curso");
-		assertThat(source(configured.toString(), temp.resolve("proyecto"))).isEqualTo(configured);
+		assertThat(source(configured.toString(), () -> temp.resolve("proyecto"))).isEqualTo(configured);
 	}
 
 	@Test
@@ -131,17 +161,29 @@ class StarterCourseGoldenTest {
 			.hasMessage("no está (required by -D" + REQUIRED_PROPERTY + " or " + REQUIRED_VARIABLE + ")");
 	}
 
+	/**
+	 * H12, T12 (S14): the property wins over a variable that is set, and the variable is used when the property is
+	 * absent or blank. The environment is injected, so the variable is really set and no real name is relied on.
+	 */
 	@Test
-	void theRequiredSettingReadsThePropertyFirst() {
+	void theSystemPropertyWinsOverASetVariableAndTheVariableIsUsedWithoutIt() {
 		String key = "academia.prueba." + System.nanoTime();
-		assertThat(setting(key, "ACADEMIA_VARIABLE_QUE_NO_EXISTE_" + System.nanoTime())).isNull();
-		System.setProperty(key, "true");
+		String variable = "ACADEMIA_PRUEBA";
+		Function<String, String> environment = name -> name.equals(variable) ? "variable" : null;
+		assertThat(setting(key, variable, environment)).isEqualTo("variable");
+		assertThat(setting(key, variable, name -> null)).isNull();
+		assertThat(setting(key, variable, name -> " ")).isNull();
 		try {
-			assertThat(Boolean.parseBoolean(setting(key, "ACADEMIA_VARIABLE_QUE_NO_EXISTE"))).isTrue();
+			System.setProperty(key, "propiedad");
+			assertThat(setting(key, variable, environment)).isEqualTo("propiedad");
+			assertThat(setting(key, variable, name -> null)).isEqualTo("propiedad");
+			System.setProperty(key, " ");
+			assertThat(setting(key, variable, environment)).isEqualTo("variable");
 		}
 		finally {
 			System.clearProperty(key);
 		}
+		assertThat(setting(key, variable, environment)).isEqualTo("variable");
 	}
 
 	@Test
@@ -166,35 +208,68 @@ class StarterCourseGoldenTest {
 		assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(30));
 	}
 
+	// H12, T12 (S14): output that is not valid UTF-8 (a child stopped mid-character, a non-UTF-8 locale) must not hide
+	// the exit code or the timeout diagnostic behind a decoding error.
+
+	@Test
+	@Timeout(value = 60, threadMode = ThreadMode.SEPARATE_THREAD)
+	void outputThatIsNotUtf8KeepsTheExitCodeAndTheText() throws Exception {
+		Result result = run("latin1", List.of("sh", "-c", "printf 'sal\\341\\377 ok'; printf 'mal\\303' >&2; exit 5"),
+			Duration.ofSeconds(30), temp);
+		assertThat(result.code()).isEqualTo(5);
+		assertThat(result.out()).isEqualTo("sal\uFFFD\uFFFD ok");
+		assertThat(result.err()).isEqualTo("mal\uFFFD");
+	}
+
+	@Test
+	@Timeout(value = 60, threadMode = ThreadMode.SEPARATE_THREAD)
+	void outputThatIsNotUtf8KeepsTheTimeoutDiagnostic() {
+		assertThatThrownBy(() -> run("cortado", List.of("sh", "-c", "printf 'empieza\\342\\202'; exec sleep 300"),
+			Duration.ofSeconds(1), temp))
+			.isInstanceOf(AssertionFailedError.class)
+			.hasMessage("cortado did not finish in 1 s and was stopped; its output so far:\nempieza\uFFFD");
+	}
+
 	/** The value of a system property, else of an environment variable; null when neither is set or both are blank. */
 	static String setting(String property, String variable) {
+		return setting(property, variable, System::getenv);
+	}
+
+	/** {@link #setting(String, String)} with the environment given, so a test can set a variable. */
+	static String setting(String property, String variable, Function<String, String> environment) {
 		String value = System.getProperty(property);
-		if (value == null || value.isBlank()) value = System.getenv(variable);
+		if (value == null || value.isBlank()) value = environment.apply(variable);
 		return value == null || value.isBlank() ? null : value;
 	}
 
-	/** The configured repository, else the default next to this project. */
-	static Path source(String configured, Path projectRoot) {
+	/**
+	 * The configured repository, else the default next to this project. The project root is only looked for when
+	 * nothing is configured, so an explicit path works wherever the classes are.
+	 */
+	static Path source(String configured, Callable<Path> projectRoot) throws Exception {
 		if (configured != null) return Path.of(configured).toAbsolutePath().normalize();
-		return projectRoot.resolve(DEFAULT).toAbsolutePath().normalize();
+		return projectRoot.call().resolve(DEFAULT).toAbsolutePath().normalize();
 	}
 
 	/** The root of this project: the parent of the backend module. */
 	static Path projectRoot() throws URISyntaxException {
 		Path classes = Path.of(StarterCourseGoldenTest.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-		return projectRoot(System.getProperty("basedir"), classes);
+		return projectRoot(System.getProperty("basedir"), classes, null);
 	}
 
 	/**
 	 * The backend module is Maven's {@code basedir}; without it (an IDE), the nearest folder with a pom.xml above the
-	 * compiled test classes. Never the working directory, which depends on where the run was started.
+	 * compiled test classes, looking no higher than {@code stop} (itself included; null, up to the filesystem root).
+	 * Never the working directory, which depends on where the run was started.
 	 */
-	static Path projectRoot(String basedir, Path classes) {
+	static Path projectRoot(String basedir, Path classes, Path stop) {
+		Path bound = stop == null ? null : stop.toAbsolutePath().normalize();
 		Path module = null;
 		if (basedir != null && !basedir.isBlank()) module = Path.of(basedir);
 		else {
 			for (Path folder = classes.toAbsolutePath().normalize(); folder != null && module == null; folder = folder.getParent()) {
 				if (Files.isRegularFile(folder.resolve("pom.xml"))) module = folder;
+				if (folder.equals(bound)) break;
 			}
 			if (module == null) throw new IllegalStateException("no pom.xml above " + classes);
 		}
@@ -268,8 +343,13 @@ class StarterCourseGoldenTest {
 			process.destroyForcibly();
 			process.waitFor(10, TimeUnit.SECONDS);
 			fail(name + " did not finish in " + timeout.toSeconds() + " s and was stopped; its output so far:\n"
-				+ Files.readString(out) + Files.readString(err));
+				+ text(out) + text(err));
 		}
-		return new Result(process.exitValue(), Files.readString(out), Files.readString(err));
+		return new Result(process.exitValue(), text(out), text(err));
+	}
+
+	/** A captured stream as UTF-8, with any malformed bytes replaced, so a decoding error never hides the result. */
+	static String text(Path log) throws Exception {
+		return new String(Files.readAllBytes(log), StandardCharsets.UTF_8);
 	}
 }
