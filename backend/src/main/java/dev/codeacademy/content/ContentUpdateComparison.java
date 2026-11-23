@@ -46,8 +46,9 @@ final class ContentUpdateComparison {
         // Every course whose commit is in this source is verified against it, and so is every course the update
         // changes. A course from another repository can only be carried byte for byte: nothing here can verify it.
         Set<String> updated = updatedCourses(base, next, conflicts);
-        verifySource(base, paths.source(), "active", updated, conflicts);
-        verifySource(next, paths.source(), "candidate", updated, conflicts);
+        verifySource(base, paths.source(), "active", updated, false, conflicts);
+        // The executable bit is checked on what is about to be installed: it must be the mode of the pinned tree (H12, T7).
+        verifySource(next, paths.source(), "candidate", updated, true, conflicts);
         List<String> changes = new ArrayList<>();
         for (var entry : base.entities().entrySet()) {
             String id = entry.getKey();
@@ -288,8 +289,8 @@ final class ContentUpdateComparison {
         return updated;
     }
 
-    private static void verifySource(Copy copy, Path source, String label, Set<String> updated, List<String> conflicts)
-            throws IOException {
+    private static void verifySource(Copy copy, Path source, String label, Set<String> updated, boolean modes,
+            List<String> conflicts) throws IOException {
         for (CourseContent course : copy.courses()) {
             Manifest m = course.manifest();
             String ref = m.source().versionRef();
@@ -306,6 +307,9 @@ final class ContentUpdateComparison {
             if (m.projectStages() != null) m.projectStages().stream().filter(Manifest.Stage::available)
                 .forEach(s -> sources.put(s.bodyPath(), s.sourcePath()));
             m.resources().stream().filter(r -> !"zip".equals(r.kind())).forEach(r -> sources.put(r.localPath(), r.sourcePath()));
+            Map<String, Boolean> executable = new TreeMap<>();
+            m.resources().stream().filter(r -> !"zip".equals(r.kind()))
+                .forEach(r -> executable.put(r.localPath(), Boolean.TRUE.equals(r.executable())));
             for (var file : sources.entrySet()) {
                 byte[] listing = git(source, "ls-tree", "-z", "--full-tree", ref, "--", file.getValue());
                 String entry = listing == null ? "" : new String(listing, StandardCharsets.UTF_8);
@@ -318,6 +322,10 @@ final class ContentUpdateComparison {
                 byte[] bytes = git(source, "cat-file", "blob", blob);
                 if (bytes == null || !sha(bytes).equals(copy.files().get(file.getKey()))) {
                     conflicts.add(label + ": source bytes differ " + file.getKey() + " at " + ref);
+                }
+                else if (modes && executable.containsKey(file.getKey())
+                    && executable.get(file.getKey()) != entry.startsWith("100755 blob ")) {
+                    conflicts.add(label + ": source mode differs " + file.getKey() + " at " + ref);
                 }
             }
         }

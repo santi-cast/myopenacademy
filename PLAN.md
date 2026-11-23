@@ -112,6 +112,7 @@ Aprobado por el autor el 23 de noviembre de 2026 (decisión 15 y apartado 4 de `
 | T3 | El temario (`GET /api/courses/{id}`) devuelve también las partes (una lista vacía si no hay). Sin tablas nuevas: el avance sale de los estados de lección. |
 | T4 | Índice, menú y «Mis cursos», con el estilo desde `tokens.css`. |
 | T5 | Pruebas: cada regla de T1 con su mensaje, la carga, la comparación y las pantallas con un curso de varias partes creado por las pruebas. Una prueba unitaria y otra de navegador demuestran que un curso sin partes solo gana el avance por fase. |
+| T7 | Los ZIP de código guardan el permiso de ejecución: 755 para lo que en el árbol de Git del commit fijado es `100755` (nunca se mira el disco); lo demás, igual que hoy, para que los ZIP del curso inicial no cambien ni un byte. Siguen siendo deterministas (decisión del autor, 23 de noviembre de 2026; sin él, `./mvnw` da «Permiso denegado» en Linux y macOS). |
 | T6 | Documentación, `CHANGELOG.md` y nota de la versión 1.1.0. Etiqueta y *release*, solo con la orden del autor y después de la instalación de prueba del curso de Java. |
 
 ## 5. Después del 1.0

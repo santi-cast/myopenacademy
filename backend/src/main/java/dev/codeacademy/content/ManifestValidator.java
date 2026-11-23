@@ -405,12 +405,17 @@ final class ManifestValidator {
 							.anyMatch(link -> folder.equals(link.sourcePath())
 								&& link.resourceIds() != null && link.resourceIds().containsAll(resource.memberResourceIds()));
 					if (!mapped) problems.add("ZIP must decorate the folder that lists its members: " + resource.resourceId());
+					if (resource.executable() != null) problems.add("ZIP resource cannot be executable: " + resource.resourceId());
 				}
 				else if (!"file".equals(resource.kind())) {
 					problems.add("resource " + resource.resourceId() + ": unsupported kind " + resource.kind());
 				}
 				else if (resource.fileName() != null || resource.memberResourceIds() != null) {
 					problems.add("file resource cannot have ZIP metadata: " + resource.resourceId());
+				}
+				// Written only when true (a 100755 file in the pinned commit), so one copy has one manifest.
+				if ("file".equals(resource.kind()) && Boolean.FALSE.equals(resource.executable())) {
+					problems.add("resource " + resource.resourceId() + ": executable must be true or absent");
 				}
 			}
 			long owners = Stream.of(resource.lessonId(), resource.stageId(), resource.documentId()).filter(Objects::nonNull).count();

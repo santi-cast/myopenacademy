@@ -719,7 +719,9 @@ final class ContentImportGenerator {
 				ResourcePlan plan = entry.getValue();
 				resourceEntries.add(new Resource(plan.id(), "lesson".equals(plan.kind()) ? plan.owner() : null,
 					entry.getKey().path(), plan.localPath(), plan.mediaType(), "stage".equals(plan.kind()) ? plan.owner() : null,
-					FILE, null, null, "document".equals(plan.kind()) ? plan.owner() : null));
+					FILE, null, null, "document".equals(plan.kind()) ? plan.owner() : null,
+					// Only a 100755 file says so: the field is absent otherwise, so the manifest keeps its bytes.
+					source.executable(entry.getKey().path()) ? Boolean.TRUE : null));
 			}
 			for (FolderPlan folder : folders.values()) {
 				if (folder.owners.isEmpty()) continue;

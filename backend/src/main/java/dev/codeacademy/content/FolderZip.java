@@ -1,14 +1,18 @@
 package dev.codeacademy.content;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,18 +128,11 @@ public final class FolderZip {
 
 	private static void writeMembers(Path root, Map<String, Manifest.Resource> resources, Manifest.Resource archive,
 			OutputStream output) throws IOException {
+		BitSet executables = new BitSet();
+		CentralDirectory sink = new CentralDirectory(output);
 		// Closing the ZIP frees its native deflater but leaves the caller's stream open.
-		try (var zip = new ZipOutputStream(new FilterOutputStream(output) {
-			@Override
-			public void close() throws IOException {
-				flush();
-			}
-
-			@Override
-			public void write(byte[] bytes, int offset, int length) throws IOException {
-				out.write(bytes, offset, length);
-			}
-		})) {
+		try (var zip = new ZipOutputStream(sink)) {
+			int index = 0;
 			for (String id : archive.memberResourceIds()) {
 				Manifest.Resource member = resources.get(id);
 				List<String> problems = new ArrayList<>();
@@ -156,7 +153,78 @@ public final class FolderZip {
 					copyExactly(input, zip, size);
 				}
 				zip.closeEntry();
+				// The registered mode, which the importer took from the Git tree of the pinned commit (H12, T7).
+				if (Boolean.TRUE.equals(member.executable())) executables.set(index);
+				index++;
 			}
+			// Without executables nothing is held back: the archive is exactly what java.util.zip writes.
+			if (!executables.isEmpty()) {
+				sink.hold();
+				zip.finish();
+				sink.release(executables);
+			}
+		}
+	}
+
+	/**
+	 * Passes every byte through, except the central directory when {@link #hold} is called before it is written: it is
+	 * held, the records of the executable entries are marked as Unix files with permissions 0755, and it is released
+	 * with the same length. java.util.zip has no public API for external attributes; local headers and data, and every
+	 * other record, keep exactly their bytes, and the archive stays deterministic. Closing only flushes.
+	 */
+	private static final class CentralDirectory extends FilterOutputStream {
+		private static final int CENTRAL = 0x02014b50;
+		/** Version made by: the high byte is the host system, 3 for Unix, so unzip tools honour the permissions. */
+		private static final int UNIX = 3 << 8;
+		/** External attributes of a regular file with permissions 0755 (S_IFREG | 0755) in the high 16 bits. */
+		private static final int EXECUTABLE = 0100755 << 16;
+
+		private ByteArrayOutputStream held;
+
+		CentralDirectory(OutputStream output) {
+			super(output);
+		}
+
+		void hold() {
+			held = new ByteArrayOutputStream();
+		}
+
+		@Override
+		public void write(int value) throws IOException {
+			if (held != null) held.write(value);
+			else out.write(value);
+		}
+
+		@Override
+		public void write(byte[] bytes, int offset, int length) throws IOException {
+			if (held != null) held.write(bytes, offset, length);
+			else out.write(bytes, offset, length);
+		}
+
+		@Override
+		public void close() throws IOException {
+			flush();
+		}
+
+		/** Marks the records of these entries, in entry order, and writes the central directory and its end record. */
+		void release(BitSet executables) throws IOException {
+			byte[] directory = held.toByteArray();
+			held = null;
+			ByteBuffer records = ByteBuffer.wrap(directory).order(ByteOrder.LITTLE_ENDIAN);
+			int position = 0;
+			for (int index = 0; position + 46 <= directory.length && records.getInt(position) == CENTRAL; index++) {
+				if (executables.get(index)) {
+					records.putShort(position + 4, (short) (UNIX | (records.getShort(position + 4) & 0xff)));
+					records.putInt(position + 38, EXECUTABLE);
+				}
+				position += 46 + (records.getShort(position + 28) & 0xffff) + (records.getShort(position + 30) & 0xffff)
+					+ (records.getShort(position + 32) & 0xffff);
+				if (index == executables.length() - 1 && position <= directory.length) {
+					out.write(directory);
+					return;
+				}
+			}
+			throw new IOException("unexpected ZIP central directory");
 		}
 	}
 

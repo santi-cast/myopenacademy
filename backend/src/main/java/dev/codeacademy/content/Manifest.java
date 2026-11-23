@@ -117,9 +117,21 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 	public record Exercise(String id, String lessonId, String title) {
 	}
 
-	/** Exactly one owner: {@code lessonId}, {@code stageId} or {@code documentId}. */
+	/**
+	 * Exactly one owner: {@code lessonId}, {@code stageId} or {@code documentId}. {@code executable} (H12, T7) is true
+	 * only for a file whose mode in the Git tree of the pinned commit is 100755; otherwise it is absent, never written
+	 * as false, so the manifest of a course without executables keeps the bytes it had before.
+	 */
 	public record Resource(String resourceId, String lessonId, String sourcePath, String localPath, String mediaType,
-			String stageId, String kind, String fileName, List<String> memberResourceIds, String documentId) {
+			String stageId, String kind, String fileName, List<String> memberResourceIds, String documentId,
+			@JsonInclude(JsonInclude.Include.NON_NULL) Boolean executable) {
+		/** Not executable (before H12, or a file committed as 100644). */
+		public Resource(String resourceId, String lessonId, String sourcePath, String localPath, String mediaType,
+				String stageId, String kind, String fileName, List<String> memberResourceIds, String documentId) {
+			this(resourceId, lessonId, sourcePath, localPath, mediaType, stageId, kind, fileName, memberResourceIds,
+				documentId, null);
+		}
+
 		public Resource(String resourceId, String lessonId, String sourcePath, String localPath, String mediaType,
 				String stageId, String kind, String fileName, List<String> memberResourceIds) {
 			this(resourceId, lessonId, sourcePath, localPath, mediaType, stageId, kind, fileName, memberResourceIds, null);

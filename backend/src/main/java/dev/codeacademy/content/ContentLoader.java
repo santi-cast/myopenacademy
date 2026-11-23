@@ -207,6 +207,7 @@ public final class ContentLoader {
 					if (resource.has("kind") || resource.has("stageId") || resource.has("fileName") || resource.has("memberResourceIds")) {
 						throw new ContentValidationException("schemaVersion 1 does not allow resource kind or stageId");
 					}
+					if (resource.has("executable")) throw new ContentValidationException("schemaVersion 1 does not allow executable");
 				}
 				for (var link : tree.path("sourceToId")) {
 					if (link.has("stageId") || link.has("zipResourceId")) {
