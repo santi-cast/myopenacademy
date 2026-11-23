@@ -95,9 +95,28 @@ Los números de la columna «Cambios» son los de la lista de `ESTADO.md` («Lis
 - **El curso inicial completo**, instalado desde su etiqueta.
 - Versión etiquetada, primer `push` y *release*, con la autorización del autor.
 
+### H12. Partes de los cursos (academia 1.1.0)
+
+Aprobado por el autor el 23 de noviembre de 2026 (decisión 15 y apartado 4 de `../PLAN.md`). Lo necesita el curso de Java. Rama `feat/h12-partes`; tareas en `odd/tasks/h12-partes.md`.
+
+- **Regla:** las partes solo cambian los cursos que las tienen. **Un curso sin partes, como el inicial, se ve igual que hoy, salvo el avance por fase**, que sale en todos los cursos (decisión del autor).
+- **Índice del curso:** cada parte es un bloque con su título y su avance («12 de 40 lecciones»), y dentro van sus fases, cada una con su avance, y sus módulos.
+- **Menú lateral:** partes plegables, con solo la de la lección actual abierta. Dentro van las fases plegables, como hoy, y cada parte y cada fase lleva su «N de M».
+- **«Mis cursos»:** solo en cursos con partes, una línea «Vas por: 2. Java avanzado (5 de 30)», con la parte de la lección que abre «Continuar».
+- **Avance:** en lecciones completadas, sin contar los retos, como el del curso.
+
+| | Qué |
+|---|---|
+| T1 | Leer y validar `partes` de `curso.json` con **exactamente las reglas de `FORMATO.md` 3.2 y 3.3 y de `formato_academia.py` del kit** (`comprobar_partes`, kit `db706a0`) y los mismos casos. `partes` es una lista y cada parte un objeto. Cada `id` es «`<curso>.`» y un nombre, y no lo usa ningún otro identificador del curso. El `titulo` es un texto no vacío y sin formato Markdown, y `fases` es una lista. Cada fase listada existe y está en una sola parte, y si hay partes, cada fase del curso está en alguna. Un campo desconocido en una parte es un aviso. Un fallo es un hallazgo y no se aplica. **Pendientes del kit** (decisión del autor, 23 de noviembre de 2026): que una parte sin fases sea un error y que cada parte sea un tramo de fases seguidas en el orden del curso, con las partes una tras otra. Primero lo añade el kit a `FORMATO.md` 3.2 y a `formato_academia.py`, dentro de su 1.1.0, y después lo copia la academia; si fuera al revés, habría cursos que pasan el kit y fallan al instalarse. |
+| T2 | `parts` opcional en el manifiesto, en el formato 2 sin subir de versión: los manifiestos de la 1.0.0 siguen cargando. La carga valida lo mismo. Al actualizar, cambiar el título de una parte o pasar una fase de una parte a otra es un cambio, no un conflicto. `docs/manifiesto.md`. |
+| T3 | El temario (`GET /api/courses/{id}`) devuelve también las partes (una lista vacía si no hay). Sin tablas nuevas: el avance sale de los estados de lección. |
+| T4 | Índice, menú y «Mis cursos», con el estilo desde `tokens.css`. |
+| T5 | Pruebas: cada regla de T1 con su mensaje, la carga, la comparación y las pantallas con un curso de varias partes creado por las pruebas. Una prueba unitaria y otra de navegador demuestran que un curso sin partes solo gana el avance por fase. |
+| T6 | Documentación, `CHANGELOG.md` y nota de la versión 1.1.0. Etiqueta y *release*, solo con la orden del autor y después de la instalación de prueba del curso de Java. |
+
 ## 5. Después del 1.0
 
-Sin orden fijo (`../PLAN.md` 8.5): partes de los cursos y su avance (las necesita el curso de Java, primer DLC aparte) · equivalencias entre versiones · preguntas de repaso como test · datos de la cabecera (tiempo, nivel, «Conviene saber antes») como datos y duración de cada curso · registro por invitación · roadmaps · instalar cursos desde GitHub y desde el panel · guía «Crea tu propio curso» · búsqueda, notas, tamaño de letra, atajos, retomar en la sección exacta · corrección automática · **listas de tareas de Markdown** (`- [ ]`, `- [x]`: la extensión de listas de tareas de commonmark-java y casillas desactivadas permitidas en el saneador; hoy ningún curso las usa fuera de bloques de código y el kit avisa si aparecen; cuando esté, se avisa al kit para que quite el aviso; raíz, 9 de noviembre de 2026) · **publicación en internet** (dominio, HTTPS, copias de seguridad, límite de intentos, CSP y lo del apartado 9).
+Sin orden fijo (`../PLAN.md` 8.5): ~~partes de los cursos y su avance~~ (en H12) · equivalencias entre versiones · preguntas de repaso como test · datos de la cabecera (tiempo, nivel, «Conviene saber antes») como datos y duración de cada curso · registro por invitación · roadmaps · instalar cursos desde GitHub y desde el panel · guía «Crea tu propio curso» · búsqueda, notas, tamaño de letra, atajos, retomar en la sección exacta · corrección automática · **listas de tareas de Markdown** (`- [ ]`, `- [x]`: la extensión de listas de tareas de commonmark-java y casillas desactivadas permitidas en el saneador; hoy ningún curso las usa fuera de bloques de código y el kit avisa si aparecen; cuando esté, se avisa al kit para que quite el aviso; raíz, 9 de noviembre de 2026) · **publicación en internet** (dominio, HTTPS, copias de seguridad, límite de intentos, CSP y lo del apartado 9).
 
 **Fuera:** certificados, pagos, mentorías, ejecutar el código del alumno en el servidor y aplicaciones móviles nativas.
 

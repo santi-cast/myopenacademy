@@ -208,6 +208,7 @@ Pedido por la raíz, sin cambiar código. Pruebas con el JAR recompilado desde `
 | Kit | Avisar de los enlaces de correo fuera de código (opción c del autor) | Que los cursos no lleguen con `mailto:` | **Hecho** por el kit en `e44174e` (16 de noviembre de 2026; `FORMATO.md` 10.7). Respondido al kit: la academia no enlaza los correos sueltos (sin `< >`), porque no usa la extensión de enlaces automáticos de GitHub; GitHub sí los enlaza. El kit avisa también del correo suelto desde `cf6c46d`; el curso inicial da 0 avisos y los cursos de ejemplo no cambian (nada que traer) |
 | Kit | Lo mismo para los cursos de ejemplo no hace falta (el E2E los etiqueta en su repositorio temporal); sí, decir en `FORMATO.md` 11.1 o en la guía del kit **cuándo** se etiqueta (al cerrar una versión, después de verificar el commit) | Que los cursos lleguen etiquetados | Pedido el 16 de noviembre de 2026 |
 | Curso de Java | Un commit sin la fase 00 (paso 3) y con los títulos de ejercicio en texto plano | La instalación de prueba en la academia | Pedido el 23 de noviembre de 2026 |
+| Kit | En `FORMATO.md` 3.2 y en `formato_academia.py`, dentro de su 1.1.0: que una parte sin fases sea un error y que cada parte sea un tramo de fases seguidas en el orden del curso, con las partes una tras otra | Copiar esas dos reglas en H12, T1 (decisión del autor: primero el kit y después la academia) | Pedido el 23 de noviembre de 2026 |
 
 | Otros esperan de la academia | Qué | Para | Estado |
 |---|---|---|---|
