@@ -57,8 +57,8 @@ Con Docker Compose, en un solo comando. Paso a paso, con la configuración, el a
 
 Cada curso vive en su propio repositorio y cumple un formato común, que define qué tiene que traer para que la academia lo instale. Cuando se publiquen, estarán en la organización `myopenacademy` de GitHub:
 
-- **El curso inicial**, «Fundamentos para programar»: `github.com/myopenacademy/curso-inicial` (todavía sin publicar).
-- **El kit de cursos**, con el formato (`FORMATO.md`) y las herramientas para escribir y comprobar un curso: `github.com/myopenacademy/kit-cursos` (todavía sin publicar).
+- **El curso inicial**, «Fundamentos para programar»: <https://github.com/myopenacademy/curso-inicial>.
+- **El kit de cursos**, con el formato (`FORMATO.md`) y las herramientas para escribir y comprobar un curso: <https://github.com/myopenacademy/kit-cursos>.
 
 Si quieres escribir un curso, empieza por el formato. Para probar la academia mientras tanto, este repositorio trae dos cursos de ejemplo pequeños en [`cursos-ejemplo/`](cursos-ejemplo/).
 

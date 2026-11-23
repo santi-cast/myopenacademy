@@ -8,7 +8,7 @@ Este repositorio es **la plataforma**. Los cursos viven cada uno en su repositor
 
 - Escribe en **español de España**, tuteando: la interfaz, los mensajes y la documentación.
 - Prepara el entorno con [`docs/desarrollo-local.md`](docs/desarrollo-local.md). Para instalar la academia sin desarrollar, [`docs/instalacion.md`](docs/instalacion.md).
-- La academia instala cursos que cumplen el **formato de los cursos** (`FORMATO.md`, en el kit de cursos, que estará en `github.com/myopenacademy/kit-cursos`). El formato se cambia en el repositorio del kit, no aquí.
+- La academia instala cursos que cumplen el **formato de los cursos** ([`FORMATO.md`](https://github.com/myopenacademy/kit-cursos/blob/main/FORMATO.md), en el [kit de cursos](https://github.com/myopenacademy/kit-cursos)). El formato se cambia en el repositorio del kit, no aquí.
 
 ## Cómo proponer un cambio
 
