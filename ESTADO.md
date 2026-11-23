@@ -60,7 +60,9 @@ Lo que ya existe en los otros proyectos:
 - **Publicado:** <https://github.com/santi-cast/myopenacademy>, público, con `main` como rama por defecto y la etiqueta `v1.0.0` (las dos en `a4d48c0`). Descripción: «MyOpenAcademy: academia de programación libre y gratuita que instala sus cursos como DLC. Spring Boot, React y Docker Compose». Temas: `education`, `e-learning`, `learning-platform`, `programming`, `spanish`, `spring-boot`, `react`, `docker-compose` y `open-source`. *Release* «MyOpenAcademy 1.0.0 — el pack base» (<https://github.com/santi-cast/myopenacademy/releases/tag/v1.0.0>), marcada como la más reciente, con `docs/notas-de-version/1.0.0.md` como nota.
 - **README en GitHub, comprobado con navegador:** las cuatro capturas cargan (1280 px de ancho). El diagrama Mermaid se dibuja (`flowchart-v2`, sin error de sintaxis). Los enlaces al curso y al kit funcionan.
 
-**Siguiente, solo con la orden del autor:** activar «Report a vulnerability» en GitHub. Al terminar, borrar `git-filter-repo` (`rm -rf ~/.local/share/venvs/git-filter-repo`). Después, lo que diga `../PLAN.md` (el curso de Java como primer DLC aparte).
+**Cierre de la publicación** (23 de noviembre de 2026, con la orden del autor): «Report a vulnerability» (avisos privados de vulnerabilidades) activado en GitHub, y la API responde `{"enabled":true}`. `git-filter-repo` borrado del equipo: lo borró el autor, porque la política de seguridad del entorno bloquea el `rm -rf` al agente, y después se comprobó que ya no está.
+
+**Siguiente:** lo que diga `../PLAN.md` (el curso de Java como primer DLC aparte).
 
 **Preguntas abiertas para el autor:**
 
@@ -226,4 +228,4 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-16 | Prueba de instalación del curso inicial desde `ed6c0b7`; `.env.example` admitido y `charset` de los CSV desde `codificacion.txt` (decisiones del autor). |
 | 2026-11-16 | H7, T2: solo identificadores `<curso>.` (forma de `FORMATO.md` 3.3) y números de fase y de módulo por el orden del curso («Fase 01», «01.01»). |
 | 2026-11-16 | H11: pack base 1.0 cerrado en local, con la etiqueta `v1.0.0` sobre `main`; el curso inicial instalado desde su `v1.0.0`. Sin remoto ni `push`. |
-| 2026-11-23 | **Publicada la 1.0.0** en <https://github.com/santi-cast/myopenacademy> (público): `main` y `v1.0.0` en `a4d48c0` (enlaces al kit y al curso en el README; la etiqueta se movió ahí), con su *release*, descripción y temas. README comprobado en GitHub con navegador: capturas y diagrama bien. |
+| 2026-11-23 | **Publicada la 1.0.0** en <https://github.com/santi-cast/myopenacademy> (público): `main` y `v1.0.0` en `a4d48c0` (enlaces al kit y al curso en el README; la etiqueta se movió ahí), con su *release*, descripción y temas. README comprobado en GitHub con navegador: capturas y diagrama bien. «Report a vulnerability» activado y `git-filter-repo` borrado del equipo. |
