@@ -179,6 +179,21 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 - ~~**Antes de publicar**~~ **Hecho en H11** (`../PLAN.md`, apartado 8.6): rutas absolutas en `odd/tasks/` (las de `PLAN.md` se quitaron al reescribirlo); README desactualizado y con voseo; `gitleaks` sobre todo el historial; licencias de las dependencias (elkjs, dompurify); el nombre MyOpenAcademy en un solo sitio (hoy «Code Academy» está en `index.html`, `src/layout/Layouts.tsx` y `e2e/stages.spec.ts`).
 - ~~**`content/` fuera de Git**~~ **Hecho** en H7, T3 (9 de noviembre de 2026). El historial sigue guardando la copia de Java: el autor decide antes de H11 si se reescribe (ver «Preguntas abiertas»).
 
+## Curso de Java: qué admite la academia 1.0.0 (23 de noviembre de 2026)
+
+Pedido por la raíz, sin cambiar código. Pruebas con el JAR recompilado desde `main` (`55879ee`, mismo código que `v1.0.0`), en carpetas temporales y sin Docker:
+
+- **Campos desconocidos en `curso.json`:** se ignoran. Lo comprobé con una copia del curso inicial `v1.0.0` que lleva `ruta_minima` arriba, un campo extra en una fase y otro en un módulo: `content-import generate` escribe la candidata (31 lecciones y 613 recursos) sin hallazgos ni avisos. En el código, `CourseDescriptor` solo lee los campos que conoce. `formato` distinto de `1` sí es un error.
+- **El curso de Java desde su commit `e777853`** (`curso.json` provisional): 199 lecciones procesadas en 11 s, con 1,1 GB de memoria; la candidata no se escribe por **252 hallazgos, todos por la misma causa**: 88 títulos de ejercicio con formato Markdown, que en `FORMATO.md` 3.2 tienen que ser texto plano. Cada uno da dos hallazgos (encabezado y `curso.json` no coinciden), y además salen 76 anclas `#ejercicio-…` rotas que nacen de esos títulos. Es la fila «176 títulos con formato» de la lista de partida del curso. Avisos: 3 `<i>` y 4 `.env` de `codigo/`, que se excluyen.
+- **`<template>` del 13.02:** la academia 1.0.0 no da ningún hallazgo ni aviso en ese módulo. El fallo lo marca `formato_academia.py` del kit. Queda por ver cómo se muestra la línea 4264 en la instalación de prueba.
+- **Lo que admite:**
+  - las 14 etapas del proyecto (`proyecto.tipo: "etapas"`, con su página y su avance);
+  - los enlaces al curso inicial (se resuelven dentro de la academia si está instalado; si no, van a GitHub);
+  - las carpetas Maven y Gradle (se empaquetan enteras, sin filtro de tipos; queda por comprobar que `mvnw` y `gradlew` conservan el permiso de ejecución);
+  - el tamaño.
+- **Lo que no admite:** `partes`, `transicion` y `equivalencias` se ignoran (no hay agrupación por partes en el índice ni en el menú). Sería trabajo para la 1.1.0 de la academia.
+- **Instalación de prueba propuesta:** desde el commit del curso cuando haya quitado la fase 00 (su paso 3) y tenga los títulos en texto plano (sin eso, la candidata no se escribe). Se haría en un proyecto de Compose aparte (`-p` y `--env-file` propios, otro puerto) y se desmontaría después.
+
 ## Dependencias con el kit y el curso inicial
 
 | La academia espera de… | Qué | Para | Estado |
@@ -192,6 +207,7 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 | Curso inicial | Que la academia instale `.github/` dentro de `codigo/` (plantilla de issue de la fase 7) y la meta en el ZIP | Fase 7 (07.02 y reto 3) | **Confirmado** (16 de noviembre de 2026, H8 L7): solo se protege el nombre exacto `.git`; prueba nueva con `.github/ISSUE_TEMPLATE/` instalado y en el ZIP byte a byte. Nada que cambiar |
 | Kit | Avisar de los enlaces de correo fuera de código (opción c del autor) | Que los cursos no lleguen con `mailto:` | **Hecho** por el kit en `e44174e` (16 de noviembre de 2026; `FORMATO.md` 10.7). Respondido al kit: la academia no enlaza los correos sueltos (sin `< >`), porque no usa la extensión de enlaces automáticos de GitHub; GitHub sí los enlaza. El kit avisa también del correo suelto desde `cf6c46d`; el curso inicial da 0 avisos y los cursos de ejemplo no cambian (nada que traer) |
 | Kit | Lo mismo para los cursos de ejemplo no hace falta (el E2E los etiqueta en su repositorio temporal); sí, decir en `FORMATO.md` 11.1 o en la guía del kit **cuándo** se etiqueta (al cerrar una versión, después de verificar el commit) | Que los cursos lleguen etiquetados | Pedido el 16 de noviembre de 2026 |
+| Curso de Java | Un commit sin la fase 00 (paso 3) y con los títulos de ejercicio en texto plano | La instalación de prueba en la academia | Pedido el 23 de noviembre de 2026 |
 
 | Otros esperan de la academia | Qué | Para | Estado |
 |---|---|---|---|
