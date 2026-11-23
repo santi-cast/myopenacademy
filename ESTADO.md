@@ -54,6 +54,12 @@ Lo que ya existe en los otros proyectos:
   1. Los 3 ZIP que no abren son de pega a propósito del curso (`fotos-viaje.zip` y `plantilla-web.zip` del reto 01 de la fase 3, y `fotos-2026.zip` del ejercicio 8 de 03.01). La academia los sirve como ZIP, así que un alumno que los abra verá «archivo dañado». **Se quedan así** (decisión del autor): en el reto 01 de la fase 3 solo sirven para ordenarlos con la terminal, y en el ejercicio 8 de 03.01 para ver qué ficheros selecciona un patrón. No hay que abrirlos.
   2. Los enlaces externos, que la pasada no comprobó, los ha comprobado la raíz el 23 de noviembre de 2026 sobre el curso inicial v1.0.0 (50 direcciones). **No hay ninguno roto de verdad.** Los que fallan son de ejemplo a propósito: dominios `.example` y `.invalid`, IPs de la red de casa, enlaces falsos de los módulos de seguridad y repositorios de ejemplo. El único que hay que vigilar es el de `FORMATO.md` del kit, que da 404 hasta que el kit se publique (lo apunta la sesión del curso).
 
+**Publicar la 1.0, cuando el kit y el curso estén publicados** (orden del autor, 23 de noviembre de 2026; el 23 de noviembre todavía no existían `myopenacademy/kit-cursos` ni `myopenacademy/curso-inicial` en GitHub):
+
+1. Comprobar que sus enlaces responden y convertir en enlaces sus menciones de `README.md` (hoy dicen «todavía sin publicar») y de `CONTRIBUTING.md`. Hacer commit y **mover `v1.0.0` a ese commit**: el README cambia el producto (decisión del autor).
+2. Enseñar al autor lo que se va a crear y subir: el repositorio `santi-cast/myopenacademy` (público), la rama `main`, la etiqueta `v1.0.0`, la descripción, los temas y la nota de la *release* (`docs/notas-de-version/1.0.0.md`). Esperar su «sí».
+3. Crear el repositorio, subir `main` y la etiqueta, y crear la *release*. Comprobar que el README se ve bien en GitHub, con las capturas y el diagrama, apuntarlo aquí y hacer commit y `push`.
+
 **Siguiente, solo con la orden del autor:** crear el remoto `santi-cast/myopenacademy`, el primer `push` (con la etiqueta), el *release* con la nota de la versión y activar «Report a vulnerability» en GitHub. Cuando se publiquen el kit y el curso, convertir en enlaces sus direcciones del `README.md` y de `CONTRIBUTING.md`. Al terminar, borrar `git-filter-repo` (`rm -rf ~/.local/share/venvs/git-filter-repo`).
 
 **Preguntas abiertas para el autor:**
