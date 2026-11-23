@@ -403,6 +403,18 @@
   border-radius: var(--radius-sm);
 }
 
+/* A key the learner presses (<kbd>Ctrl</kbd>): drawn like a keycap, with a thicker lower edge (H12). */
+.reading kbd {
+  font-size: var(--code-inline-size);
+  color: var(--code-text);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border-strong);
+  border-bottom-width: var(--border-width-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-0) var(--space-1);
+  white-space: nowrap;
+}
+
 .reading table {
   display: block;
   overflow-x: auto;
