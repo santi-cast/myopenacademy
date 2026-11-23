@@ -44,6 +44,16 @@ Lo que ya existe en los otros proyectos:
 
 **Uso real antes de publicar** (decisión del autor, 16 de noviembre de 2026): el autor usa la academia en local unos días. La arranca él con `docker compose up -d --build` desde `Academia/` y crea su administrador en su propia terminal (`docker compose run --rm app --create-admin=…`). Listo para ello: `.env` con `DB_PASSWORD` (sin mostrarla), `content/` con el curso inicial instalado desde su `v1.0.0` (T8) y `cursos-instalados.json` al día; el volumen `myopenacademy_postgres_data` todavía no existe (base nueva) y los puertos 8080 y 5434 están libres. **Si sale algo que corregir:** se arregla en un commit nuevo y la etiqueta `v1.0.0` se vuelve a poner sobre él (es local, no se ha publicado). Ni remoto ni `push` hasta su orden.
 
+**Cuentas de prueba en la instancia local del autor** (23 de noviembre de 2026): `prueba_admin` (administrador, creada con `--create-admin`) y `prueba_alumno` (alumno, registrada desde `/register`). Sirven para las pasadas automáticas con navegador sobre la academia real. No guardan contraseña: antes de cada pasada se les pone una aleatoria con `docker compose run --rm app --reset-password=<usuario>` (necesita una terminal de verdad) y se borra al terminar. No se desactivan. `prueba_alumno` tiene marcado progreso en 01.01 (lección completada, un ejercicio resuelto y otro en curso): sirve para comprobar que el progreso sobrevive a una actualización del curso. Viven solo en la base de datos local; no van a Git ni se publican.
+
+**Primera pasada** (23 de noviembre de 2026, curso inicial v1.0.0), sin fallos:
+
+- **Contenido:** 47 páginas sin errores de JavaScript ni respuestas de error del servidor, y ninguna tarda más de 3 segundos. Los 81 diagramas Mermaid se dibujan en los dos temas. Los 527 enlaces internos y sus anclas son correctos. Los 834 recursos se descargan, y 221 de los 224 ZIP están íntegros.
+- **Progreso y permisos:** el progreso persiste al recargar y al volver a entrar, y es propio de cada cuenta. El alumno no entra en `/admin` y `/api/admin/users` le responde 403. El tema se conserva al recargar.
+- **Dos detalles para decidir con el autor:**
+  1. Los 3 ZIP que no abren son de pega a propósito del curso (`fotos-viaje.zip` y `plantilla-web.zip` del reto 01 de la fase 3, y `fotos-2026.zip` del ejercicio 8 de 03.01). La academia los sirve como ZIP, así que un alumno que los abra verá «archivo dañado».
+  2. Los 36 enlaces externos no se han comprobado.
+
 **Siguiente, solo con la orden del autor:** crear el remoto `santi-cast/myopenacademy`, el primer `push` (con la etiqueta), el *release* con la nota de la versión y activar «Report a vulnerability» en GitHub. Cuando se publiquen el kit y el curso, convertir en enlaces sus direcciones del `README.md` y de `CONTRIBUTING.md`. Al terminar, borrar `git-filter-repo` (`rm -rf ~/.local/share/venvs/git-filter-repo`).
 
 **Preguntas abiertas para el autor:**
