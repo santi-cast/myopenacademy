@@ -2,7 +2,7 @@
 
 Cada curso instalado vive en `content/<id>/` con su `manifest.json`: el formato **interno** con el que la academia guarda un curso ya instalado. **No se escribe a mano**: lo genera `backend/content-import` a partir del `curso.json` del curso, en el commit fijado (el contrato con los cursos es `FORMATO.md`, en el kit). El backend lo carga y lo valida entero al arrancar (`ContentLoader`), y si algo no cuadra no arranca. Cómo se genera, se compara y se aplica: [actualización de contenido](actualizacion-contenido.md). Qué devuelve la API: [API](api.md).
 
-Estado: H8 (16 de noviembre de 2026). Versión del formato: `schemaVersion: 2`. El cargador sigue admitiendo la versión 1 (sin etapas, ZIP, procedencia ni documentos), que ya no genera nadie.
+Estado: H12 (23 de noviembre de 2026). Versión del formato: `schemaVersion: 2`; las partes (`parts`, H12) son un campo opcional de esa misma versión, sin subirla. El cargador sigue admitiendo la versión 1 (sin etapas, ZIP, procedencia, documentos ni partes), que ya no genera nadie.
 
 ## De `curso.json` al manifiesto
 
@@ -12,16 +12,17 @@ Estado: H8 (16 de noviembre de 2026). Versión del formato: `schemaVersion: 2`. 
 | `titulo`, `descripcion`, `conviene_saber_antes` | `course.title`, `course.description`, `course.recommended` |
 | `version`, `repositorio`, la etiqueta y el commit instalados | `source.courseVersion`, `source.repository`, `source.versionTag` (o `null` si se instaló por commit) y `source.versionRef` (commit completo); `source.name` es el título |
 | `fases` | `phases`, en el mismo orden, con posiciones 1…N |
+| `partes` (opcional) | `parts`, en el mismo orden, con posiciones 1…N y sus fases en `phaseIds`; sin `partes`, el manifiesto no lleva el campo (abajo) |
 | `modulos` | `lessons`, en el orden del curso y con posiciones 1…N en todo el curso; `"disponible": false` da una lección pendiente (`sourceAvailable` y `available` a `false`, sin cuerpo ni ejercicios) |
 | `ejercicios` | `lessons[].exercises`, con su `id` y su `titulo` |
 | `proyecto` | `course.project`: `kind` (`etapas` o `modulo`), `title` y, si es un módulo, `lessonId`; las etapas, en `projectStages` (vacío si no hay) |
 | `retos` de cada fase (si `retos_disponibles`) y `glosario.md` | `documents`: documentos sin seguimiento (abajo) |
 
-**Nada se inventa:** todos los identificadores de fases, lecciones, ejercicios y etapas salen de `curso.json` tal cual. Lo único que pone la academia son los identificadores de los recursos (abajo). Los números «Fase 01» y «01.01» que se ven en pantalla salen del orden, nunca de un identificador.
+**Nada se inventa:** todos los identificadores de partes, fases, lecciones, ejercicios y etapas salen de `curso.json` tal cual. Lo único que pone la academia son los identificadores de los recursos (abajo). Los números «Fase 01» y «01.01» que se ven en pantalla salen del orden, nunca de un identificador.
 
 ## Ejemplo
 
-Extracto del curso de ejemplo del kit (`cursos-ejemplo/bueno`), recortado:
+Extracto del curso de ejemplo del kit (`cursos-ejemplo/bueno`), recortado; `parts` se ha añadido para enseñar su forma:
 
 ```json
 {
@@ -60,6 +61,10 @@ Extracto del curso de ejemplo del kit (`cursos-ejemplo/bueno`), recortado:
       "phaseId": "ejemplo.fase.primeros-pasos", "sourcePath": "fase-01-primeros-pasos/retos.md",
       "bodyPath": "ejemplo/documents/ejemplo.fase.primeros-pasos.retos.md" }
   ],
+  "parts": [
+    { "id": "ejemplo.parte.empezar", "title": "Para empezar", "position": 1,
+      "phaseIds": [ "ejemplo.fase.primeros-pasos" ] }
+  ],
   "provenance": { "files": [ "…" ], "generated": [ "…" ] }
 }
 ```
@@ -67,7 +72,7 @@ Extracto del curso de ejemplo del kit (`cursos-ejemplo/bueno`), recortado:
 ## Identificadores
 
 - **Forma** (`FORMATO.md` 3.3): todos empiezan por `<curso>.`; los que vienen de `curso.json` solo llevan minúsculas sin tildes, cifras, guiones y puntos, y los ejercicios cuelgan de su módulo (`<módulo>.<nombre>`). La forma `<curso>-…` del importador antiguo se rechaza.
-- **Únicos** entre todos los identificadores del curso (fases, lecciones, ejercicios, etapas y recursos) y, con el prefijo, en toda la academia.
+- **Únicos** entre todos los identificadores del curso (partes, fases, lecciones, ejercicios, etapas y recursos) y, con el prefijo, en toda la academia.
 - **Permanentes:** el progreso de los alumnos va unido a ellos. Cambiar un título es un cambio permitido (`FORMATO.md` 11.2), que la comparación enseña como «retitle» y el catálogo actualiza al arrancar; que desaparezca un identificador con progreso es un conflicto.
 - **Recursos:** los pone la academia, a partir del dueño (lección o etapa), el nombre del fichero y un resumen de su ruta: `<dueño>-r-<nombre>-<8 hex>` para un fichero y `<dueño>-zip-<carpeta>-<8 hex>` para el ZIP de una carpeta (`ejemplo.ficheros-json-r-año-pequeñocsv-8ab61787`). Conservan las letras no ASCII del nombre, en NFC (una forma descompuesta se rechaza), y nunca llevan espacios (se convierten en guiones). Un curso ya instalado conserva los suyos al actualizarse.
 
@@ -88,6 +93,16 @@ Extracto del curso de ejemplo del kit (`cursos-ejemplo/bueno`), recortado:
 - Las fases van de 1 a N, sin huecos, y cada una tiene al menos una lección; las lecciones de una fase son consecutivas y siguen el orden de las fases.
 - Al sincronizar el catálogo pueden cambiar el título y la posición de una fase, y una lección puede cambiar de fase. Que desaparezca una fase guardada es un conflicto.
 - Las etapas del proyecto (`projectStages`) tienen sus propias posiciones 1…N, no tienen fase ni ejercicios y no cuentan en el avance de lecciones.
+
+## Partes
+
+`parts` (opcional en el esquema 2; H12) agrupa las fases de un curso que declara `partes` en su `curso.json` (`FORMATO.md` 3.2). Cada parte lleva su `id`, su `title`, su `position` y `phaseIds`, la lista ordenada de sus fases.
+
+- **Un curso sin partes no lleva el campo** (ni `null` ni una lista vacía): su manifiesto sale idéntico, byte a byte, al de antes de H12, y los manifiestos instalados con la 1.0.0 siguen cargando.
+- La carga comprueba lo mismo que el importador: el identificador tiene la forma de los demás y no lo usa nadie más; el título es un texto no vacío y sin formato Markdown; las posiciones van de 1 a N sin huecos; cada fase de `phaseIds` existe y está en una sola parte, y, si hay partes, cada fase del curso está en alguna (una lista `parts` vacía deja todas las fases fuera y se rechaza). Una parte incompleta (sin `id`, `title`, `position` o `phaseIds`) se rechaza, y un campo desconocido también, como en el resto del manifiesto.
+- Como en el kit todavía, una parte sin fases se admite y el orden de las fases no se comprueba.
+- La versión 1 no admite `parts`.
+- Las partes no guardan avance: al actualizar, cambiar el título de una parte, añadirla, quitarla o pasar una fase de una parte a otra es un cambio, nunca un conflicto.
 
 ## Documentos sin seguimiento
 

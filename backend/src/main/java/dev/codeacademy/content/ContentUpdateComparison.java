@@ -21,6 +21,7 @@ import tools.jackson.databind.json.JsonMapper;
 /** Pure comparison of prepared copies, using the runtime loader and immutable Git blobs. */
 final class ContentUpdateComparison {
     private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final String PART = "part";
     private final Copy base;
     private final Copy candidate;
     private final List<String> conflicts;
@@ -52,8 +53,10 @@ final class ContentUpdateComparison {
             String id = entry.getKey();
             Entity old = entry.getValue();
             Entity replacement = next.entities().get(id);
-            if (replacement == null) { conflicts.add("removal " + id); continue; }
-            if (!old.kind().equals(replacement.kind())) conflicts.add("identity kind change " + id);
+            // A part holds no learner progress (H12): removing it, or reusing its ID for something else, is a change.
+            boolean part = old.kind().equals(PART);
+            if (replacement == null) { (part ? changes : conflicts).add("removal " + id); continue; }
+            if (!old.kind().equals(replacement.kind())) (part ? changes : conflicts).add("identity kind change " + id);
             // The ID is the identity (curso.json): a new title is a change, not a conflict (FORMATO.md 11.2).
             if (!old.title().equals(replacement.title())) {
                 changes.add("retitle " + id + ": «" + old.title() + "» -> «" + replacement.title() + "»");
@@ -150,6 +153,8 @@ final class ContentUpdateComparison {
             refs.put(owner, m.source().versionRef());
             add(entities, owner, "course", m.course().title(), "", "", true, m.course());
             for (var phase : m.phases()) add(entities, phase.id(), "phase", phase.title(), owner, "", true, phase);
+            // A phase does not record its part, so moving it to another part changes only the parts it leaves and joins.
+            if (m.parts() != null) for (var part : m.parts()) add(entities, part.id(), PART, part.title(), owner, "", true, part);
             for (var lesson : m.lessons()) {
                 safeSource(lesson.sourcePath());
                 add(entities, lesson.id(), "lesson", lesson.title(), owner, lesson.sourcePath(), lesson.available(), lesson);

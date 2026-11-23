@@ -20,8 +20,8 @@ import dev.codeacademy.content.Manifest.Resource;
 import dev.codeacademy.content.Manifest.SourceLink;
 
 /**
- * Structural rules of docs/manifiesto.md that do not need the files: schema, provenance, IDs, phases, positions,
- * sourceToId.
+ * Structural rules of docs/manifiesto.md that do not need the files: schema, provenance, IDs, phases, parts,
+ * positions, sourceToId.
  */
 final class ManifestValidator {
 
@@ -93,6 +93,7 @@ final class ManifestValidator {
 			return;
 		}
 		Map<String, Phase> phases = phases();
+		parts(phases);
 		Map<String, Lesson> lessons = lessons();
 		phaseOrder(phases, lessons);
 		project(lessons);
@@ -154,6 +155,49 @@ final class ManifestValidator {
 			problems.add("phase positions must be 1.." + positions.size() + " without gaps or repeats");
 		}
 		return phases;
+	}
+
+	/**
+	 * The parts of the course (H12), optional in schema 2 and checked as the importer checks {@code partes} of
+	 * curso.json: an ID like any other of the course, a plain-text title, positions 1..n, and each listed phase exists
+	 * and is in one part only; with parts, every phase is in one. An incomplete part is left out of the other checks.
+	 */
+	private void parts(Map<String, Phase> phases) {
+		if (manifest.parts() == null) return;
+		if (!Objects.equals(manifest.schemaVersion(), 2)) {
+			problems.add("schemaVersion 1 does not allow parts");
+			return;
+		}
+		Map<String, String> partOf = new HashMap<>();
+		List<Integer> positions = new ArrayList<>();
+		for (Manifest.Part part : manifest.parts()) {
+			if (part == null || blank(part.id()) || blank(part.title()) || part.position() == null
+					|| part.phaseIds() == null) {
+				problems.add("part " + (part == null ? null : part.id()) + " needs id, title, position and phaseIds");
+				continue;
+			}
+			registerDeclared(part.id());
+			positions.add(part.position());
+			String markdown = CourseDescriptor.markdown(part.title());
+			if (markdown != null) {
+				problems.add("part " + part.id() + ": title «" + part.title() + "» has Markdown formatting (" + markdown
+					+ "); titles are plain text");
+			}
+			for (String phaseId : part.phaseIds()) {
+				if (phaseId == null || !phases.containsKey(phaseId)) {
+					problems.add("part " + part.id() + ": unknown phase " + phaseId);
+				}
+				else if (partOf.containsKey(phaseId)) {
+					problems.add("part " + part.id() + ": phase " + phaseId + " is already in part " + partOf.get(phaseId));
+				}
+				else partOf.put(phaseId, part.id());
+			}
+		}
+		if (!positions.stream().sorted().toList().equals(IntStream.rangeClosed(1, positions.size()).boxed().toList())) {
+			problems.add("part positions must be 1.." + positions.size() + " without gaps or repeats");
+		}
+		manifest.phases().stream().filter(Objects::nonNull).map(Phase::id).filter(phases::containsKey)
+			.filter(id -> !partOf.containsKey(id)).distinct().forEach(id -> problems.add("phase " + id + " is in no part"));
 	}
 
 	/**

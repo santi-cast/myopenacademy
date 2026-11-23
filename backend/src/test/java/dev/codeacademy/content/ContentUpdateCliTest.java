@@ -282,6 +282,77 @@ class ContentUpdateCliTest {
         });
     }
 
+    // --- parts (H12, T2, S3): they hold no learner progress, so every change to them is a change, never a conflict ---
+
+    /** Both copies in schema 2; the active one with the two parts of the fixture, the candidate edited from them. */
+    void parts(boolean activeHasParts, java.util.function.Consumer<tools.jackson.databind.node.ObjectNode> edit) {
+        CoursePartsManifestTest.upgrade(active);
+        CoursePartsManifestTest.upgrade(candidate);
+        if (activeHasParts) active.editManifest(CoursePartsManifestTest::addParts);
+        candidate.editManifest(m -> {
+            CoursePartsManifestTest.addParts(m);
+            edit.accept(m);
+        });
+    }
+
+    /** compare finds no conflict and reports these changes; apply then installs the candidate's parts. */
+    void partsChangeApplies(String... changes) throws Exception {
+        assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+        var data = JSON.readTree(Files.readString(report));
+        assertThat(data.path("conflicts")).isEmpty();
+        List<String> reported = new ArrayList<>();
+        data.path("changes").forEach(change -> reported.add(change.asString()));
+        assertThat(reported).contains(changes);
+        var expected = candidate.load().manifest().parts();
+        assertThat(run("apply").code()).isZero();
+        assertThat(ContentLoader.loadAll(active.root).getFirst().manifest().parts()).isEqualTo(expected);
+    }
+
+    @Test void retitlingAPartIsAChange() throws Exception {
+        parts(true, m -> CoursePartsManifestTest.part(m, 1).put("title", "Java avanzado"));
+        partsChangeApplies("retitle demo.parte.dos: «Segunda parte» -> «Java avanzado»");
+    }
+
+    @Test void movingAPhaseToAnotherPartIsAChange() throws Exception {
+        parts(true, m -> {
+            CoursePartsManifestTest.part(m, 0).withArray("phaseIds").add("demo.phase-02");
+            CoursePartsManifestTest.part(m, 1).putArray("phaseIds");
+        });
+        partsChangeApplies(
+            "metadata demo.parte.uno: {\"id\":\"demo.parte.uno\",\"title\":\"Primera parte\",\"position\":1,"
+                + "\"phaseIds\":[\"demo.phase-01\"]} -> {\"id\":\"demo.parte.uno\",\"title\":\"Primera parte\","
+                + "\"position\":1,\"phaseIds\":[\"demo.phase-01\",\"demo.phase-02\"]}",
+            "metadata demo.parte.dos: {\"id\":\"demo.parte.dos\",\"title\":\"Segunda parte\",\"position\":2,"
+                + "\"phaseIds\":[\"demo.phase-02\"]} -> {\"id\":\"demo.parte.dos\",\"title\":\"Segunda parte\","
+                + "\"position\":2,\"phaseIds\":[]}");
+    }
+
+    @Test void addingAPartIsAChange() throws Exception {
+        parts(true, m -> ((tools.jackson.databind.node.ArrayNode) m.get("parts")).addObject().put("id", "demo.parte.tres")
+            .put("title", "Tercera parte").put("position", 3).putArray("phaseIds"));
+        partsChangeApplies("addition demo.parte.tres: {\"id\":\"demo.parte.tres\",\"title\":\"Tercera parte\","
+            + "\"position\":3,\"phaseIds\":[]}");
+    }
+
+    @Test void removingAPartIsAChange() throws Exception {
+        parts(true, m -> {
+            ((tools.jackson.databind.node.ArrayNode) m.get("parts")).remove(1);
+            CoursePartsManifestTest.part(m, 0).withArray("phaseIds").add("demo.phase-02");
+        });
+        partsChangeApplies("removal demo.parte.dos");
+    }
+
+    @Test void aCourseMayGainItsParts() throws Exception {
+        parts(false, m -> { });
+        partsChangeApplies("addition demo.parte.uno: {\"id\":\"demo.parte.uno\",\"title\":\"Primera parte\","
+            + "\"position\":1,\"phaseIds\":[\"demo.phase-01\"]}");
+    }
+
+    @Test void aCourseMayLoseItsParts() throws Exception {
+        parts(true, m -> m.remove("parts"));
+        partsChangeApplies("removal demo.parte.uno", "removal demo.parte.dos");
+    }
+
     @Test void forgedV2HashesCannotBlessAnAdaptation() throws Exception {
         candidate.replace(ContentFixture.INTRO, "Texto de cuerpo.", "Adapted body.");
         upgradeCandidate();

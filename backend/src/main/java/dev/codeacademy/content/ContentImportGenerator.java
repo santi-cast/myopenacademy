@@ -163,7 +163,7 @@ final class ContentImportGenerator {
 		}
 		Manifest finished = new Manifest(skeleton.schemaVersion(), skeleton.source(), skeleton.course(), skeleton.phases(),
 			skeleton.lessons(), skeleton.resources(), skeleton.sourceToId(), skeleton.projectStages(),
-			new Manifest.Provenance(List.copyOf(copies), List.copyOf(generated)), skeleton.documents());
+			new Manifest.Provenance(List.copyOf(copies), List.copyOf(generated)), skeleton.documents(), skeleton.parts());
 		Files.writeString(output.resolve(skeleton.course().id() + "/manifest.json"),
 			JSON.writerWithDefaultPrettyPrinter().writeValueAsString(finished) + "\n",
 			StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
@@ -762,6 +762,15 @@ final class ContentImportGenerator {
 			for (CourseDescriptor.Phase phase : descriptor.phases()) {
 				phases.add(new Manifest.Phase(phase.id(), phase.title(), phases.size() + 1));
 			}
+			// A course without partes has no parts field at all, so its manifest keeps the bytes it had before H12.
+			List<Manifest.Part> parts = null;
+			if (!descriptor.parts().isEmpty()) {
+				parts = new ArrayList<>();
+				for (CourseDescriptor.Part part : descriptor.parts()) {
+					parts.add(new Manifest.Part(part.id(), part.title(), parts.size() + 1, part.phases()));
+				}
+				parts = List.copyOf(parts);
+			}
 			return new Manifest(2, new Manifest.Source(descriptor.title(), source.commit(), tag, descriptor.version(),
 				descriptor.repository()),
 				new Manifest.Course(descriptor.id(), descriptor.id(), descriptor.title(), descriptor.description(),
@@ -769,7 +778,7 @@ final class ContentImportGenerator {
 						: new Manifest.Project(descriptor.project().type(), descriptor.project().title(),
 							descriptor.project().module())),
 				List.copyOf(phases), List.copyOf(lessons), List.copyOf(resourceEntries), List.copyOf(links),
-				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()), List.copyOf(courseDocuments));
+				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()), List.copyOf(courseDocuments), parts);
 		}
 
 		/** Exercises, links and fragments are validated before anything is written, with the runtime pipeline. */

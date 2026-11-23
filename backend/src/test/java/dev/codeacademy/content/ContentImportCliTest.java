@@ -1534,6 +1534,33 @@ class ContentImportCliTest {
 		assertThat(Files.exists(output)).isTrue();
 	}
 
+	// --- parts in the manifest (H12, T2, S3) ---
+
+	@Test void theManifestOfACourseWithPartesCarriesItsPartsInOrder() throws Exception {
+		parts();
+		part(0).withArray("fases").add("demo.phase-02");
+		parts().remove(1);
+		parts().addObject().put("id", "demo.parte.vacia").put("titulo", "Parte sin fases").putArray("fases");
+		assertThat(generate("--commit", commit(files, "partes\n")).code()).isZero();
+		JsonNode manifest = manifest();
+		assertThat(manifest.path("schemaVersion").asInt()).isEqualTo(2);
+		assertThat(manifest.path("parts")).isEqualTo(JSON.readTree("""
+			[ { "id": "demo.parte.uno", "title": "Primera parte", "position": 1,
+			    "phaseIds": [ "demo.phase-01", "demo.phase-02" ] },
+			  { "id": "demo.parte.vacia", "title": "Parte sin fases", "position": 2, "phaseIds": [ ] } ]
+			"""));
+		assertThat(List.copyOf(manifest.path("parts").get(0).propertyNames()))
+			.containsExactly("id", "title", "position", "phaseIds");
+		// The candidate with parts is the one the runtime loader accepts.
+		assertThat(ContentLoader.loadAll(output).getFirst().manifest().parts()).hasSize(2);
+	}
+
+	@Test void theManifestOfACourseWithoutPartesHasNoPartsField() throws Exception {
+		assertThat(generate("--commit", commit(files, "no partes\n")).code()).isZero();
+		assertThat(manifest().has("parts")).isFalse();
+		assertThat(Files.readString(output.resolve("demo/manifest.json"))).doesNotContain("\"parts\"");
+	}
+
 	/** Two valid partes, one per fase of the fixture, added to curso.json; returns the list to change it. */
 	ArrayNode parts() {
 		if (curso.get("partes") instanceof ArrayNode parts) return parts;

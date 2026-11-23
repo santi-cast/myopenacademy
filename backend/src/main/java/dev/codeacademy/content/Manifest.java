@@ -3,10 +3,23 @@ package dev.codeacademy.content;
 import java.util.List;
 import java.util.Map;
 
-/** content/<course>/manifest.json, as described in docs/manifiesto.md. */
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+/**
+ * content/<course>/manifest.json, as described in docs/manifiesto.md. {@code parts} is optional in schema 2 (H12) and
+ * is never written when null, so the manifest of a course without parts keeps the bytes it had before.
+ */
 public record Manifest(Integer schemaVersion, Source source, Course course, List<Phase> phases, List<Lesson> lessons,
 		List<Resource> resources, List<SourceLink> sourceToId, List<Stage> projectStages, Provenance provenance,
-		List<Document> documents) {
+		List<Document> documents, @JsonInclude(JsonInclude.Include.NON_NULL) List<Part> parts) {
+
+	/** Without parts (before H12, or a course that has none). */
+	public Manifest(Integer schemaVersion, Source source, Course course, List<Phase> phases, List<Lesson> lessons,
+			List<Resource> resources, List<SourceLink> sourceToId, List<Stage> projectStages, Provenance provenance,
+			List<Document> documents) {
+		this(schemaVersion, source, course, phases, lessons, resources, sourceToId, projectStages, provenance, documents,
+			null);
+	}
 
 	/** Without course documents (before H8, or a course that has none). */
 	public Manifest(Integer schemaVersion, Source source, Course course, List<Phase> phases, List<Lesson> lessons,
@@ -88,6 +101,13 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 
 	/** A permanent group of lessons; its title is taken verbatim from the source course index. */
 	public record Phase(String id, String title, Integer position) {
+	}
+
+	/**
+	 * A named stretch of the course (curso.json {@code partes}; H12): its phases in the order it lists them. It holds
+	 * no learner progress, so an update may retitle it, add it, remove it or move a phase to another part.
+	 */
+	public record Part(String id, String title, Integer position, List<String> phaseIds) {
 	}
 
 	public record Lesson(String id, String title, Integer position, String phaseId, String sourcePath,
