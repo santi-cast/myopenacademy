@@ -187,9 +187,9 @@ describe('Índice del curso', () => {
     expect(screen.getByText(/lecciones disponibles completadas/)).toHaveTextContent('1 de 1 lecciones disponibles completadas · 100 % · 199 previstas')
     const tables = screen.getAllByRole('table')
     expect(tables).toHaveLength(3)
-    expect(tables[0]).toHaveAccessibleName('Fase 01 · Lógica de programación 0 de 2 disponibles')
-    expect(tables[1]).toHaveAccessibleName('Fase 02 · Fundamentos de Java 1 de 2 disponibles')
-    expect(tables[2]).toHaveAccessibleName('Fase 03 · Programación orientada a objetos 0 de 1 disponible')
+    expect(tables[0]).toHaveAccessibleName('Fase 01 · Lógica de programación 0 de 2 disponibles · 0 de 0 completadas')
+    expect(tables[1]).toHaveAccessibleName('Fase 02 · Fundamentos de Java 1 de 2 disponibles · 1 de 1 completadas')
+    expect(tables[2]).toHaveAccessibleName('Fase 03 · Programación orientada a objetos 0 de 1 disponible · 0 de 0 completadas')
     const phase02 = tables[1]
     const rows = within(phase02).getAllByRole('row').slice(1)
     expect(within(rows[0]).getByText('02.01')).toBeVisible()
@@ -243,8 +243,8 @@ describe('Índice del curso', () => {
     await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
     const tables = screen.getAllByRole('table')
     expect(tables).toHaveLength(2)
-    expect(tables[0]).toHaveAccessibleName('Fase 01 · Primera 1 de 2 disponibles')
-    expect(tables[1]).toHaveAccessibleName('Fase 02 · Segunda 0 de 1 disponible')
+    expect(tables[0]).toHaveAccessibleName('Fase 01 · Primera 1 de 2 disponibles · 0 de 1 completadas')
+    expect(tables[1]).toHaveAccessibleName('Fase 02 · Segunda 0 de 1 disponible · 0 de 0 completadas')
     const cells = (table: HTMLElement) => within(table).getAllByRole('row').slice(1)
       .map((row) => within(row).getAllByRole('cell').slice(0, 2).map((cell) => cell.textContent))
     expect(cells(tables[0])).toEqual([['01.01', 'Equis'], ['01.02', 'Engañosa']])
@@ -266,10 +266,10 @@ describe('Índice del curso', () => {
     await screen.findByRole('heading', { level: 1, name: 'Java · Índice del curso' })
     const tables = screen.getAllByRole('table')
     expect(tables.map((table) => table.querySelector('caption')?.textContent)).toEqual([
-      'Fase 01 · Lógica de programación 0 de 1 disponible',
-      'Fase 02 · Fundamentos de Java 1 de 2 disponibles',
-      'Fase 03 · Programación orientada a objetos 0 de 1 disponible',
-      'Sin fase 0 de 1 disponible',
+      'Fase 01 · Lógica de programación 0 de 1 disponible · 0 de 0 completadas',
+      'Fase 02 · Fundamentos de Java 1 de 2 disponibles · 0 de 1 completadas',
+      'Fase 03 · Programación orientada a objetos 0 de 1 disponible · 0 de 0 completadas',
+      'Sin fase 0 de 1 disponible · 0 de 0 completadas',
     ])
     expect(within(tables[3]).getByText('Qué es programar')).toBeVisible()
   })
@@ -306,7 +306,7 @@ describe('Documentos del curso (H8, T3)', () => {
     expect(screen.queryByRole('link', { name: 'Ruta de aprendizaje' })).not.toBeInTheDocument()
     const tables = screen.getAllByRole('table')
     // The challenges do not change the count of the phase.
-    expect(tables[1]).toHaveAccessibleName('Fase 02 · Fundamentos de Java 1 de 2 disponibles')
+    expect(tables[1]).toHaveAccessibleName('Fase 02 · Fundamentos de Java 1 de 2 disponibles · 0 de 1 completadas')
     expect(within(tables[1]).getByRole('link', { name: 'Retos de la fase' })).toHaveAttribute('href', '/documents/java.fase.fundamentos.retos')
     expect(within(tables[1]).getByText('Opcionales')).toBeVisible()
     expect(within(tables[0]).queryByRole('link', { name: 'Retos de la fase' })).not.toBeInTheDocument()

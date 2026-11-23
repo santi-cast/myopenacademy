@@ -118,6 +118,53 @@
   color: var(--text-muted);
 }
 
+/* The second count of a phase (its availability) sits right after its progress. */
+.ph-count + .ph-count {
+  margin-left: 0;
+}
+
+/* A part of the course (H12, S6): a disclosure button over its phases. */
+.part-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  margin: var(--space-2) 0 var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 0;
+  border-bottom: var(--border-width) solid var(--border);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+  text-align: left;
+  color: var(--heading);
+  cursor: pointer;
+}
+
+.part-toggle::before {
+  content: "";
+  flex: none;
+  margin-top: var(--space-1);
+  border-left: var(--caret-size) solid var(--text-muted);
+  border-top: var(--caret-size-small) solid transparent;
+  border-bottom: var(--caret-size-small) solid transparent;
+  transition: transform 0.15s;
+}
+
+.part-toggle[aria-expanded="true"]::before {
+  transform: rotate(90deg);
+}
+
+.part-toggle:hover {
+  background: var(--surface-2);
+}
+
+.part-body {
+  padding-left: var(--space-2);
+}
+
 .phase-nav ol {
   list-style: none;
   margin: var(--space-0) 0 var(--space-2);

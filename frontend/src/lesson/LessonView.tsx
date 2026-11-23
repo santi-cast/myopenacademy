@@ -6,7 +6,7 @@ import type {
   Enrollment, Exercise, ExerciseState, ExerciseStateResult, LessonState, LessonStateResult, LessonView as LessonPayload, Progress,
   Syllabus as SyllabusData,
 } from '../api/types'
-import { challengesLabel, groupByPhase } from '../syllabus'
+import { challengesLabel, groupByPart, groupByPhase } from '../syllabus'
 import { currentTheme } from '../theme/theme'
 import { copyText } from './clipboard'
 import {
@@ -156,6 +156,7 @@ export function LessonView({ data }: { data: LessonData }) {
 
   const bodyTitle = useMemo(() => deliveredTitle(view.bodyHtml), [view.bodyHtml])
   const groups = useMemo(() => groupByPhase(syllabus.phases, syllabus.lessons), [syllabus])
+  const partGroups = useMemo(() => groupByPart(syllabus.parts, groups), [syllabus, groups])
   const pendingLessons = useMemo(() => new Set(syllabus.lessons.filter((entry) => !entry.available).map((entry) => entry.id)), [syllabus])
   const isPending = useCallback((lessonId: string) => pendingLessons.has(lessonId), [pendingLessons])
   const titles = useMemo(() => {
@@ -392,6 +393,8 @@ export function LessonView({ data }: { data: LessonData }) {
         <Syllabus
           courseTitle={syllabus.course.title}
           groups={groups}
+          parts={partGroups.parts}
+          rest={partGroups.rest}
           currentLessonId={lesson.id}
           completed={completed}
           counts={progress.progress}
