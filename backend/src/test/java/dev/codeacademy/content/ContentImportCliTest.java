@@ -1390,6 +1390,176 @@ class ContentImportCliTest {
 		assertThat(snapshot(temp)).isEqualTo(before);
 	}
 
+	// --- partes of curso.json (H12, T1, S2): the same rules and cases as comprobar_partes of the kit ---
+
+	@Test void aCourseWithoutPartesIsImportedAsBefore() throws Exception {
+		assertThat(curso.has("partes")).isFalse();
+		assertThat(generate("--commit", commit(files, "no partes\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).isEmpty();
+		assertThat(Files.exists(output)).isTrue();
+		List<String> problems = new ArrayList<>();
+		List<String> warnings = new ArrayList<>();
+		CourseDescriptor descriptor = CourseDescriptor.parse(JSON.writeValueAsBytes(curso), problems, warnings);
+		assertThat(problems).isEmpty();
+		assertThat(warnings).isEmpty();
+		assertThat(descriptor.parts()).isEmpty();
+	}
+
+	@Test void aValidCourseWithSeveralPartesHasNoFindingsAndKeepsItsParts() throws Exception {
+		parts();
+		assertThat(generate("--commit", commit(files, "partes\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).isEmpty();
+		assertThat(Files.exists(output)).isTrue();
+		List<String> problems = new ArrayList<>();
+		List<String> warnings = new ArrayList<>();
+		CourseDescriptor descriptor = CourseDescriptor.parse(JSON.writeValueAsBytes(curso), problems, warnings);
+		assertThat(problems).isEmpty();
+		assertThat(warnings).isEmpty();
+		assertThat(descriptor.parts()).containsExactly(
+			new CourseDescriptor.Part("demo.parte.uno", "Primera parte", List.of("demo.phase-01")),
+			new CourseDescriptor.Part("demo.parte.dos", "Segunda parte", List.of("demo.phase-02")));
+	}
+
+	@Test void partesMustBeAList() throws Exception {
+		curso.putObject("partes");
+		// As in the kit, no parte is then read, so no fase is in one.
+		assertPartFindings("curso.json: partes must be a list",
+			"curso.json: fase demo.phase-01 is in no parte (with partes, each fase goes in one)",
+			"curso.json: fase demo.phase-02 is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void eachParteMustBeAnObject() throws Exception {
+		parts().add("demo.parte.tres");
+		assertPartFindings("curso.json: each parte must be an object");
+	}
+
+	@Test void aParteNeedsAnId() throws Exception {
+		part(0).remove("id");
+		assertPartFindings("curso.json: parte id must be lower-case letters, digits, hyphens and dots: null");
+	}
+
+	@Test void aParteIdHasTheCoursePrefixAndAPlainName() throws Exception {
+		part(0).put("id", "otro.parte.uno");
+		assertPartFindings("curso.json: parte id otro.parte.uno does not start with demo.");
+		part(0).put("id", "demo.Parte_uno");
+		assertPartFindings("curso.json: parte id must be lower-case letters, digits, hyphens and dots: demo.Parte_uno");
+		part(0).put("id", "demo.");
+		assertPartFindings("curso.json: parte id must be lower-case letters, digits, hyphens and dots: demo.");
+	}
+
+	@Test void twoPartesCannotShareAnId() throws Exception {
+		part(1).put("id", "demo.parte.uno");
+		assertPartFindings("curso.json: id demo.parte.uno is declared twice");
+	}
+
+	@Test void aParteIdIsNotUsedByAnyOtherIdOfTheCourse() throws Exception {
+		for (String other : List.of("demo.phase-01", "demo.01.01", "demo.01.01.e01", "demo.stage-01")) {
+			part(0).put("id", other);
+			assertPartFindings("curso.json: id " + other + " is declared twice");
+		}
+	}
+
+	@Test void aParteNeedsATitulo() throws Exception {
+		part(0).remove("titulo");
+		assertPartFindings("curso.json: missing titulo in parte demo.parte.uno");
+	}
+
+	@Test void aParteTituloIsANonEmptyText() throws Exception {
+		part(0).put("titulo", "");
+		assertPartFindings("curso.json: titulo must be a non-empty text in parte demo.parte.uno");
+		part(0).put("titulo", "   ");
+		assertPartFindings("curso.json: titulo must be a non-empty text in parte demo.parte.uno");
+		part(0).put("titulo", 5);
+		assertPartFindings("curso.json: titulo must be a non-empty text in parte demo.parte.uno");
+	}
+
+	@Test void aParteTituloIsPlainTextWithoutMarkdown() throws Exception {
+		// The cases of formato_en_titulo in the kit (FORMATO.md 3.2, «Los títulos son texto plano»).
+		Map<String, String> cases = new java.util.LinkedHashMap<>();
+		cases.put("El `main`", "code in backticks");
+		cases.put("El **lenguaje**", "bold or italics with *");
+		cases.put("El __lenguaje__", "bold or italics with _");
+		cases.put("El _lenguaje_ Java", "bold or italics with _");
+		cases.put("El ~~viejo~~ lenguaje", "strikethrough");
+		cases.put("El [lenguaje](https://example.com)", "a link");
+		cases.put("El <b>lenguaje</b>", "HTML");
+		for (Map.Entry<String, String> entry : cases.entrySet()) {
+			part(0).put("titulo", entry.getKey());
+			assertPartFindings("curso.json: parte demo.parte.uno: titulo «" + entry.getKey() + "» has Markdown formatting ("
+				+ entry.getValue() + "); titles are plain text");
+		}
+		// An underscore inside a word, a lone bracket or a comparison are plain text.
+		part(0).put("titulo", "Variables snake_case [y] a < b");
+		assertThat(generate("--commit", commit(files, "plain\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+	}
+
+	@Test void aParteNeedsItsFases() throws Exception {
+		part(0).remove("fases");
+		assertPartFindings("curso.json: missing fases in parte demo.parte.uno",
+			"curso.json: fase demo.phase-01 is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void aParteFasesMustBeAList() throws Exception {
+		part(0).put("fases", "demo.phase-01");
+		assertPartFindings("curso.json: fases must be a list in parte demo.parte.uno",
+			"curso.json: fase demo.phase-01 is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void aParteListsOnlyExistingFases() throws Exception {
+		part(1).withArray("fases").add("demo.phase-09");
+		assertPartFindings("curso.json: parte demo.parte.dos: fase demo.phase-09 does not exist");
+	}
+
+	@Test void aFaseGoesInOnlyOneParte() throws Exception {
+		part(1).withArray("fases").add("demo.phase-01");
+		assertPartFindings("curso.json: parte demo.parte.dos: fase demo.phase-01 is already in parte demo.parte.uno"
+			+ " (each fase goes in only one)");
+	}
+
+	@Test void withPartesEveryFaseIsInOne() throws Exception {
+		parts().remove(1);
+		assertPartFindings("curso.json: fase demo.phase-02 is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void anUnknownFieldInAParteIsReportedWithoutBlocking() throws Exception {
+		part(0).put("descripcion", "Lo básico").put("color", "azul");
+		assertThat(generate("--commit", commit(files, "unknown field\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).containsExactly(
+			"curso.json: parte demo.parte.uno: unknown field «color» (ignored)",
+			"curso.json: parte demo.parte.uno: unknown field «descripcion» (ignored)");
+		assertThat(Files.exists(output)).isTrue();
+	}
+
+	/** Two valid partes, one per fase of the fixture, added to curso.json; returns the list to change it. */
+	ArrayNode parts() {
+		if (curso.get("partes") instanceof ArrayNode parts) return parts;
+		ArrayNode parts = curso.putArray("partes");
+		parts.addObject().put("id", "demo.parte.uno").put("titulo", "Primera parte").putArray("fases").add("demo.phase-01");
+		parts.addObject().put("id", "demo.parte.dos").put("titulo", "Segunda parte").putArray("fases").add("demo.phase-02");
+		return parts;
+	}
+
+	ObjectNode part(int index) {
+		return (ObjectNode) parts().get(index);
+	}
+
+	/** The descriptor is refused with exactly these findings: exit 3, nothing written, the active copy untouched. */
+	void assertPartFindings(String... expected) throws Exception {
+		String changed = commit(files, "partes\n");
+		Map<String, String> activeBefore = snapshot(active.root);
+		Result result = generate("--commit", changed);
+		assertThat(result.code()).as(String.join("\n", expected)).isEqualTo(3);
+		assertThat(findings()).containsExactlyInAnyOrder(expected);
+		assertThat(Files.exists(output)).isFalse();
+		assertThat(JSON.readTree(Files.readString(report)).path("written").asBoolean()).isFalse();
+		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
+		Files.delete(report);
+	}
+
 	// --- fixtures and process helpers ---
 
 	JsonNode manifest() throws Exception {

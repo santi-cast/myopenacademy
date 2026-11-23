@@ -23,7 +23,7 @@ Objetivo: agrupar por partes el índice y el menú de los cursos que las tienen,
 
 ## Tareas
 
-T1 | Leer y validar `partes` (S2) | pendiente.
+T1 | Leer y validar `partes` (S2) | hecho: L5 (salvo las dos reglas pendientes del kit).
 T2 | `parts` en el manifiesto, carga y comparación (S3) | pendiente.
 T3 | Partes en la API del temario (S4) | pendiente.
 T4 | Índice, menú y «Mis cursos» (S1, S5 a S8) | pendiente.
@@ -36,3 +36,4 @@ T6 | Documentación, `CHANGELOG.md` y nota de la 1.1.0. Etiqueta y *release*, so
 - L2 — Decisiones del autor sobre el plan: partes plegables en el menú, con solo la actual abierta; avance por fase en el índice y en el menú; «Mis cursos» con una línea de la parte actual. Regla: «las partes solo cambian los cursos que las tienen; el avance por fase sale en todos».
 - L3 — Aprobación: «Sí al plan H12 […] en T1, las reglas de validación de las partes tienen que ser exactamente las de FORMATO.md 3.2 y las de formato_academia.py del kit, con los mismos casos; si ves alguna diferencia, avísame antes de seguir.»
 - L4 — Diferencias encontradas y decididas: el plan pedía identificadores `<curso>.parte.…` y partes no vacías; el kit solo exige `<curso>.` y acepta una parte sin fases y partes en cualquier orden. Decisión del autor: el kit hará errores de la parte vacía y del orden (tramos seguidos), y la academia los copiará después; T1 sigue con el resto de reglas.
+- L5 — T1 hecha (23 de noviembre de 2026). `CourseDescriptor` lee `partes` en registros `Part(id, title, phases)` y las valida como `comprobar_partes` del kit. Cualquier error es un hallazgo: salida 3, sin candidata. Un campo desconocido es un aviso en `reported`. El identificador de una parte pasa por la comprobación de identificadores que ya había (prefijo del curso, sin repetir con fases, módulos, ejercicios, etapas ni otras partes). Los títulos con formato se detectan con los mismos 7 patrones de `formato_en_titulo`. Hay 17 pruebas nuevas en `ContentImportCliTest`, una por caso, con el hallazgo exacto; la fase de RED dio 16 fallos esperados. Comprobaciones: `./mvnw -B verify`, salida 0, 815 pruebas sin fallos. Comparación con lo instalado: el curso inicial `v1.0.0` generado con el código nuevo sale idéntico byte a byte a `content/`. **Diferencias con el kit, solo en el mensaje, con el mismo resultado:** los mensajes van en inglés, como los demás del importador. Para un `id` que falta o que se repite se usa el mensaje que ya había para fases y módulos, que no dice quién lo usa ya. `"partes": null` da «partes must be a list», y el kit da «falta el campo»; los dos lo rechazan.

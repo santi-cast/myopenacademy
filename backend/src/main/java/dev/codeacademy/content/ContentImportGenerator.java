@@ -84,7 +84,7 @@ final class ContentImportGenerator {
 			for (CourseContent course : installed) {
 				baseRefs.put(course.manifest().course().id(), course.manifest().source().versionRef());
 			}
-			CourseDescriptor descriptor = descriptor(source, findings);
+			CourseDescriptor descriptor = descriptor(source, findings, reported);
 			if (descriptor == null) {
 				return new Result(false, List.copyOf(findings), List.copyOf(reported), 0, 0, 0,
 					report(paths, baseRefs, 0, 0, 0, 0, false, findings, reported));
@@ -170,15 +170,19 @@ final class ContentImportGenerator {
 	}
 
 	/** The course's own curso.json at the pinned commit, or null with the reasons among the findings. */
-	private static CourseDescriptor descriptor(ContentImportSource source, Set<String> findings) throws IOException {
+	private static CourseDescriptor descriptor(ContentImportSource source, Set<String> findings, Set<String> reported)
+			throws IOException {
 		byte[] bytes = source.read(CourseDescriptor.PATH);
 		if (bytes == null) {
 			findings.add("source has no " + CourseDescriptor.PATH + " at " + source.commit());
 			return null;
 		}
 		List<String> problems = new ArrayList<>();
-		CourseDescriptor descriptor = CourseDescriptor.parse(bytes, problems);
+		List<String> warnings = new ArrayList<>();
+		CourseDescriptor descriptor = CourseDescriptor.parse(bytes, problems, warnings);
 		findings.addAll(problems);
+		// Non-blocking: an unknown field of curso.json the academy ignores (for now, inside a parte).
+		reported.addAll(warnings);
 		return descriptor;
 	}
 
