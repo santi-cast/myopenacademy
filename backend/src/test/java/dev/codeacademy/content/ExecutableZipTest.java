@@ -295,6 +295,62 @@ class ExecutableZipTest {
 		assertThat(ContentLoader.loadAll(output)).hasSize(1);
 	}
 
+	/**
+	 * H12, T9 (S11): a course installed before 1.1.0, without the flag and with a plain ZIP, gains the permission when it
+	 * is updated, regenerated at the same commit.
+	 */
+	@Test
+	void aCourseInstalledBefore110GainsTheModeWhenItIsUpdatedAtTheSameCommit() throws Exception {
+		String commit = commit(true);
+		gainsTheMode(commit, commit);
+	}
+
+	/** H12, T9 (S11): the same, updated to a new commit. */
+	@Test
+	void aCourseInstalledBefore110GainsTheModeWhenItIsUpdatedToANewCommit() throws Exception {
+		String first = commit(true);
+		gainsTheMode(first, commit(true));
+	}
+
+	void gainsTheMode(String installed, String next) throws Exception {
+		Path active = generate(installed, "activa");
+		before110(active);
+		assertThat(resource(manifest(active), WRAPPER).has("executable")).isFalse();
+		assertThat(central(zip(active, manifest(active))).get("mvnw").external()).isZero();
+		Path candidate = generate(next, active, "candidata");
+		Path report = temp.resolve("informe-actualizacion.json");
+		assertThat(update("compare", active, candidate, report)).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+		assertThat(JSON.readTree(report.toFile()).path("conflicts")).isEmpty();
+		assertThat(update("apply", active, candidate, report).code()).isZero();
+		JsonNode manifest = manifest(active);
+		assertThat(manifest.path("source").path("versionRef").asString()).isEqualTo(next);
+		assertThat(resource(manifest, WRAPPER).path("executable").isBoolean()).isTrue();
+		assertThat(resource(manifest, WRAPPER).path("executable").asBoolean()).isTrue();
+		Central wrapper = central(zip(active, manifest)).get("mvnw");
+		assertThat(wrapper.madeBy() >> 8).isEqualTo(UNIX);
+		assertThat(wrapper.external()).isEqualTo(0100755L << 16);
+		assertThat(ContentLoader.loadAll(active)).hasSize(1);
+	}
+
+	/**
+	 * H12, T9 (S11): a brand-new course, not in the active copy, whose candidate flag disagrees with its commit is a
+	 * conflict: limiting the mode check to updated courses (T8) still covers the new ones.
+	 */
+	@Test
+	void aNewCourseWhoseFlagDisagreesWithItsCommitIsAConflict() throws Exception {
+		Path empty = Files.createDirectory(temp.resolve("vacio"));
+		String executable = commit(true);
+		String plain = commit(false);
+		Path candidate = generate(plain, empty, "candidata");
+		edit(candidate, manifest -> ((ObjectNode) manifest.path("source")).put("versionRef", executable));
+		String local = resource(manifest(candidate), WRAPPER).path("localPath").asString();
+		Path report = temp.resolve("informe-actualizacion.json");
+		assertThat(update("compare", empty, candidate, report)).isEqualTo(new Result(3, "Comparison written; conflicts: 1\n", ""));
+		List<String> conflicts = new ArrayList<>();
+		JSON.readTree(report.toFile()).path("conflicts").forEach(conflict -> conflicts.add(conflict.asString()));
+		assertThat(conflicts).containsExactly("candidate: source mode differs " + local + " at " + executable);
+	}
+
 	/** Turns a copy into what academy 1.0.0 wrote: no executable flag and every ZIP as plain java.util.zip. */
 	static void before110(Path root) throws Exception {
 		edit(root, manifest -> ((ObjectNode) resource(manifest, WRAPPER)).remove("executable"));
