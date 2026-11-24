@@ -190,14 +190,15 @@ En la rama `feat/h12-partes` (sin integrar ni `push`); el detalle está en `odd/
 - ZIP del proyecto Maven o Gradle más exterior dentro de `codigo/`, con la regla del kit `774aeaa`;
 - teclas `<kbd>` y listas de tareas;
 - T15, `academia_minima`, y T17, Gradle sin settings y solo la `codigo/` de una fase o de `proyecto/`, con las reglas del kit 1.1.0 (`v1.1.0`);
-- T18, puerto por defecto 8070, salvo `.env.example`;
+- T18, puerto por defecto 8070 (`.env.example`, commit del autor `ee993ec`);
 - T6, versión 1.1.0 en `backend/pom.xml` y `frontend/package.json`, `CHANGELOG.md`, `README.md` y la nota `docs/notas-de-version/1.1.0.md` (con cómo seguir en el 8080), salvo la etiqueta y la *release*.
 
 Con T15 y T17, `./mvnw -B verify` da 964 pruebas sin fallos ni saltadas; las de navegador, 6 de 6. El curso inicial `v1.0.0` sale idéntico byte a byte, y lo comprueba `StarterCourseGoldenTest`. Con `870e1b0f`, el curso de Java da 0 hallazgos.
 
 **Lo que falta, en este orden:**
-1. **`.env.example` con el 8070** (T18): lo cambia el autor, porque la política de seguridad del entorno no deja al agente leerlo ni editarlo.
-2. **Revisión del autor en el navegador antes de integrar** en `main` con `--no-ff`. Después, la etiqueta `v1.1.0` y la *release*, solo con su orden.
+1. ~~`.env.example` con el 8070~~ **Hecho** por el autor (`ee993ec`): la política de seguridad del entorno no deja al agente leerlo ni editarlo.
+2. ~~Revisión en el navegador~~ **Hecha** (24 de noviembre de 2026) por el autor y la raíz, sin hallazgos: partes, «Vas por», avance por fase, ZIP del proyecto con `mvnw` 755, multimódulo, listas de tareas, `<kbd>` y sin errores. Instancia de prueba `myopenacademy-demo-111` desmontada.
+3. **Integrar y publicar**, con la orden del autor (24 de noviembre de 2026): `--no-ff` en `main`, batería completa en `main`, etiqueta `v1.1.0`, `push` y *release* «MyOpenAcademy 1.1.0».
 
 **Decidido:** el curso de Java se publica después de la academia 1.1.0, con su README diciendo que la necesita y `"academia_minima": "1.1.0"` en su `curso.json`.
 
