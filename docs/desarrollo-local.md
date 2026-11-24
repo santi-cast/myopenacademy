@@ -7,7 +7,7 @@ Esta guía arranca la academia en local: cuentas, los cursos instalados en `cont
 - Java 25; Spring Boot está fijado en 4.1.2. El Maven Wrapper incluido descarga Maven 3.10.0: no necesitas Maven global.
 - Docker con Compose y el motor activo. La imagen de base de datos es `postgres:18.6`.
 - fnm con Node 24.22.1 y npm 11.19.1. La raíz fija Node en `.node-version`; con la integración `fnm --use-on-cd`, entrar en `frontend/` usa esa versión. Si hace falta, ejecuta allí `fnm use 24.22.1`.
-- Puertos locales libres: 5173 (frontend), 8080 (backend) y 5434 (PostgreSQL; `APP_PORT` y `DB_PORT` en `.env` los cambian).
+- Puertos locales libres: 5173 (frontend), 8070 (backend) y 5434 (PostgreSQL; `APP_PORT` y `DB_PORT` en `.env` los cambian).
 
 ## Preparar la configuración privada una sola vez
 
@@ -50,7 +50,7 @@ cd backend
 
 Deja esta terminal abierta y el comando ejecutándose: el backend funciona en primer plano. Para el paso 3, abre otra terminal en la raíz del proyecto.
 
-La salud mínima en http://127.0.0.1:8080/actuator/health debe responder `{"status":"UP"}` antes de continuar.
+La salud mínima en http://127.0.0.1:8070/actuator/health debe responder `{"status":"UP"}` antes de continuar.
 
 Las migraciones crean las tablas en el esquema `code_academy`, y el historial de Flyway (`flyway_schema_history`) queda siempre en `public` (`spring.flyway.default-schema=public`). Así el backend arranca igual las veces que haga falta, aunque el usuario de la base se llame `code_academy`, y las bases ya migradas conservan su historial sin repetir ninguna migración.
 
@@ -107,7 +107,7 @@ npm run test:e2e
 
 (`npm run test:e2e:journey` es el nombre antiguo de la misma orden; `npx playwright test` suelto no las lanza.)
 
-El script crea un contenedor `code-academy-e2e-<aleatorio>` con datos en memoria y una contraseña generada que no se muestra, instala los cursos de ejemplo del kit (`cursos-ejemplo/`) por su etiqueta con el importador real, arranca el jar con el perfil por defecto y Vite apuntando a ese backend (variable `CODE_ACADEMY_BACKEND_URL`, que por defecto sigue siendo `http://127.0.0.1:8080`), todo en puertos libres de `127.0.0.1`. Al terminar, también ante un fallo o Ctrl+C, detiene el backend y el contenedor, que se borra solo. Los resultados quedan en `frontend/test-results/journey/<fecha>/`: capturas, registros del backend y `summary.json` con tiempos y el reinicio.
+El script crea un contenedor `code-academy-e2e-<aleatorio>` con datos en memoria y una contraseña generada que no se muestra, instala los cursos de ejemplo del kit (`cursos-ejemplo/`) por su etiqueta con el importador real, arranca el jar con el perfil por defecto y Vite apuntando a ese backend (variable `CODE_ACADEMY_BACKEND_URL`, que por defecto sigue siendo `http://127.0.0.1:8070`), todo en puertos libres de `127.0.0.1`. Al terminar, también ante un fallo o Ctrl+C, detiene el backend y el contenedor, que se borra solo. Los resultados quedan en `frontend/test-results/journey/<fecha>/`: capturas, registros del backend y `summary.json` con tiempos y el reinicio.
 
 ## Crear el administrador
 

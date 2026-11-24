@@ -21,9 +21,9 @@ Abre `.env` y pon una **contraseña larga para la base** en `DB_PASSWORD` (sin c
 
 | Variable | Para qué |
 |---|---|
-| `APP_PORT` | El puerto en el que se abre la academia (8080). |
+| `APP_PORT` | El puerto en el que se abre la academia (8070 desde la 1.1.0; antes, 8080, el mismo que usa Spring Boot por defecto). |
 | `APP_BIND` | Quién puede entrar: `127.0.0.1`, solo este equipo; `0.0.0.0`, también la red de casa. |
-| `PUBLIC_URL` | La dirección con la que se entra, por ejemplo `http://192.168.1.50:8080`. |
+| `PUBLIC_URL` | La dirección con la que se entra, por ejemplo `http://192.168.1.50:8070`. |
 | `CONTENT_HOST_DIR` | La carpeta con los cursos instalados (`./content`). |
 | `DB_PORT` | El puerto de la base en este equipo (5434, que no choca con el 5433 del Code Academy original). |
 | `CURSOS_DIR` | La carpeta con los repositorios de los cursos (`../Cursos`). |
@@ -37,7 +37,7 @@ No cambies `DB_NAME`, `DB_USERNAME` ni `DB_PASSWORD` después de crear la base: 
 docker compose up -d --build
 ```
 
-La primera vez construye la aplicación (unos minutos). Después levanta la base y la academia, que sirve las pantallas y la API en un solo puerto. Abre `http://127.0.0.1:8080` (o tu `PUBLIC_URL`). Al arrancar, el registro de la aplicación (`docker compose logs app`) dice dónde está y avisa si se abre a la red sin HTTPS.
+La primera vez construye la aplicación (unos minutos). Después levanta la base y la academia, que sirve las pantallas y la API en un solo puerto. Abre `http://127.0.0.1:8070` (o tu `PUBLIC_URL`). Al arrancar, el registro de la aplicación (`docker compose logs app`) dice dónde está y avisa si se abre a la red sin HTTPS.
 
 La primera vez no hay ningún curso: la academia arranca igual, avisa en su registro y el catálogo dice que no hay cursos y quién los instala (apartado 5).
 
@@ -83,7 +83,7 @@ La copia anterior queda en `content.previous` por si hay que volver atrás; arch
 
 ## 6. En la red de casa
 
-1. En `.env`, `APP_BIND=0.0.0.0` y, en `PUBLIC_URL`, la dirección de este equipo en la red: su IP (`http://192.168.1.50:8080`) o su nombre en la red local (`http://mi-equipo.local:8080`, si el equipo lo anuncia con mDNS, como hacen macOS y casi todos los Linux de escritorio).
+1. En `.env`, `APP_BIND=0.0.0.0` y, en `PUBLIC_URL`, la dirección de este equipo en la red: su IP (`http://192.168.1.50:8070`) o su nombre en la red local (`http://mi-equipo.local:8070`, si el equipo lo anuncia con mDNS, como hacen macOS y casi todos los Linux de escritorio).
 2. Para que la IP no cambie, resérvala en el router (casi todos lo permiten en su apartado DHCP: «reserva» o «IP fija» para la dirección MAC del equipo).
 3. `docker compose up -d` para aplicarlo. Si el equipo tiene cortafuegos, abre el puerto de `APP_PORT` para la red local.
 4. Recuerda: sin HTTPS, las contraseñas viajan sin cifrar. En la red de casa, con gente de confianza, vale; fuera, no.

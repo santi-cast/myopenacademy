@@ -32,10 +32,10 @@ services:
       DB_NAME: ${DB_NAME:-myopenacademy}
       DB_USERNAME: ${DB_USERNAME:-myopenacademy}
       DB_PASSWORD: ${DB_PASSWORD:?Set a nonempty DB_PASSWORD in your local environment}
-      PUBLIC_URL: ${PUBLIC_URL:-http://127.0.0.1:8080}
+      PUBLIC_URL: ${PUBLIC_URL:-http://127.0.0.1:8070}
     ports:
       # 127.0.0.1 by default: only this machine. APP_BIND=0.0.0.0 opens it to the home network (see the guide).
-      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8070}:8080"
     volumes:
       # The installed courses (by default ./content): install and update them with content-import and content-update.
       - ${CONTENT_HOST_DIR:-./content}:/content
