@@ -161,6 +161,7 @@ final class ManifestValidator {
 	 * The parts of the course (H12), optional in schema 2 and checked as the importer checks {@code partes} of
 	 * curso.json: an ID like any other of the course, a plain-text title, positions 1..n, and each listed phase exists
 	 * and is in one part only; with parts, every phase is in one. An incomplete part is left out of the other checks.
+	 * Then each part is a stretch of the phases, as the importer checks it (T14, S16).
 	 */
 	private void parts(Map<String, Phase> phases) {
 		if (manifest.parts() == null) return;
@@ -170,12 +171,14 @@ final class ManifestValidator {
 		}
 		Map<String, String> partOf = new HashMap<>();
 		List<Integer> positions = new ArrayList<>();
+		List<Manifest.Part> complete = new ArrayList<>();
 		for (Manifest.Part part : manifest.parts()) {
 			if (part == null || blank(part.id()) || blank(part.title()) || part.position() == null
 					|| part.phaseIds() == null) {
 				problems.add("part " + (part == null ? null : part.id()) + " needs id, title, position and phaseIds");
 				continue;
 			}
+			complete.add(part);
 			registerDeclared(part.id());
 			positions.add(part.position());
 			String markdown = CourseDescriptor.markdown(part.title());
@@ -198,6 +201,57 @@ final class ManifestValidator {
 		}
 		manifest.phases().stream().filter(Objects::nonNull).map(Phase::id).filter(phases::containsKey)
 			.filter(id -> !partOf.containsKey(id)).distinct().forEach(id -> problems.add("phase " + id + " is in no part"));
+		stretches(phases, complete, partOf);
+	}
+
+	/**
+	 * Each part is a stretch of consecutive phases in the course order, and the parts, in position order, follow each
+	 * other (FORMATO.md 3.2, revision 1.1; the importer's rules): a part is seen only with the phases that exist and
+	 * are its own (the others already have their problem); an out-of-order part is not also checked for gaps; the order
+	 * of the parts compares the first phase of each with that of the previous part with phases.
+	 */
+	private void stretches(Map<String, Phase> phases, List<Manifest.Part> parts, Map<String, String> partOf) {
+		List<String> order = phases.values().stream().sorted(Comparator.comparing(Phase::position)
+			.thenComparing(Phase::id)).map(Phase::id).toList();
+		Map<String, Integer> position = new HashMap<>();
+		for (int i = 0; i < order.size(); i++) position.put(order.get(i), i);
+		String previous = null;
+		int previousFirst = -1;
+		for (Manifest.Part part : parts.stream().sorted(Comparator.comparing(Manifest.Part::position)).toList()) {
+			if (part.phaseIds().isEmpty()) {
+				problems.add("part " + part.id() + " has no phases (each part groups at least one)");
+				continue;
+			}
+			List<String> own = part.phaseIds().stream()
+				.filter(id -> position.containsKey(id) && part.id().equals(partOf.get(id))).toList();
+			if (own.isEmpty()) continue;
+			int disorder = -1;
+			for (int i = 1; i < own.size() && disorder < 0; i++) {
+				if (position.get(own.get(i)) < position.get(own.get(i - 1))) disorder = i;
+			}
+			if (disorder > 0) {
+				problems.add("part " + part.id() + ": its phases are not in the course order (phase "
+					+ own.get(disorder - 1) + " is listed before phase " + own.get(disorder) + ")");
+			}
+			else {
+				for (int i = 1; i < own.size(); i++) {
+					int before = position.get(own.get(i - 1));
+					if (position.get(own.get(i)) != before + 1) {
+						String between = order.get(before + 1);
+						String of = partOf.containsKey(between) ? ", of part " + partOf.get(between) : "";
+						problems.add("part " + part.id() + ": its phases are not consecutive (between phase "
+							+ own.get(i - 1) + " and phase " + own.get(i) + " is phase " + between + of + ")");
+						break;
+					}
+				}
+			}
+			int first = own.stream().mapToInt(position::get).min().getAsInt();
+			if (previous != null && first < previousFirst) {
+				problems.add("part " + previous + " comes before part " + part.id() + " in parts, but its phases come after");
+			}
+			previous = part.id();
+			previousFirst = first;
+		}
 	}
 
 	/**

@@ -1534,20 +1534,104 @@ class ContentImportCliTest {
 		assertThat(Files.exists(output)).isTrue();
 	}
 
+	// --- partes as stretches (H12, T14, S16): the cases of Partes in the kit's test_formato_academia.py (44a8e32) ---
+
+	static final String F1 = "demo.phase-01", F2 = "demo.phase-02", F3 = "demo.phase-03";
+
+	@Test void kitStretchesThatFollowEachOtherInOrderAreValid() throws Exception {
+		kitPartes("a", List.of(F1, F2), "b", List.of(F3));
+		assertKitPartesValid();
+	}
+
+	@Test void kitOneParteWithEveryFaseIsValid() throws Exception {
+		kitPartes("a", List.of(F1, F2, F3));
+		assertKitPartesValid();
+	}
+
+	@Test void kitAParteWithoutFasesIsAFinding() throws Exception {
+		kitPartes("a", List.of(F1, F2, F3), "b", List.of());
+		assertPartFindings("curso.json: parte demo.parte.b has no fases (each parte groups at least one)");
+	}
+
+	@Test void kitFasesOutOfTheCourseOrderAreAFindingAndNotAlsoNotConsecutive() throws Exception {
+		kitPartes("a", List.of(F3, F1), "b", List.of(F2));
+		assertPartFindings("curso.json: parte demo.parte.a: its fases are not in the course order (fase " + F3
+			+ " is listed before fase " + F1 + ")");
+	}
+
+	@Test void kitFasesThatAreNotConsecutiveNameTheFaseBetweenAndItsParte() throws Exception {
+		kitPartes("a", List.of(F1, F3), "b", List.of(F2));
+		assertPartFindings("curso.json: parte demo.parte.a: its fases are not consecutive (between fase " + F1
+			+ " and fase " + F3 + " is fase " + F2 + ", of parte demo.parte.b)");
+	}
+
+	@Test void kitTheFaseBetweenInNoParteLeavesItsParteOut() throws Exception {
+		kitPartes("a", List.of(F1, F3));
+		assertPartFindings("curso.json: fase " + F2 + " is in no parte (with partes, each fase goes in one)",
+			"curso.json: parte demo.parte.a: its fases are not consecutive (between fase " + F1 + " and fase " + F3
+				+ " is fase " + F2 + ")");
+	}
+
+	@Test void kitPartesInReverseOrderAreAFinding() throws Exception {
+		kitPartes("b", List.of(F3), "a", List.of(F1, F2));
+		assertPartFindings("curso.json: parte demo.parte.b comes before parte demo.parte.a in partes, but its fases come"
+			+ " after");
+	}
+
+	@Test void kitTheOrderOfPartesSkipsAParteWithoutFases() throws Exception {
+		// The previous parte with fases is c, not the empty b.
+		kitPartes("c", List.of(F3), "b", List.of(), "a", List.of(F1, F2));
+		assertPartFindings("curso.json: parte demo.parte.b has no fases (each parte groups at least one)",
+			"curso.json: parte demo.parte.c comes before parte demo.parte.a in partes, but its fases come after");
+	}
+
+	@Test void kitAFaseInNoParte() throws Exception {
+		kitPartes("a", List.of(F1, F2));
+		assertPartFindings("curso.json: fase " + F3 + " is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void kitAFaseInTwoPartesIsTheSecondPartesFindingOnly() throws Exception {
+		kitPartes("a", List.of(F1, F2), "b", List.of(F2, F3));
+		assertPartFindings("curso.json: parte demo.parte.b: fase " + F2 + " is already in parte demo.parte.a"
+			+ " (each fase goes in only one)");
+	}
+
+	/**
+	 * The kit's three fases: a third, pending fase after the two of the fixture, and partes demo.parte.LETTER with
+	 * these fases, given as letter, fases, letter, fases…
+	 */
+	void kitPartes(Object... letterAndFases) {
+		ObjectNode phase = curso.withArray("fases").addObject().put("id", F3).put("carpeta", "fase-03")
+			.put("titulo", "Tercera fase");
+		phase.putArray("modulos").addObject().put("id", "demo.03.01").put("fichero", "fase-03/01-pendiente.md")
+			.put("titulo", "Pendiente tres").put("disponible", false);
+		ArrayNode partes = curso.putArray("partes");
+		for (int i = 0; i < letterAndFases.length; i += 2) {
+			ArrayNode fases = partes.addObject().put("id", "demo.parte." + letterAndFases[i])
+				.put("titulo", "Parte " + letterAndFases[i]).putArray("fases");
+			for (Object fase : (List<?>) letterAndFases[i + 1]) fases.add((String) fase);
+		}
+	}
+
+	void assertKitPartesValid() throws Exception {
+		assertThat(generate("--commit", commit(files, "partes\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).isEmpty();
+		assertThat(Files.exists(output)).isTrue();
+	}
+
 	// --- parts in the manifest (H12, T2, S3) ---
 
 	@Test void theManifestOfACourseWithPartesCarriesItsPartsInOrder() throws Exception {
-		parts();
-		part(0).withArray("fases").add("demo.phase-02");
-		parts().remove(1);
-		parts().addObject().put("id", "demo.parte.vacia").put("titulo", "Parte sin fases").putArray("fases");
+		// T14 (S16): a parte without fases is now a finding, so the second parte holds the third fase instead.
+		kitPartes("a", List.of(F1, F2), "b", List.of(F3));
 		assertThat(generate("--commit", commit(files, "partes\n")).code()).isZero();
 		JsonNode manifest = manifest();
 		assertThat(manifest.path("schemaVersion").asInt()).isEqualTo(2);
 		assertThat(manifest.path("parts")).isEqualTo(JSON.readTree("""
-			[ { "id": "demo.parte.uno", "title": "Primera parte", "position": 1,
+			[ { "id": "demo.parte.a", "title": "Parte a", "position": 1,
 			    "phaseIds": [ "demo.phase-01", "demo.phase-02" ] },
-			  { "id": "demo.parte.vacia", "title": "Parte sin fases", "position": 2, "phaseIds": [ ] } ]
+			  { "id": "demo.parte.b", "title": "Parte b", "position": 2, "phaseIds": [ "demo.phase-03" ] } ]
 			"""));
 		assertThat(List.copyOf(manifest.path("parts").get(0).propertyNames()))
 			.containsExactly("id", "title", "position", "phaseIds");

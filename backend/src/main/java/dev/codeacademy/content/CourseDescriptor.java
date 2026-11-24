@@ -141,7 +141,7 @@ record CourseDescriptor(int format, String id, String title, String description,
 	 * The optional {@code partes} (FORMATO.md 3.2), checked case by case as {@code comprobar_partes} of the kit: each
 	 * parte is an object with an {@code id} like any other of the course, a plain-text {@code titulo} and the list of
 	 * its {@code fases}; each fase exists and is in one parte only, and with partes every fase is in one. An unknown
-	 * field is a warning. Not yet checked, as in the kit: an empty parte and the order of the fases.
+	 * field is a warning. Then each parte is a stretch, as {@code comprobar_tramos_de_partes} of the kit (revision 1.1).
 	 */
 	private static List<Part> parts(JsonNode root, List<Phase> phases, Ids ids, List<String> found,
 			List<String> warnings) {
@@ -150,6 +150,7 @@ record CourseDescriptor(int format, String id, String title, String description,
 		for (Phase phase : phases) phaseIds.add(phase.id());
 		Map<String, String> seen = new HashMap<>();
 		List<Part> parts = new ArrayList<>();
+		List<Stretch> stretches = new ArrayList<>();
 		JsonNode list = root.get("partes");
 		if (!list.isArray()) found.add(PATH + ": partes must be a list");
 		int position = 0;
@@ -175,12 +176,14 @@ record CourseDescriptor(int format, String id, String title, String description,
 				}
 			}
 			List<String> listed = new ArrayList<>();
+			List<String> named = new ArrayList<>();
 			JsonNode fases = node.get("fases");
 			if (fases == null) found.add(PATH + ": missing fases in " + where);
 			else if (!fases.isArray()) found.add(PATH + ": fases must be a list in " + where);
 			else {
 				for (JsonNode fase : fases) {
 					String phaseId = fase.isString() ? fase.asString() : fase.toString();
+					if (fase.isString()) named.add(phaseId);
 					if (!fase.isString() || !phaseIds.contains(phaseId)) {
 						found.add(PATH + ": " + where + ": fase " + phaseId + " does not exist");
 					}
@@ -193,6 +196,7 @@ record CourseDescriptor(int format, String id, String title, String description,
 						listed.add(phaseId);
 					}
 				}
+				stretches.add(new Stretch(id != null ? id : "#" + position, where, fases.isEmpty(), named));
 			}
 			parts.add(new Part(id, title, List.copyOf(listed)));
 		}
@@ -201,7 +205,66 @@ record CourseDescriptor(int format, String id, String title, String description,
 				found.add(PATH + ": fase " + phase.id() + " is in no parte (with partes, each fase goes in one)");
 			}
 		}
+		stretches(stretches, phases, seen, found);
 		return List.copyOf(parts);
+	}
+
+	/** A parte with a list of fases, for the stretch rules: its owner key in {@code seen} and the fases it names. */
+	private record Stretch(String key, String where, boolean empty, List<String> named) {
+	}
+
+	/**
+	 * Each parte is a stretch of consecutive fases in the course order, and the partes follow each other (FORMATO.md
+	 * 3.2, revision 1.1), as {@code comprobar_tramos_de_partes} of the kit: a parte is seen only with the fases that
+	 * exist and are its own (the others already have their finding); an out-of-order parte is not also checked for
+	 * gaps; the order of the partes compares the first fase of each with that of the previous parte with fases.
+	 */
+	private static void stretches(List<Stretch> stretches, List<Phase> phases, Map<String, String> seen,
+			List<String> found) {
+		List<String> order = new ArrayList<>();
+		Map<String, Integer> position = new HashMap<>();
+		for (Phase phase : phases) {
+			if (phase.id() != null) position.put(phase.id(), order.size());
+			order.add(phase.id());
+		}
+		String previous = null;
+		int previousFirst = -1;
+		for (Stretch stretch : stretches) {
+			if (stretch.empty()) {
+				found.add(PATH + ": " + stretch.where() + " has no fases (each parte groups at least one)");
+				continue;
+			}
+			List<String> own = stretch.named().stream()
+				.filter(f -> position.containsKey(f) && stretch.key().equals(seen.get(f))).toList();
+			if (own.isEmpty()) continue;
+			int disorder = -1;
+			for (int i = 1; i < own.size() && disorder < 0; i++) {
+				if (position.get(own.get(i)) < position.get(own.get(i - 1))) disorder = i;
+			}
+			if (disorder > 0) {
+				found.add(PATH + ": " + stretch.where() + ": its fases are not in the course order (fase "
+					+ own.get(disorder - 1) + " is listed before fase " + own.get(disorder) + ")");
+			}
+			else {
+				for (int i = 1; i < own.size(); i++) {
+					int before = position.get(own.get(i - 1));
+					if (position.get(own.get(i)) != before + 1) {
+						String between = order.get(before + 1);
+						String of = seen.containsKey(between) ? ", of parte " + seen.get(between) : "";
+						found.add(PATH + ": " + stretch.where() + ": its fases are not consecutive (between fase "
+							+ own.get(i - 1) + " and fase " + own.get(i) + " is fase " + between + of + ")");
+						break;
+					}
+				}
+			}
+			int first = own.stream().mapToInt(position::get).min().getAsInt();
+			if (previous != null && first < previousFirst) {
+				found.add(PATH + ": parte " + previous + " comes before " + stretch.where()
+					+ " in partes, but its fases come after");
+			}
+			previous = stretch.key();
+			previousFirst = first;
+		}
 	}
 
 	/** What Markdown formatting a title carries, or null for plain text (formato_en_titulo of the kit). */

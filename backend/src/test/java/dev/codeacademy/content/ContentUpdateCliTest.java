@@ -314,24 +314,29 @@ class ContentUpdateCliTest {
     }
 
     @Test void movingAPhaseToAnotherPartIsAChange() throws Exception {
+        // T14 (S16): no part may be left without phases and parts follow the phases, so the two parts swap theirs.
         parts(true, m -> {
-            CoursePartsManifestTest.part(m, 0).withArray("phaseIds").add("demo.phase-02");
-            CoursePartsManifestTest.part(m, 1).putArray("phaseIds");
+            CoursePartsManifestTest.part(m, 0).put("position", 2).putArray("phaseIds").add("demo.phase-02");
+            CoursePartsManifestTest.part(m, 1).put("position", 1).putArray("phaseIds").add("demo.phase-01");
         });
         partsChangeApplies(
             "metadata demo.parte.uno: {\"id\":\"demo.parte.uno\",\"title\":\"Primera parte\",\"position\":1,"
                 + "\"phaseIds\":[\"demo.phase-01\"]} -> {\"id\":\"demo.parte.uno\",\"title\":\"Primera parte\","
-                + "\"position\":1,\"phaseIds\":[\"demo.phase-01\",\"demo.phase-02\"]}",
+                + "\"position\":2,\"phaseIds\":[\"demo.phase-02\"]}",
             "metadata demo.parte.dos: {\"id\":\"demo.parte.dos\",\"title\":\"Segunda parte\",\"position\":2,"
                 + "\"phaseIds\":[\"demo.phase-02\"]} -> {\"id\":\"demo.parte.dos\",\"title\":\"Segunda parte\","
-                + "\"position\":2,\"phaseIds\":[]}");
+                + "\"position\":1,\"phaseIds\":[\"demo.phase-01\"]}");
     }
 
     @Test void addingAPartIsAChange() throws Exception {
-        parts(true, m -> ((tools.jackson.databind.node.ArrayNode) m.get("parts")).addObject().put("id", "demo.parte.tres")
-            .put("title", "Tercera parte").put("position", 3).putArray("phaseIds"));
-        partsChangeApplies("addition demo.parte.tres: {\"id\":\"demo.parte.tres\",\"title\":\"Tercera parte\","
-            + "\"position\":3,\"phaseIds\":[]}");
+        // T14 (S16): no part may be empty, so the active copy has one part with both phases and the candidate splits it.
+        parts(true, m -> { });
+        active.editManifest(m -> {
+            ((tools.jackson.databind.node.ArrayNode) m.get("parts")).remove(1);
+            CoursePartsManifestTest.part(m, 0).withArray("phaseIds").add("demo.phase-02");
+        });
+        partsChangeApplies("addition demo.parte.dos: {\"id\":\"demo.parte.dos\",\"title\":\"Segunda parte\","
+            + "\"position\":2,\"phaseIds\":[\"demo.phase-02\"]}");
     }
 
     @Test void removingAPartIsAChange() throws Exception {

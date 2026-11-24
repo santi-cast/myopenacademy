@@ -224,6 +224,121 @@ class CoursePartsManifestTest {
 		assertThat(ex.problems()).contains("id demo.parte.uno is used by more than one course");
 	}
 
+	// --- parts as stretches (H12, T14, S16): the cases of Partes in the kit's test_formato_academia.py (44a8e32) ---
+
+	static final String F1 = "demo.phase-01", F2 = "demo.phase-02", F3 = "demo.phase-03";
+
+	@Test
+	void kitStretchesThatFollowEachOtherInOrderAreValid() {
+		fixture.editManifest(m -> kitParts(m, "a", List.of(F1, F2), "b", List.of(F3)));
+		assertThat(fixture.load().manifest().parts()).containsExactly(
+			new Manifest.Part("demo.parte.a", "Parte a", 1, List.of(F1, F2)),
+			new Manifest.Part("demo.parte.b", "Parte b", 2, List.of(F3)));
+	}
+
+	@Test
+	void kitOnePartWithEveryPhaseIsValid() {
+		fixture.editManifest(m -> kitParts(m, "a", List.of(F1, F2, F3)));
+		assertThat(fixture.load().manifest().parts()).containsExactly(
+			new Manifest.Part("demo.parte.a", "Parte a", 1, List.of(F1, F2, F3)));
+	}
+
+	@Test
+	void kitAPartWithoutPhasesIsRejected() throws Exception {
+		kitRejected("a", List.of(F1, F2, F3), "b", List.of(),
+			"part demo.parte.b has no phases (each part groups at least one)");
+	}
+
+	@Test
+	void kitPhasesOutOfTheCourseOrderAreRejectedAndNotAlsoAsNotConsecutive() throws Exception {
+		kitRejected("a", List.of(F3, F1), "b", List.of(F2),
+			"part demo.parte.a: its phases are not in the course order (phase " + F3 + " is listed before phase " + F1 + ")");
+	}
+
+	@Test
+	void kitPhasesThatAreNotConsecutiveNameThePhaseBetweenAndItsPart() throws Exception {
+		kitRejected("a", List.of(F1, F3), "b", List.of(F2), "part demo.parte.a: its phases are not consecutive (between"
+			+ " phase " + F1 + " and phase " + F3 + " is phase " + F2 + ", of part demo.parte.b)");
+	}
+
+	@Test
+	void kitThePhaseBetweenInNoPartLeavesItsPartOut() throws Exception {
+		kitRejected("a", List.of(F1, F3), "phase " + F2 + " is in no part",
+			"part demo.parte.a: its phases are not consecutive (between phase " + F1 + " and phase " + F3 + " is phase "
+				+ F2 + ")");
+	}
+
+	@Test
+	void kitPartsInReverseOrderAreRejected() throws Exception {
+		kitRejected("b", List.of(F3), "a", List.of(F1, F2),
+			"part demo.parte.b comes before part demo.parte.a in parts, but its phases come after");
+	}
+
+	@Test
+	void kitTheOrderOfPartsSkipsAPartWithoutPhases() throws Exception {
+		// The previous part with phases is c, not the empty b.
+		kitRejected("c", List.of(F3), "b", List.of(), "a", List.of(F1, F2),
+			"part demo.parte.b has no phases (each part groups at least one)",
+			"part demo.parte.c comes before part demo.parte.a in parts, but its phases come after");
+	}
+
+	@Test
+	void kitTheOrderOfPartsFollowsTheirPositionsNotTheirPlaceInTheList() {
+		// The manifest orders parts by position: b listed first but at position 2 follows a.
+		fixture.editManifest(m -> {
+			kitParts(m, "b", List.of(F3), "a", List.of(F1, F2));
+			part(m, 0).put("position", 2);
+			part(m, 1).put("position", 1);
+		});
+		assertThat(fixture.load().manifest().parts()).hasSize(2);
+	}
+
+	@Test
+	void kitAPhaseInNoPart() throws Exception {
+		kitRejected("a", List.of(F1, F2), "phase " + F3 + " is in no part");
+	}
+
+	@Test
+	void kitAPhaseInTwoPartsIsTheSecondPartsProblemOnly() throws Exception {
+		kitRejected("a", List.of(F1, F2), "b", List.of(F2, F3),
+			"part demo.parte.b: phase " + F2 + " is already in part demo.parte.a");
+	}
+
+	/**
+	 * The kit's three phases: a third phase with one pending lesson after the two of the synthetic course, and parts
+	 * demo.parte.LETTER at positions 1..n with these phases, given as letter, phases, letter, phases…
+	 */
+	static void kitParts(ObjectNode manifest, Object... letterAndPhases) {
+		((ArrayNode) manifest.get("phases")).addObject().put("id", F3).put("title", "Tercera fase").put("position", 3);
+		ObjectNode lesson = ((ArrayNode) manifest.get("lessons")).addObject().put("id", "demo.03.01")
+			.put("title", "Pendiente tres").put("position", 4).put("phaseId", F3)
+			.put("sourcePath", "fase-03/01-pendiente.md").put("sourceAvailable", false).put("available", false);
+		lesson.putNull("bodyPath");
+		lesson.putArray("exercises");
+		((ArrayNode) manifest.get("sourceToId")).addObject().put("sourcePath", "fase-03/01-pendiente.md")
+			.put("lessonId", "demo.03.01").putObject("fragments");
+		ArrayNode parts = manifest.putArray("parts");
+		for (int i = 0; i < letterAndPhases.length; i += 2) {
+			ArrayNode phaseIds = parts.addObject().put("id", "demo.parte." + letterAndPhases[i])
+				.put("title", "Parte " + letterAndPhases[i]).put("position", i / 2 + 1).putArray("phaseIds");
+			for (Object phase : (List<?>) letterAndPhases[i + 1]) phaseIds.add((String) phase);
+		}
+	}
+
+	/** Loading the kit's parts fails as a whole with exactly these problems (the trailing strings). */
+	void kitRejected(Object... partsThenProblems) throws Exception {
+		int split = 0;
+		while (split + 1 < partsThenProblems.length && partsThenProblems[split + 1] instanceof List) split += 2;
+		Object[] parts = java.util.Arrays.copyOfRange(partsThenProblems, 0, split);
+		String[] problems = java.util.Arrays.stream(partsThenProblems, split, partsThenProblems.length)
+			.map(String.class::cast).toArray(String[]::new);
+		fixture.editManifest(m -> kitParts(m, parts));
+		Map<String, String> before = snapshot();
+		ContentValidationException ex = assertThrows(ContentValidationException.class, fixture::load);
+		assertThat(ex.problems()).containsExactly(problems);
+		assertThat(snapshot()).isEqualTo(before);
+	}
+
 	Map<String, String> snapshot() throws Exception {
 		Map<String, String> result = new LinkedHashMap<>();
 		try (var paths = Files.walk(fixture.root)) {
