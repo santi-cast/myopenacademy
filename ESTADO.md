@@ -198,7 +198,7 @@ Con T15 y T17, `./mvnw -B verify` da 964 pruebas sin fallos ni saltadas; las de 
 **Lo que falta, en este orden:**
 1. ~~`.env.example` con el 8070~~ **Hecho** por el autor (`ee993ec`): la política de seguridad del entorno no deja al agente leerlo ni editarlo.
 2. ~~Revisión en el navegador~~ **Hecha** (24 de noviembre de 2026) por el autor y la raíz, sin hallazgos: partes, «Vas por», avance por fase, ZIP del proyecto con `mvnw` 755, multimódulo, listas de tareas, `<kbd>` y sin errores. Instancia de prueba `myopenacademy-demo-111` desmontada.
-3. **Integrar y publicar**, con la orden del autor (24 de noviembre de 2026): `--no-ff` en `main`, batería completa en `main`, etiqueta `v1.1.0`, `push` y *release* «MyOpenAcademy 1.1.0».
+3. ~~Integrar y publicar~~ **Hecho** con la orden del autor (24 de noviembre de 2026): `feat/h12-partes` integrada en `main` con `--no-ff` (`87b3062`). Batería completa en `main`: `./mvnw -B verify` con la comparación del curso inicial obligatoria, 964 pruebas sin fallos ni saltadas (el curso inicial `v1.0.0`, idéntico byte a byte); `lint`, `build`, 238 de 238 en el frontend y 6 de 6 en el navegador. `gitleaks` sobre los 29 commits nuevos, sin hallazgos. Etiqueta anotada `v1.1.0` sobre `87b3062`, `push` de `main` y de la etiqueta, y *release* «MyOpenAcademy 1.1.0» (<https://github.com/santi-cast/myopenacademy/releases/tag/v1.1.0>), marcada como la más reciente, con `docs/notas-de-version/1.1.0.md` como nota. RDD: el rango entero no se revisó de una vez; valen las revisiones commit a commit (decisión del autor, L32). Este commit de `ESTADO.md` no mueve la etiqueta (regla del autor del 23 de noviembre de 2026).
 
 **Decidido:** el curso de Java se publica después de la academia 1.1.0, con su README diciendo que la necesita y `"academia_minima": "1.1.0"` en su `curso.json`.
 
@@ -271,4 +271,5 @@ Si algo bloquea, dilo al autor: él pasa la información de una sesión a otra.
 | 2026-11-16 | Prueba de instalación del curso inicial desde `ed6c0b7`; `.env.example` admitido y `charset` de los CSV desde `codificacion.txt` (decisiones del autor). |
 | 2026-11-16 | H7, T2: solo identificadores `<curso>.` (forma de `FORMATO.md` 3.3) y números de fase y de módulo por el orden del curso («Fase 01», «01.01»). |
 | 2026-11-16 | H11: pack base 1.0 cerrado en local, con la etiqueta `v1.0.0` sobre `main`; el curso inicial instalado desde su `v1.0.0`. Sin remoto ni `push`. |
+| 2026-11-24 | **Publicada la 1.1.0** (H12, partes de los cursos): `v1.1.0` y `main` en `87b3062`, con su *release*. Puerto por defecto 8070. |
 | 2026-11-23 | **Publicada la 1.0.0** en <https://github.com/santi-cast/myopenacademy> (público): `main` y `v1.0.0` en `a4d48c0` (enlaces al kit y al curso en el README; la etiqueta se movió ahí), con su *release*, descripción y temas. README comprobado en GitHub con navegador: capturas y diagrama bien. «Report a vulnerability» activado y `git-filter-repo` borrado del equipo. |
