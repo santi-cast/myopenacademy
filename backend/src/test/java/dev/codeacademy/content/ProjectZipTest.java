@@ -220,6 +220,64 @@ class ProjectZipTest {
 	}
 
 	@Test
+	void theLoaderRefusesALinkDecoratedWithTheArchiveOfAnotherProject() throws Exception {
+		Path output = generate(withProjects(false), "contenido");
+		// A folder inside the Maven project, decorated with the archive of the Gradle Kotlin project: not its outermost.
+		String other = zipOf(ExecutableZipTest.manifest(output), KTS + "src/main/java/es/k/").path("resourceId").asString();
+		String folder = PHASE + MAVEN + "src/test/java/es/tienda/";
+		ExecutableZipTest.edit(output, manifest -> {
+			for (JsonNode link : manifest.path("sourceToId")) {
+				if (folder.equals(link.path("sourcePath").asString())) ((ObjectNode) link).put("zipResourceId", other);
+			}
+		});
+		Map<String, String> copy = ExecutableZipTest.snapshot(output);
+		assertThat(ExecutableZipTest.rejected(output)).contains("folder ZIP does not match ordered members: " + folder);
+		assertThat(ExecutableZipTest.snapshot(output)).isEqualTo(copy);
+	}
+
+	@Test
+	void theLoaderRefusesAProjectArchiveWhoseOwnerDoesNotClaimTheLinkedFolder() throws Exception {
+		Path output = generate(withProjects(false), "contenido");
+		JsonNode generated = ExecutableZipTest.manifest(output);
+		String zip = zipOf(generated, MAVEN + "src/main/java/es/tienda/").path("resourceId").asString();
+		String stage = generated.path("projectStages").get(0).path("id").asString();
+		String folder = PHASE + MAVEN + "src/main/java/es/tienda/";
+		// Only the lesson claims the project and its folders; the project's archive now says the stage owns it.
+		ExecutableZipTest.edit(output, manifest -> {
+			for (JsonNode resource : manifest.path("resources")) {
+				if (zip.equals(resource.path("resourceId").asString())) {
+					((ObjectNode) resource).putNull("lessonId").put("stageId", stage);
+				}
+			}
+		});
+		Map<String, String> copy = ExecutableZipTest.snapshot(output);
+		assertThat(ExecutableZipTest.rejected(output))
+			.contains("folder ZIP must be owned by an owner that claims the folder: " + folder);
+		assertThat(ExecutableZipTest.snapshot(output)).isEqualTo(copy);
+	}
+
+	@Test
+	void twoFoldersOfOneOwnerInsideAProjectShareItsArchiveWithoutListingItsMembers() throws Exception {
+		Path output = generate(withProjects(false), "contenido");
+		JsonNode manifest = ExecutableZipTest.manifest(output);
+		JsonNode main = zipOf(manifest, MAVEN + "src/main/java/es/tienda/");
+		assertThat(zipOf(manifest, MAVEN + "src/test/java/es/tienda/")).isEqualTo(main);
+		assertThat(main.path("sourcePath").asString()).isEqualTo(PHASE + MAVEN);
+		// Neither folder lists every member of the project's archive: it is checked once, by the project's own entry.
+		for (String folder : List.of(MAVEN + "src/main/java/es/tienda/", MAVEN + "src/test/java/es/tienda/")) {
+			for (JsonNode link : manifest.path("sourceToId")) {
+				if (!(PHASE + folder).equals(link.path("sourcePath").asString())) continue;
+				List<String> listed = new ArrayList<>();
+				link.path("resourceIds").forEach(id -> listed.add(id.asString()));
+				List<String> members = new ArrayList<>();
+				main.path("memberResourceIds").forEach(id -> members.add(id.asString()));
+				assertThat(listed).isNotEmpty().isSubsetOf(members).hasSizeLessThan(members.size());
+			}
+		}
+		assertThat(ContentLoader.loadAll(output)).hasSize(1);
+	}
+
+	@Test
 	void anUpdateThatTurnsAFolderIntoAProjectIsAChangeAndAppliesTheProjectArchive() throws Exception {
 		// The same folders, first without the build files (the archive is the linked folder), then with them.
 		String before = withProjects(false, false);

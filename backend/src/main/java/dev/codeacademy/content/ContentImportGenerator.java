@@ -257,6 +257,19 @@ final class ContentImportGenerator {
 		return members;
 	}
 
+	/**
+	 * The plan of the project a folder inside a Maven or Gradle project takes its archive from (H12, T11 and T16). The
+	 * importer claims the project folder before it marks the linked folder, and a project path is a prefix of the folder,
+	 * so it passes every path check the folder passes: a missing plan is a broken invariant, not a course finding.
+	 */
+	static <T> T projectPlan(String folder, String project, Map<String, T> plans) {
+		T plan = plans.get(project);
+		if (plan == null) {
+			throw new IllegalStateException("folder " + folder + " is inside project " + project + ", which has no folder plan");
+		}
+		return plan;
+	}
+
 	/** One course plan: its manifest, its copies, its object stream and the bytes and hashes already read for it. */
 	private record Plan(Manifest skeleton, List<Copy> copies, ContentImportSource source,
 			Map<String, byte[]> documents, Map<String, String> hashes) {
@@ -768,7 +781,8 @@ final class ContentImportGenerator {
 			}
 			for (FolderPlan folder : folders.values()) {
 				if (folder.owners.isEmpty()) continue;
-				FolderPlan archive = folder.project == null ? folder : folders.get(folder.project);
+				FolderPlan archive = folder.project == null ? folder
+					: projectPlan(folder.sourcePath(), folder.project, folders);
 				// A project that could not be claimed is already a finding: nothing is written.
 				if (archive.owners.isEmpty()) continue;
 				links.add(new SourceLink(folder.sourcePath(), null, null, null, members.get(folder.sourcePath()), null, null,
