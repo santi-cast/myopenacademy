@@ -1671,6 +1671,43 @@ class ContentImportCliTest {
 		Files.delete(report);
 	}
 
+	// --- academia_minima of curso.json (H12, T15, S17 and S19): the kit 1.1.0 rule, with its cases ---
+
+	@Test void aCourseThatAsksForALaterAcademyIsRefusedWithItsVersions() throws Exception {
+		String later = AcademyVersion.current().replaceFirst("\\d+$", "") + "99";
+		curso.put("academia_minima", later);
+		assertPartFindings("curso.json: course requires academy " + later + " or later; this academy is "
+			+ AcademyVersion.current());
+	}
+
+	@Test void aCourseThatAsksForThisAcademyIsImportedAndTheManifestDoesNotKeepTheField() throws Exception {
+		String withoutField = commit(files, "sin academia_minima\n");
+		assertThat(generate("--commit", withoutField).code()).isZero();
+		String before = Files.readString(output.resolve("demo/manifest.json"));
+		cleanOutput();
+		curso.put("academia_minima", AcademyVersion.current());
+		assertThat(generate("--commit", commit(files, "academia_minima\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).isEmpty();
+		String after = Files.readString(output.resolve("demo/manifest.json"));
+		assertThat(after).doesNotContain("academia_minima");
+		// Only the pinned commit differs: the field changes nothing else in the copy.
+		assertThat(after.replace(manifest().path("source").path("versionRef").asString(), "X"))
+			.isEqualTo(before.replace(withoutField, "X"));
+	}
+
+	@Test void aMalformedAcademiaMinimaIsAFinding() throws Exception {
+		curso.put("academia_minima", "1.1");
+		assertPartFindings("curso.json: academia_minima (1.1) must be MAJOR.MINOR.PATCH, for example 1.1.0");
+	}
+
+	void cleanOutput() throws Exception {
+		try (var paths = Files.walk(output)) {
+			for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) Files.delete(path);
+		}
+		Files.deleteIfExists(report);
+	}
+
 	// --- fixtures and process helpers ---
 
 	JsonNode manifest() throws Exception {

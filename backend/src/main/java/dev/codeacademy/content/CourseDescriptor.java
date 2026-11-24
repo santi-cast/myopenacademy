@@ -58,6 +58,11 @@ record CourseDescriptor(int format, String id, String title, String description,
 
 	/** Parses and checks a descriptor; every problem is added to {@code problems} and the result is then null. */
 	static CourseDescriptor parse(byte[] bytes, List<String> problems, List<String> warnings) {
+		return parse(bytes, AcademyVersion.current(), problems, warnings);
+	}
+
+	/** As {@link #parse(byte[], List, List)}, for an academy of this version (academia_minima). */
+	static CourseDescriptor parse(byte[] bytes, String academy, List<String> problems, List<String> warnings) {
 		JsonNode root;
 		try {
 			root = JSON.readTree(bytes);
@@ -81,6 +86,7 @@ record CourseDescriptor(int format, String id, String title, String description,
 		}
 		String title = required(root, "titulo", found);
 		String version = required(root, "version", found);
+		academiaMinima(root, academy, found);
 		Ids ids = new Ids(id, found);
 		List<Phase> phases = new ArrayList<>();
 		Set<String> files = new HashSet<>();
@@ -316,6 +322,45 @@ record CourseDescriptor(int format, String id, String title, String description,
 			if (!seen.add(id)) problems.add(PATH + ": id " + id + " is declared twice");
 			return id;
 		}
+	}
+
+	/**
+	 * The optional {@code academia_minima} (FORMATO.md 3.2, revision 1.1; kit 1.1.0): a JSON text MAJOR.MINOR.PATCH.
+	 * A course that asks for a later academy is refused. Without the field, nothing; it never goes to the manifest.
+	 */
+	private static void academiaMinima(JsonNode root, String academy, List<String> found) {
+		if (!root.has("academia_minima")) return;
+		JsonNode value = root.get("academia_minima");
+		if (!value.isString() || !AcademyVersion.SEMVER.matcher(value.asString()).matches()) {
+			found.add(PATH + ": academia_minima (" + visible(value) + ") must be MAJOR.MINOR.PATCH, for example 1.1.0");
+		}
+		else if (AcademyVersion.compare(value.asString(), academy) > 0) {
+			found.add(PATH + ": course requires academy " + value.asString() + " or later; this academy is " + academy);
+		}
+	}
+
+	/**
+	 * A value in a message as valor_visible of the kit: a text as it is; as in JSON when it is not a text or would not be
+	 * seen whole (empty, with spaces before or after, or with line breaks or other non-printable characters).
+	 */
+	static String visible(JsonNode value) {
+		if (value.isString()) {
+			String text = value.asString();
+			if (!text.isEmpty() && text.equals(text.strip()) && text.codePoints().allMatch(CourseDescriptor::printable)) {
+				return text;
+			}
+		}
+		return JSON.writeValueAsString(value);
+	}
+
+	/** str.isprintable of Python: no control, format, private-use, unassigned or separator character but the space. */
+	private static boolean printable(int codePoint) {
+		if (codePoint == ' ') return true;
+		return switch (Character.getType(codePoint)) {
+			case Character.CONTROL, Character.FORMAT, Character.SURROGATE, Character.PRIVATE_USE, Character.UNASSIGNED,
+				Character.SPACE_SEPARATOR, Character.LINE_SEPARATOR, Character.PARAGRAPH_SEPARATOR -> false;
+			default -> true;
+		};
 	}
 
 	private static String text(JsonNode node, String field) {
