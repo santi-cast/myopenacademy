@@ -179,19 +179,28 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 - ~~**Antes de publicar**~~ **Hecho en H11** (`../PLAN.md`, apartado 8.6): rutas absolutas en `odd/tasks/` (las de `PLAN.md` se quitaron al reescribirlo); README desactualizado y con voseo; `gitleaks` sobre todo el historial; licencias de las dependencias (elkjs, dompurify); el nombre MyOpenAcademy en un solo sitio (hoy «Code Academy» está en `index.html`, `src/layout/Layouts.tsx` y `e2e/stages.spec.ts`).
 - ~~**`content/` fuera de Git**~~ **Hecho** en H7, T3 (9 de noviembre de 2026). El historial sigue guardando la copia de Java: el autor decide antes de H11 si se reescribe (ver «Preguntas abiertas»).
 
-## H12, academia 1.1.0 (24 de noviembre de 2026)
+## H12, academia 1.1.0 (24 de noviembre de 2026; sesión cerrada hasta que el kit publique su 1.1.0)
 
-En la rama `feat/h12-partes`, sin integrar ni publicar; el detalle está en `odd/tasks/h12-partes.md`. **Hecho, con pruebas y revisión:**
-- partes (validación, manifiesto, API y pantallas) y avance por fase en todos los cursos;
+En la rama `feat/h12-partes` (20 commits sobre `main`, sin integrar ni `push`); el detalle está en `odd/tasks/h12-partes.md` (S1 a S18, L1 a L24).
+
+**Hecho, con pruebas y con revisión externa cuando le tocaba:**
+- partes, con las reglas del kit `44a8e32` (validación, manifiesto, API y pantallas), y avance por fase en todos los cursos;
 - pruebas de navegador con y sin partes;
 - permiso de ejecución de Git en los ZIP;
+- ZIP del proyecto Maven o Gradle más exterior dentro de `codigo/`, con la regla del kit `774aeaa`;
 - teclas `<kbd>` y listas de tareas.
 
-El curso inicial `v1.0.0` sigue saliendo idéntico byte a byte; una prueba lo compara con lo que instaló la 1.0.0.
+`./mvnw -B verify` da 946 pruebas y las de navegador, 6 de 6. El curso inicial `v1.0.0` sale idéntico byte a byte, y lo comprueba `StarterCourseGoldenTest`. Con `870e1b0f`, el curso de Java da 0 hallazgos.
 
-**En espera del kit (su `FORMATO.md` 1.1):** las dos reglas de las partes (sin fases vacías y por tramos seguidos) y T11, el ZIP del proyecto Maven o Gradle más exterior dentro de `codigo/`. Después, cerrar T6 (nota de la versión) y la revisión del autor antes de integrar.
+**Lo que falta, en este orden:**
+1. **T15, `academia_minima`:** el diseño está aprobado por el autor (S17 de `odd/tasks/h12-partes.md`). Espera la regla exacta del kit: formato, mensaje y casos.
+2. **Duda de `codigo/` dentro de un proyecto** (tercer hallazgo de la revisión de T11). La decide el kit. Propuesta del autor: solo cuenta la `codigo/` que cuelga directamente de una fase o de `proyecto/`. Cuando el kit decida, la academia la copia con sus casos.
+3. **T6:** la nota `docs/notas-de-version/1.1.0.md`, la versión 1.1.0 en `backend/pom.xml` y `frontend/package.json`, y repasar `CHANGELOG.md` y `README.md`, ya adelantados.
+4. **Revisión del autor en el navegador antes de integrar** en `main` con `--no-ff`. Después, la etiqueta `v1.1.0` y la *release*, solo con su orden.
 
-**Pendiente para después de la 1.1.0:** los hallazgos que se dejaron para más tarde de las revisiones de T12 y T13 (`PLAN.md`, apartado 5).
+**Decidido:** el curso de Java se publica después de la academia 1.1.0, con su README diciendo que la necesita y `"academia_minima": "1.1.0"` en su `curso.json`.
+
+**Pendiente para después de la 1.1.0** (`PLAN.md`, apartado 5): subir el límite de tiempo de una prueba (revisión de T12); quitar la forma de `Markdown.render` sin marcador y probar una lista de tareas con líneas en blanco entre sus elementos (revisión de T13); que el enlace al `README.md` de otro curso lleve a su página.
 
 ## Curso de Java: qué admite la academia 1.0.0 (23 de noviembre de 2026)
 
@@ -221,7 +230,7 @@ Pedido por la raíz, sin cambiar código. Pruebas con el JAR recompilado desde `
 | Curso inicial | Que la academia instale `.github/` dentro de `codigo/` (plantilla de issue de la fase 7) y la meta en el ZIP | Fase 7 (07.02 y reto 3) | **Confirmado** (16 de noviembre de 2026, H8 L7): solo se protege el nombre exacto `.git`; prueba nueva con `.github/ISSUE_TEMPLATE/` instalado y en el ZIP byte a byte. Nada que cambiar |
 | Kit | Avisar de los enlaces de correo fuera de código (opción c del autor) | Que los cursos no lleguen con `mailto:` | **Hecho** por el kit en `e44174e` (16 de noviembre de 2026; `FORMATO.md` 10.7). Respondido al kit: la academia no enlaza los correos sueltos (sin `< >`), porque no usa la extensión de enlaces automáticos de GitHub; GitHub sí los enlaza. El kit avisa también del correo suelto desde `cf6c46d`; el curso inicial da 0 avisos y los cursos de ejemplo no cambian (nada que traer) |
 | Kit | Lo mismo para los cursos de ejemplo no hace falta (el E2E los etiqueta en su repositorio temporal); sí, decir en `FORMATO.md` 11.1 o en la guía del kit **cuándo** se etiqueta (al cerrar una versión, después de verificar el commit) | Que los cursos lleguen etiquetados | Pedido el 16 de noviembre de 2026 |
-| Curso de Java | Un commit sin la fase 00 (paso 3) y con los títulos de ejercicio en texto plano | La instalación de prueba en la academia, en un proyecto de Compose aparte y con un alumno de usar y tirar (decisión del autor) | Pedido el 23 de noviembre de 2026. `a2eb8911` y `c2cdab96` tienen ya la fase 00 quitada y los títulos en texto plano, pero la candidata no se escribe: 127 y 125 hallazgos, todos enlaces a lo quitado. El curso adelanta su paso 6 y pasará un solo commit con los enlaces arreglados y el 01.01 nuevo |
+| Curso de Java | Un commit sin la fase 00 (paso 3) y con los títulos de ejercicio en texto plano | La instalación de prueba en la academia, en un proyecto de Compose aparte y con un alumno de usar y tirar (decisión del autor) | **Hecho** (24 de noviembre de 2026): `870e1b0f`, instalado en un proyecto de prueba aparte, fase 01 revisada por el autor y por la raíz, y prueba desmontada |
 | Kit | En `FORMATO.md` 3.2 y en `formato_academia.py`, dentro de su 1.1.0: que una parte sin fases sea un error y que cada parte sea un tramo de fases seguidas en el orden del curso, con las partes una tras otra | Copiar esas dos reglas en H12, T1 (decisión del autor: primero el kit y después la academia) | Pedido el 23 de noviembre de 2026. Aprobado por el autor; va primero en el kit (su T10), que avisará con un commit, los mensajes exactos y los casos de prueba |
 
 | Otros esperan de la academia | Qué | Para | Estado |
