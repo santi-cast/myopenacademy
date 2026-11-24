@@ -438,6 +438,42 @@
   margin-top: var(--space-6);
 }
 
+/* A part of the course (H12): a block with its title and progress over its phases. */
+.part-block {
+  margin-top: var(--space-6);
+}
+
+.part-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.part-head h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  color: var(--heading);
+}
+
+.part-progress {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.part-block .phase-grid {
+  margin-top: var(--space-4);
+}
+
+.current-part {
+  margin: var(--space-2) 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 .phase-table {
   break-inside: avoid;
   margin: 0 0 var(--space-6);

@@ -129,14 +129,15 @@ class CodeAcademyApplicationTest {
 	}
 
 	@Test
-	void serverBindingDefaultsAreLoopback8080WhileTestUsesRandomPort() throws Exception {
+	void serverBindingDefaultsAreLoopback8070WhileTestUsesRandomPort() throws Exception {
 		var defaults = new Properties();
 		try (var input = context.getResource("classpath:application.properties").getInputStream()) {
 			defaults.load(input);
 		}
-		// H10: from the environment, with only this machine on port 8080 when nothing is set.
+		// H10: from the environment, with only this machine when nothing is set; port 8070 since 1.1.0 (H12, T18: 8080 is
+		// the default of Spring Boot, which the students run while the academy is up).
 		assertThat(defaults.getProperty("server.address")).isEqualTo("${APP_ADDRESS:127.0.0.1}");
-		assertThat(defaults.getProperty("server.port")).isEqualTo("${APP_PORT:8080}");
+		assertThat(defaults.getProperty("server.port")).isEqualTo("${APP_PORT:8070}");
 		assertThat(context.getEnvironment().getProperty("server.address")).isEqualTo("127.0.0.1");
 		assertThat(port).isPositive();
 		assertThat(request("GET", "/actuator/health", null).statusCode()).isEqualTo(200);

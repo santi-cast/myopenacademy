@@ -282,6 +282,82 @@ class ContentUpdateCliTest {
         });
     }
 
+    // --- parts (H12, T2, S3): they hold no learner progress, so every change to them is a change, never a conflict ---
+
+    /** Both copies in schema 2; the active one with the two parts of the fixture, the candidate edited from them. */
+    void parts(boolean activeHasParts, java.util.function.Consumer<tools.jackson.databind.node.ObjectNode> edit) {
+        CoursePartsManifestTest.upgrade(active);
+        CoursePartsManifestTest.upgrade(candidate);
+        if (activeHasParts) active.editManifest(CoursePartsManifestTest::addParts);
+        candidate.editManifest(m -> {
+            CoursePartsManifestTest.addParts(m);
+            edit.accept(m);
+        });
+    }
+
+    /** compare finds no conflict and reports these changes; apply then installs the candidate's parts. */
+    void partsChangeApplies(String... changes) throws Exception {
+        assertThat(run("compare")).isEqualTo(new Result(0, "Comparison written; conflicts: 0\n", ""));
+        var data = JSON.readTree(Files.readString(report));
+        assertThat(data.path("conflicts")).isEmpty();
+        List<String> reported = new ArrayList<>();
+        data.path("changes").forEach(change -> reported.add(change.asString()));
+        assertThat(reported).contains(changes);
+        var expected = candidate.load().manifest().parts();
+        assertThat(run("apply").code()).isZero();
+        assertThat(ContentLoader.loadAll(active.root).getFirst().manifest().parts()).isEqualTo(expected);
+    }
+
+    @Test void retitlingAPartIsAChange() throws Exception {
+        parts(true, m -> CoursePartsManifestTest.part(m, 1).put("title", "Java avanzado"));
+        partsChangeApplies("retitle demo.parte.dos: «Segunda parte» -> «Java avanzado»");
+    }
+
+    @Test void movingAPhaseToAnotherPartIsAChange() throws Exception {
+        // T14 (S16): no part may be left without phases and parts follow the phases, so the two parts swap theirs.
+        parts(true, m -> {
+            CoursePartsManifestTest.part(m, 0).put("position", 2).putArray("phaseIds").add("demo.phase-02");
+            CoursePartsManifestTest.part(m, 1).put("position", 1).putArray("phaseIds").add("demo.phase-01");
+        });
+        partsChangeApplies(
+            "metadata demo.parte.uno: {\"id\":\"demo.parte.uno\",\"title\":\"Primera parte\",\"position\":1,"
+                + "\"phaseIds\":[\"demo.phase-01\"]} -> {\"id\":\"demo.parte.uno\",\"title\":\"Primera parte\","
+                + "\"position\":2,\"phaseIds\":[\"demo.phase-02\"]}",
+            "metadata demo.parte.dos: {\"id\":\"demo.parte.dos\",\"title\":\"Segunda parte\",\"position\":2,"
+                + "\"phaseIds\":[\"demo.phase-02\"]} -> {\"id\":\"demo.parte.dos\",\"title\":\"Segunda parte\","
+                + "\"position\":1,\"phaseIds\":[\"demo.phase-01\"]}");
+    }
+
+    @Test void addingAPartIsAChange() throws Exception {
+        // T14 (S16): no part may be empty, so the active copy has one part with both phases and the candidate splits it.
+        parts(true, m -> { });
+        active.editManifest(m -> {
+            ((tools.jackson.databind.node.ArrayNode) m.get("parts")).remove(1);
+            CoursePartsManifestTest.part(m, 0).withArray("phaseIds").add("demo.phase-02");
+        });
+        partsChangeApplies("addition demo.parte.dos: {\"id\":\"demo.parte.dos\",\"title\":\"Segunda parte\","
+            + "\"position\":2,\"phaseIds\":[\"demo.phase-02\"]}");
+    }
+
+    @Test void removingAPartIsAChange() throws Exception {
+        parts(true, m -> {
+            ((tools.jackson.databind.node.ArrayNode) m.get("parts")).remove(1);
+            CoursePartsManifestTest.part(m, 0).withArray("phaseIds").add("demo.phase-02");
+        });
+        partsChangeApplies("removal demo.parte.dos");
+    }
+
+    @Test void aCourseMayGainItsParts() throws Exception {
+        parts(false, m -> { });
+        partsChangeApplies("addition demo.parte.uno: {\"id\":\"demo.parte.uno\",\"title\":\"Primera parte\","
+            + "\"position\":1,\"phaseIds\":[\"demo.phase-01\"]}");
+    }
+
+    @Test void aCourseMayLoseItsParts() throws Exception {
+        parts(true, m -> m.remove("parts"));
+        partsChangeApplies("removal demo.parte.uno", "removal demo.parte.dos");
+    }
+
     @Test void forgedV2HashesCannotBlessAnAdaptation() throws Exception {
         candidate.replace(ContentFixture.INTRO, "Texto de cuerpo.", "Adapted body.");
         upgradeCandidate();
@@ -313,6 +389,18 @@ class ContentUpdateCliTest {
         assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 2\n", ""));
         assertThat(Files.readString(report)).contains("removal demo.01.01.e01", "ambiguous identity");
         rejected("apply", "comparison contains conflicts");
+    }
+
+    /** H12, T11 (PRESERVE): only a folder ZIP that disappears became a change; a file resource that does is a conflict. */
+    @Test void aFileResourceThatDisappearsIsStillAConflict() throws Exception {
+        candidate.editManifest(m -> {
+            ContentFixture.resource(m, "demo.01.01-r-solo").put("resourceId", "demo.01.01-r-solo2");
+            ContentFixture.link(m, "fase-01/codigo/solo/Solo.java").put("resourceId", "demo.01.01-r-solo2");
+            ((tools.jackson.databind.node.ArrayNode) ContentFixture.link(m, "fase-01/codigo/solo/").path("resourceIds"))
+                .set(0, "demo.01.01-r-solo2");
+        });
+        assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 2\n", ""));
+        assertThat(Files.readString(report)).contains("\"removal demo.01.01-r-solo\"", "ambiguous identity");
     }
 
     @Test void anExistingExerciseCanChangeItsTitleWithNewSourceBytes() throws Exception {

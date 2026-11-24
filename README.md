@@ -6,7 +6,7 @@ Academia de programación **libre, gratuita y de código abierto**, pensada como
 
 El **pack base 1.0** es la academia más el curso inicial, «Fundamentos para programar»: lo que conviene saber antes de cualquier curso (qué es programar, tu ordenador, la terminal, Git y GitHub, los formatos de datos, internet y cómo aprender).
 
-**Estado:** versión 1.0.0, el pack base. Ver el [registro de cambios](CHANGELOG.md).
+**Estado:** versión 1.1.0, con las partes de los cursos. Ver el [registro de cambios](CHANGELOG.md) y la [nota de la 1.1.0](docs/notas-de-version/1.1.0.md).
 
 ![Índice del curso inicial, con el avance de una alumna, las fases y la ruta de aprendizaje](docs/capturas/indice.png)
 
@@ -37,7 +37,7 @@ La academia no lee los cursos en directo: el importador los copia desde su repos
 ## Qué hace
 
 - **Cursos como DLC.** La academia arranca vacía y los cursos se instalan desde su repositorio, por su etiqueta de versión, con un importador sin conexión que compara los cambios antes de aplicarlos y conserva el avance de los alumnos. Ningún curso está escrito en el código: todo sale de los cursos instalados.
-- **Lecciones completas:** ejercicios con pistas y soluciones, preguntas de repaso, diagramas, código resaltado y con botón de copiar, imágenes y carpetas de código descargables como ZIP. Además, los retos de cada fase, el glosario, la ruta de aprendizaje, la chuleta global y el proyecto del curso.
+- **Lecciones completas:** ejercicios con pistas y soluciones, preguntas de repaso, diagramas, código resaltado y con botón de copiar, imágenes y carpetas de código descargables como ZIP (los proyectos de Maven y Gradle, enteros y con el permiso de ejecución de `mvnw` y `gradlew`), listas de tareas y teclas. Los cursos grandes se dividen en partes, con el avance de cada parte y de cada fase. Además, los retos de cada fase, el glosario, la ruta de aprendizaje, la chuleta global y el proyecto del curso.
 - **Tu avance:** cada alumno marca sus lecciones, ejercicios y etapas, ve su progreso en «Mis cursos» y continúa donde lo dejó.
 - **Administración:** registro abierto o cerrado, nombre de la academia, cuentas (desactivar, contraseña temporal) y cursos instalados.
 - **Modo claro y oscuro**, modo de lectura sin distracciones y páginas que se imprimen bien.
@@ -51,7 +51,7 @@ Después del pack base vienen más cursos, cada uno como un DLC con su versión:
 
 ## Instalar
 
-Con Docker Compose, en un solo comando. Paso a paso, con la configuración, el administrador, los cursos y el uso en la red de casa: [`docs/instalacion.md`](docs/instalacion.md).
+Con Docker Compose, en un solo comando; la academia se abre en el puerto 8070 (`APP_PORT` lo cambia). Paso a paso, con la configuración, el administrador, los cursos y el uso en la red de casa: [`docs/instalacion.md`](docs/instalacion.md).
 
 ## Los cursos
 

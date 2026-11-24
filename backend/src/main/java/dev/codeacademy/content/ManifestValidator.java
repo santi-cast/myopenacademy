@@ -20,8 +20,8 @@ import dev.codeacademy.content.Manifest.Resource;
 import dev.codeacademy.content.Manifest.SourceLink;
 
 /**
- * Structural rules of docs/manifiesto.md that do not need the files: schema, provenance, IDs, phases, positions,
- * sourceToId.
+ * Structural rules of docs/manifiesto.md that do not need the files: schema, provenance, IDs, phases, parts,
+ * positions, sourceToId.
  */
 final class ManifestValidator {
 
@@ -37,6 +37,8 @@ final class ManifestValidator {
 	private final Set<String> ids = new HashSet<>();
 	private String prefix = "";
 	private int folderPasses;
+	/** The source paths of the registered file resources, built on the first folder decorated by a project archive. */
+	private Set<String> registeredFiles;
 
 	private ManifestValidator(Manifest manifest) {
 		this.manifest = manifest;
@@ -93,6 +95,7 @@ final class ManifestValidator {
 			return;
 		}
 		Map<String, Phase> phases = phases();
+		parts(phases);
 		Map<String, Lesson> lessons = lessons();
 		phaseOrder(phases, lessons);
 		project(lessons);
@@ -154,6 +157,103 @@ final class ManifestValidator {
 			problems.add("phase positions must be 1.." + positions.size() + " without gaps or repeats");
 		}
 		return phases;
+	}
+
+	/**
+	 * The parts of the course (H12), optional in schema 2 and checked as the importer checks {@code partes} of
+	 * curso.json: an ID like any other of the course, a plain-text title, positions 1..n, and each listed phase exists
+	 * and is in one part only; with parts, every phase is in one. An incomplete part is left out of the other checks.
+	 * Then each part is a stretch of the phases, as the importer checks it (T14, S16).
+	 */
+	private void parts(Map<String, Phase> phases) {
+		if (manifest.parts() == null) return;
+		if (!Objects.equals(manifest.schemaVersion(), 2)) {
+			problems.add("schemaVersion 1 does not allow parts");
+			return;
+		}
+		Map<String, String> partOf = new HashMap<>();
+		List<Integer> positions = new ArrayList<>();
+		List<Manifest.Part> complete = new ArrayList<>();
+		for (Manifest.Part part : manifest.parts()) {
+			if (part == null || blank(part.id()) || blank(part.title()) || part.position() == null
+					|| part.phaseIds() == null) {
+				problems.add("part " + (part == null ? null : part.id()) + " needs id, title, position and phaseIds");
+				continue;
+			}
+			complete.add(part);
+			registerDeclared(part.id());
+			positions.add(part.position());
+			String markdown = CourseDescriptor.markdown(part.title());
+			if (markdown != null) {
+				problems.add("part " + part.id() + ": title «" + part.title() + "» has Markdown formatting (" + markdown
+					+ "); titles are plain text");
+			}
+			for (String phaseId : part.phaseIds()) {
+				if (phaseId == null || !phases.containsKey(phaseId)) {
+					problems.add("part " + part.id() + ": unknown phase " + phaseId);
+				}
+				else if (partOf.containsKey(phaseId)) {
+					problems.add("part " + part.id() + ": phase " + phaseId + " is already in part " + partOf.get(phaseId));
+				}
+				else partOf.put(phaseId, part.id());
+			}
+		}
+		if (!positions.stream().sorted().toList().equals(IntStream.rangeClosed(1, positions.size()).boxed().toList())) {
+			problems.add("part positions must be 1.." + positions.size() + " without gaps or repeats");
+		}
+		manifest.phases().stream().filter(Objects::nonNull).map(Phase::id).filter(phases::containsKey)
+			.filter(id -> !partOf.containsKey(id)).distinct().forEach(id -> problems.add("phase " + id + " is in no part"));
+		stretches(phases, complete, partOf);
+	}
+
+	/**
+	 * Each part is a stretch of consecutive phases in the course order, and the parts, in position order, follow each
+	 * other (FORMATO.md 3.2, revision 1.1; the importer's rules): a part is seen only with the phases that exist and
+	 * are its own (the others already have their problem); an out-of-order part is not also checked for gaps; the order
+	 * of the parts compares the first phase of each with that of the previous part with phases.
+	 */
+	private void stretches(Map<String, Phase> phases, List<Manifest.Part> parts, Map<String, String> partOf) {
+		List<String> order = phases.values().stream().sorted(Comparator.comparing(Phase::position)
+			.thenComparing(Phase::id)).map(Phase::id).toList();
+		Map<String, Integer> position = new HashMap<>();
+		for (int i = 0; i < order.size(); i++) position.put(order.get(i), i);
+		String previous = null;
+		int previousFirst = -1;
+		for (Manifest.Part part : parts.stream().sorted(Comparator.comparing(Manifest.Part::position)).toList()) {
+			if (part.phaseIds().isEmpty()) {
+				problems.add("part " + part.id() + " has no phases (each part groups at least one)");
+				continue;
+			}
+			List<String> own = part.phaseIds().stream()
+				.filter(id -> position.containsKey(id) && part.id().equals(partOf.get(id))).toList();
+			if (own.isEmpty()) continue;
+			int disorder = -1;
+			for (int i = 1; i < own.size() && disorder < 0; i++) {
+				if (position.get(own.get(i)) < position.get(own.get(i - 1))) disorder = i;
+			}
+			if (disorder > 0) {
+				problems.add("part " + part.id() + ": its phases are not in the course order (phase "
+					+ own.get(disorder - 1) + " is listed before phase " + own.get(disorder) + ")");
+			}
+			else {
+				for (int i = 1; i < own.size(); i++) {
+					int before = position.get(own.get(i - 1));
+					if (position.get(own.get(i)) != before + 1) {
+						String between = order.get(before + 1);
+						String of = partOf.containsKey(between) ? ", of part " + partOf.get(between) : "";
+						problems.add("part " + part.id() + ": its phases are not consecutive (between phase "
+							+ own.get(i - 1) + " and phase " + own.get(i) + " is phase " + between + of + ")");
+						break;
+					}
+				}
+			}
+			int first = own.stream().mapToInt(position::get).min().getAsInt();
+			if (previous != null && first < previousFirst) {
+				problems.add("part " + previous + " comes before part " + part.id() + " in parts, but its phases come after");
+			}
+			previous = part.id();
+			previousFirst = first;
+		}
 	}
 
 	/**
@@ -361,12 +461,17 @@ final class ManifestValidator {
 							.anyMatch(link -> folder.equals(link.sourcePath())
 								&& link.resourceIds() != null && link.resourceIds().containsAll(resource.memberResourceIds()));
 					if (!mapped) problems.add("ZIP must decorate the folder that lists its members: " + resource.resourceId());
+					if (resource.executable() != null) problems.add("ZIP resource cannot be executable: " + resource.resourceId());
 				}
 				else if (!"file".equals(resource.kind())) {
 					problems.add("resource " + resource.resourceId() + ": unsupported kind " + resource.kind());
 				}
 				else if (resource.fileName() != null || resource.memberResourceIds() != null) {
 					problems.add("file resource cannot have ZIP metadata: " + resource.resourceId());
+				}
+				// Written only when true (a 100755 file in the pinned commit), so one copy has one manifest.
+				if ("file".equals(resource.kind()) && Boolean.FALSE.equals(resource.executable())) {
+					problems.add("resource " + resource.resourceId() + ": executable must be true or absent");
 				}
 			}
 			long owners = Stream.of(resource.lessonId(), resource.stageId(), resource.documentId()).filter(Objects::nonNull).count();
@@ -504,8 +609,16 @@ final class ManifestValidator {
 		}
 		if (link.zipResourceId() != null) {
 			Resource zip = resources.get(link.zipResourceId());
-			if (zip == null || !"zip".equals(zip.kind()) || !folder.equals(zip.sourcePath())) {
+			if (zip == null || !"zip".equals(zip.kind())
+					|| (!folder.equals(zip.sourcePath()) && !zip.sourcePath().equals(project(folder, resources)))) {
 				problems.add("folder ZIP does not match ordered members: " + folder);
+				return;
+			}
+			// Inside a project (H12, T11), the folder uses the project's archive, which its own entry already checks.
+			if (!folder.equals(zip.sourcePath())) {
+				if (!claims.contains(owner(zip))) {
+					problems.add("folder ZIP must be owned by an owner that claims the folder: " + folder);
+				}
 				return;
 			}
 			// A shared folder keeps one archive: its members are a subset of the listed files of its owners.
@@ -526,6 +639,21 @@ final class ManifestValidator {
 				problems.add("folder ZIP must be owned by an owner that claims the folder: " + folder);
 			}
 		}
+	}
+
+	/**
+	 * The outermost Maven or Gradle project of a folder among the registered files (H12, T11): the archive of a folder
+	 * inside one must be the project's. The registered files are the source paths of the file resources, built once.
+	 */
+	private String project(String folder, Map<String, Resource> resources) {
+		if (registeredFiles == null) {
+			folderPasses++;
+			registeredFiles = new HashSet<>();
+			for (Resource resource : resources.values()) {
+				if (!"zip".equals(resource.kind())) registeredFiles.add(resource.sourcePath());
+			}
+		}
+		return CodeProjects.root(folder, registeredFiles::contains);
 	}
 
 	private static String owner(Resource resource) {

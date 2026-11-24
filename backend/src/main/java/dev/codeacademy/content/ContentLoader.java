@@ -77,6 +77,7 @@ public final class ContentLoader {
 			});
 			if (manifest.projectStages() != null) manifest.projectStages().forEach(stage -> courseIds.add(stage.id()));
 			if (manifest.documents() != null) manifest.documents().forEach(document -> courseIds.add(document.id()));
+			if (manifest.parts() != null) manifest.parts().forEach(part -> courseIds.add(part.id()));
 			manifest.resources().forEach(resource -> courseIds.add(resource.resourceId()));
 			courseIds.stream().filter(id -> !ids.add(id))
 				.forEach(id -> problems.add("id " + id + " is used by more than one course"));
@@ -201,10 +202,12 @@ public final class ContentLoader {
 				if (tree.has("projectStages") || tree.has("provenance") || tree.has("documents")) {
 					throw new ContentValidationException("schemaVersion 1 does not allow projectStages, provenance or documents");
 				}
+				if (tree.has("parts")) throw new ContentValidationException("schemaVersion 1 does not allow parts");
 				for (var resource : tree.path("resources")) {
 					if (resource.has("kind") || resource.has("stageId") || resource.has("fileName") || resource.has("memberResourceIds")) {
 						throw new ContentValidationException("schemaVersion 1 does not allow resource kind or stageId");
 					}
+					if (resource.has("executable")) throw new ContentValidationException("schemaVersion 1 does not allow executable");
 				}
 				for (var link : tree.path("sourceToId")) {
 					if (link.has("stageId") || link.has("zipResourceId")) {

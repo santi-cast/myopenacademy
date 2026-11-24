@@ -15,3 +15,14 @@ export function progressWidth(counts: Counts): string {
   const value = counts.availableLessons === 0 || counts.percentage === null ? 0 : Math.min(100, Math.max(0, counts.percentage))
   return `${value}%`
 }
+
+type LessonCount = { completed: number; available: number }
+
+/** «N de M»: completed of available lessons of a part or a phase (H12, S6). */
+export const countText = (count: LessonCount) => `${count.completed} de ${count.available}`
+
+/** «12 de 40 lecciones»: the progress of a part in the course index (H12, S5). */
+export const partProgressText = (count: LessonCount) => `${countText(count)} lecciones`
+
+/** «1 de 2 completadas»: the progress of a phase in the course index, after its availability (H12, S1). */
+export const phaseProgressText = (count: LessonCount) => `${countText(count)} completadas`

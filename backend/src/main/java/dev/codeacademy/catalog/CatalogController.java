@@ -53,6 +53,13 @@ class CatalogController {
 		}
 	}
 
+	/** A part of the course (H12, S4): its phases, in the order of the course. */
+	record PartView(String id, String title, int position, List<String> phaseIds) {
+		static PartView of(Manifest.Part part) {
+			return new PartView(part.id(), part.title(), part.position(), part.phaseIds());
+		}
+	}
+
 	record LessonEntry(String id, String courseId, String title, int position, String phaseId, boolean available) {
 		static LessonEntry of(LessonRef ref) {
 			Lesson lesson = ref.lesson();
@@ -102,8 +109,9 @@ class CatalogController {
 		}
 	}
 
+	/** {@code parts} is empty for a course without parts (H12, S1): nothing else changes for it. */
 	record SyllabusView(CourseView course, List<PhaseView> phases, List<LessonEntry> lessons, List<DocumentEntry> documents,
-			ProjectView project) {
+			ProjectView project, List<PartView> parts) {
 	}
 
 	/** {@code improveUrl}: where to propose a change to the lesson, or null (H8, T2). */
@@ -168,7 +176,8 @@ class CatalogController {
 				Catalog.phases(course).stream().map(PhaseView::of).toList(), Catalog.syllabus(course).stream()
 					.map(lesson -> LessonEntry.of(new LessonRef(course, lesson))).toList(),
 				Catalog.documents(course).stream().map(document -> DocumentEntry.of(courseId, document)).toList(),
-				ProjectView.of(course.manifest().course().project()));
+				ProjectView.of(course.manifest().course().project()),
+				Catalog.parts(course).stream().map(PartView::of).toList());
 	}
 
 	/** A document without progress: its body and its resources, like a stage but with no state (H8, T3). */

@@ -1390,6 +1390,324 @@ class ContentImportCliTest {
 		assertThat(snapshot(temp)).isEqualTo(before);
 	}
 
+	// --- partes of curso.json (H12, T1, S2): the same rules and cases as comprobar_partes of the kit ---
+
+	@Test void aCourseWithoutPartesIsImportedAsBefore() throws Exception {
+		assertThat(curso.has("partes")).isFalse();
+		assertThat(generate("--commit", commit(files, "no partes\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).isEmpty();
+		assertThat(Files.exists(output)).isTrue();
+		List<String> problems = new ArrayList<>();
+		List<String> warnings = new ArrayList<>();
+		CourseDescriptor descriptor = CourseDescriptor.parse(JSON.writeValueAsBytes(curso), problems, warnings);
+		assertThat(problems).isEmpty();
+		assertThat(warnings).isEmpty();
+		assertThat(descriptor.parts()).isEmpty();
+	}
+
+	@Test void aValidCourseWithSeveralPartesHasNoFindingsAndKeepsItsParts() throws Exception {
+		parts();
+		assertThat(generate("--commit", commit(files, "partes\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).isEmpty();
+		assertThat(Files.exists(output)).isTrue();
+		List<String> problems = new ArrayList<>();
+		List<String> warnings = new ArrayList<>();
+		CourseDescriptor descriptor = CourseDescriptor.parse(JSON.writeValueAsBytes(curso), problems, warnings);
+		assertThat(problems).isEmpty();
+		assertThat(warnings).isEmpty();
+		assertThat(descriptor.parts()).containsExactly(
+			new CourseDescriptor.Part("demo.parte.uno", "Primera parte", List.of("demo.phase-01")),
+			new CourseDescriptor.Part("demo.parte.dos", "Segunda parte", List.of("demo.phase-02")));
+	}
+
+	@Test void partesMustBeAList() throws Exception {
+		curso.putObject("partes");
+		// As in the kit, no parte is then read, so no fase is in one.
+		assertPartFindings("curso.json: partes must be a list",
+			"curso.json: fase demo.phase-01 is in no parte (with partes, each fase goes in one)",
+			"curso.json: fase demo.phase-02 is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void eachParteMustBeAnObject() throws Exception {
+		parts().add("demo.parte.tres");
+		assertPartFindings("curso.json: each parte must be an object");
+	}
+
+	@Test void aParteNeedsAnId() throws Exception {
+		part(0).remove("id");
+		assertPartFindings("curso.json: parte id must be lower-case letters, digits, hyphens and dots: null");
+	}
+
+	@Test void aParteIdHasTheCoursePrefixAndAPlainName() throws Exception {
+		part(0).put("id", "otro.parte.uno");
+		assertPartFindings("curso.json: parte id otro.parte.uno does not start with demo.");
+		part(0).put("id", "demo.Parte_uno");
+		assertPartFindings("curso.json: parte id must be lower-case letters, digits, hyphens and dots: demo.Parte_uno");
+		part(0).put("id", "demo.");
+		assertPartFindings("curso.json: parte id must be lower-case letters, digits, hyphens and dots: demo.");
+	}
+
+	@Test void twoPartesCannotShareAnId() throws Exception {
+		part(1).put("id", "demo.parte.uno");
+		assertPartFindings("curso.json: id demo.parte.uno is declared twice");
+	}
+
+	@Test void aParteIdIsNotUsedByAnyOtherIdOfTheCourse() throws Exception {
+		for (String other : List.of("demo.phase-01", "demo.01.01", "demo.01.01.e01", "demo.stage-01")) {
+			part(0).put("id", other);
+			assertPartFindings("curso.json: id " + other + " is declared twice");
+		}
+	}
+
+	@Test void aParteNeedsATitulo() throws Exception {
+		part(0).remove("titulo");
+		assertPartFindings("curso.json: missing titulo in parte demo.parte.uno");
+	}
+
+	@Test void aParteTituloIsANonEmptyText() throws Exception {
+		part(0).put("titulo", "");
+		assertPartFindings("curso.json: titulo must be a non-empty text in parte demo.parte.uno");
+		part(0).put("titulo", "   ");
+		assertPartFindings("curso.json: titulo must be a non-empty text in parte demo.parte.uno");
+		part(0).put("titulo", 5);
+		assertPartFindings("curso.json: titulo must be a non-empty text in parte demo.parte.uno");
+	}
+
+	@Test void aParteTituloIsPlainTextWithoutMarkdown() throws Exception {
+		// The cases of formato_en_titulo in the kit (FORMATO.md 3.2, «Los títulos son texto plano»).
+		Map<String, String> cases = new java.util.LinkedHashMap<>();
+		cases.put("El `main`", "code in backticks");
+		cases.put("El **lenguaje**", "bold or italics with *");
+		cases.put("El __lenguaje__", "bold or italics with _");
+		cases.put("El _lenguaje_ Java", "bold or italics with _");
+		cases.put("El ~~viejo~~ lenguaje", "strikethrough");
+		cases.put("El [lenguaje](https://example.com)", "a link");
+		cases.put("El <b>lenguaje</b>", "HTML");
+		for (Map.Entry<String, String> entry : cases.entrySet()) {
+			part(0).put("titulo", entry.getKey());
+			assertPartFindings("curso.json: parte demo.parte.uno: titulo «" + entry.getKey() + "» has Markdown formatting ("
+				+ entry.getValue() + "); titles are plain text");
+		}
+		// An underscore inside a word, a lone bracket or a comparison are plain text.
+		part(0).put("titulo", "Variables snake_case [y] a < b");
+		assertThat(generate("--commit", commit(files, "plain\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+	}
+
+	@Test void aParteNeedsItsFases() throws Exception {
+		part(0).remove("fases");
+		assertPartFindings("curso.json: missing fases in parte demo.parte.uno",
+			"curso.json: fase demo.phase-01 is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void aParteFasesMustBeAList() throws Exception {
+		part(0).put("fases", "demo.phase-01");
+		assertPartFindings("curso.json: fases must be a list in parte demo.parte.uno",
+			"curso.json: fase demo.phase-01 is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void aParteListsOnlyExistingFases() throws Exception {
+		part(1).withArray("fases").add("demo.phase-09");
+		assertPartFindings("curso.json: parte demo.parte.dos: fase demo.phase-09 does not exist");
+	}
+
+	@Test void aFaseGoesInOnlyOneParte() throws Exception {
+		part(1).withArray("fases").add("demo.phase-01");
+		assertPartFindings("curso.json: parte demo.parte.dos: fase demo.phase-01 is already in parte demo.parte.uno"
+			+ " (each fase goes in only one)");
+	}
+
+	@Test void withPartesEveryFaseIsInOne() throws Exception {
+		parts().remove(1);
+		assertPartFindings("curso.json: fase demo.phase-02 is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void anUnknownFieldInAParteIsReportedWithoutBlocking() throws Exception {
+		part(0).put("descripcion", "Lo básico").put("color", "azul");
+		assertThat(generate("--commit", commit(files, "unknown field\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).containsExactly(
+			"curso.json: parte demo.parte.uno: unknown field «color» (ignored)",
+			"curso.json: parte demo.parte.uno: unknown field «descripcion» (ignored)");
+		assertThat(Files.exists(output)).isTrue();
+	}
+
+	// --- partes as stretches (H12, T14, S16): the cases of Partes in the kit's test_formato_academia.py (44a8e32) ---
+
+	static final String F1 = "demo.phase-01", F2 = "demo.phase-02", F3 = "demo.phase-03";
+
+	@Test void kitStretchesThatFollowEachOtherInOrderAreValid() throws Exception {
+		kitPartes("a", List.of(F1, F2), "b", List.of(F3));
+		assertKitPartesValid();
+	}
+
+	@Test void kitOneParteWithEveryFaseIsValid() throws Exception {
+		kitPartes("a", List.of(F1, F2, F3));
+		assertKitPartesValid();
+	}
+
+	@Test void kitAParteWithoutFasesIsAFinding() throws Exception {
+		kitPartes("a", List.of(F1, F2, F3), "b", List.of());
+		assertPartFindings("curso.json: parte demo.parte.b has no fases (each parte groups at least one)");
+	}
+
+	@Test void kitFasesOutOfTheCourseOrderAreAFindingAndNotAlsoNotConsecutive() throws Exception {
+		kitPartes("a", List.of(F3, F1), "b", List.of(F2));
+		assertPartFindings("curso.json: parte demo.parte.a: its fases are not in the course order (fase " + F3
+			+ " is listed before fase " + F1 + ")");
+	}
+
+	@Test void kitFasesThatAreNotConsecutiveNameTheFaseBetweenAndItsParte() throws Exception {
+		kitPartes("a", List.of(F1, F3), "b", List.of(F2));
+		assertPartFindings("curso.json: parte demo.parte.a: its fases are not consecutive (between fase " + F1
+			+ " and fase " + F3 + " is fase " + F2 + ", of parte demo.parte.b)");
+	}
+
+	@Test void kitTheFaseBetweenInNoParteLeavesItsParteOut() throws Exception {
+		kitPartes("a", List.of(F1, F3));
+		assertPartFindings("curso.json: fase " + F2 + " is in no parte (with partes, each fase goes in one)",
+			"curso.json: parte demo.parte.a: its fases are not consecutive (between fase " + F1 + " and fase " + F3
+				+ " is fase " + F2 + ")");
+	}
+
+	@Test void kitPartesInReverseOrderAreAFinding() throws Exception {
+		kitPartes("b", List.of(F3), "a", List.of(F1, F2));
+		assertPartFindings("curso.json: parte demo.parte.b comes before parte demo.parte.a in partes, but its fases come"
+			+ " after");
+	}
+
+	@Test void kitTheOrderOfPartesSkipsAParteWithoutFases() throws Exception {
+		// The previous parte with fases is c, not the empty b.
+		kitPartes("c", List.of(F3), "b", List.of(), "a", List.of(F1, F2));
+		assertPartFindings("curso.json: parte demo.parte.b has no fases (each parte groups at least one)",
+			"curso.json: parte demo.parte.c comes before parte demo.parte.a in partes, but its fases come after");
+	}
+
+	@Test void kitAFaseInNoParte() throws Exception {
+		kitPartes("a", List.of(F1, F2));
+		assertPartFindings("curso.json: fase " + F3 + " is in no parte (with partes, each fase goes in one)");
+	}
+
+	@Test void kitAFaseInTwoPartesIsTheSecondPartesFindingOnly() throws Exception {
+		kitPartes("a", List.of(F1, F2), "b", List.of(F2, F3));
+		assertPartFindings("curso.json: parte demo.parte.b: fase " + F2 + " is already in parte demo.parte.a"
+			+ " (each fase goes in only one)");
+	}
+
+	/**
+	 * The kit's three fases: a third, pending fase after the two of the fixture, and partes demo.parte.LETTER with
+	 * these fases, given as letter, fases, letter, fases…
+	 */
+	void kitPartes(Object... letterAndFases) {
+		ObjectNode phase = curso.withArray("fases").addObject().put("id", F3).put("carpeta", "fase-03")
+			.put("titulo", "Tercera fase");
+		phase.putArray("modulos").addObject().put("id", "demo.03.01").put("fichero", "fase-03/01-pendiente.md")
+			.put("titulo", "Pendiente tres").put("disponible", false);
+		ArrayNode partes = curso.putArray("partes");
+		for (int i = 0; i < letterAndFases.length; i += 2) {
+			ArrayNode fases = partes.addObject().put("id", "demo.parte." + letterAndFases[i])
+				.put("titulo", "Parte " + letterAndFases[i]).putArray("fases");
+			for (Object fase : (List<?>) letterAndFases[i + 1]) fases.add((String) fase);
+		}
+	}
+
+	void assertKitPartesValid() throws Exception {
+		assertThat(generate("--commit", commit(files, "partes\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).isEmpty();
+		assertThat(Files.exists(output)).isTrue();
+	}
+
+	// --- parts in the manifest (H12, T2, S3) ---
+
+	@Test void theManifestOfACourseWithPartesCarriesItsPartsInOrder() throws Exception {
+		// T14 (S16): a parte without fases is now a finding, so the second parte holds the third fase instead.
+		kitPartes("a", List.of(F1, F2), "b", List.of(F3));
+		assertThat(generate("--commit", commit(files, "partes\n")).code()).isZero();
+		JsonNode manifest = manifest();
+		assertThat(manifest.path("schemaVersion").asInt()).isEqualTo(2);
+		assertThat(manifest.path("parts")).isEqualTo(JSON.readTree("""
+			[ { "id": "demo.parte.a", "title": "Parte a", "position": 1,
+			    "phaseIds": [ "demo.phase-01", "demo.phase-02" ] },
+			  { "id": "demo.parte.b", "title": "Parte b", "position": 2, "phaseIds": [ "demo.phase-03" ] } ]
+			"""));
+		assertThat(List.copyOf(manifest.path("parts").get(0).propertyNames()))
+			.containsExactly("id", "title", "position", "phaseIds");
+		// The candidate with parts is the one the runtime loader accepts.
+		assertThat(ContentLoader.loadAll(output).getFirst().manifest().parts()).hasSize(2);
+	}
+
+	@Test void theManifestOfACourseWithoutPartesHasNoPartsField() throws Exception {
+		assertThat(generate("--commit", commit(files, "no partes\n")).code()).isZero();
+		assertThat(manifest().has("parts")).isFalse();
+		assertThat(Files.readString(output.resolve("demo/manifest.json"))).doesNotContain("\"parts\"");
+	}
+
+	/** Two valid partes, one per fase of the fixture, added to curso.json; returns the list to change it. */
+	ArrayNode parts() {
+		if (curso.get("partes") instanceof ArrayNode parts) return parts;
+		ArrayNode parts = curso.putArray("partes");
+		parts.addObject().put("id", "demo.parte.uno").put("titulo", "Primera parte").putArray("fases").add("demo.phase-01");
+		parts.addObject().put("id", "demo.parte.dos").put("titulo", "Segunda parte").putArray("fases").add("demo.phase-02");
+		return parts;
+	}
+
+	ObjectNode part(int index) {
+		return (ObjectNode) parts().get(index);
+	}
+
+	/** The descriptor is refused with exactly these findings: exit 3, nothing written, the active copy untouched. */
+	void assertPartFindings(String... expected) throws Exception {
+		String changed = commit(files, "partes\n");
+		Map<String, String> activeBefore = snapshot(active.root);
+		Result result = generate("--commit", changed);
+		assertThat(result.code()).as(String.join("\n", expected)).isEqualTo(3);
+		assertThat(findings()).containsExactlyInAnyOrder(expected);
+		assertThat(Files.exists(output)).isFalse();
+		assertThat(JSON.readTree(Files.readString(report)).path("written").asBoolean()).isFalse();
+		assertThat(snapshot(active.root)).isEqualTo(activeBefore);
+		Files.delete(report);
+	}
+
+	// --- academia_minima of curso.json (H12, T15, S17 and S19): the kit 1.1.0 rule, with its cases ---
+
+	@Test void aCourseThatAsksForALaterAcademyIsRefusedWithItsVersions() throws Exception {
+		String later = AcademyVersion.current().replaceFirst("\\d+$", "") + "99";
+		curso.put("academia_minima", later);
+		assertPartFindings("curso.json: course requires academy " + later + " or later; this academy is "
+			+ AcademyVersion.current());
+	}
+
+	@Test void aCourseThatAsksForThisAcademyIsImportedAndTheManifestDoesNotKeepTheField() throws Exception {
+		String withoutField = commit(files, "sin academia_minima\n");
+		assertThat(generate("--commit", withoutField).code()).isZero();
+		String before = Files.readString(output.resolve("demo/manifest.json"));
+		cleanOutput();
+		curso.put("academia_minima", AcademyVersion.current());
+		assertThat(generate("--commit", commit(files, "academia_minima\n")).code()).isZero();
+		assertThat(findings()).isEmpty();
+		assertThat(reported()).isEmpty();
+		String after = Files.readString(output.resolve("demo/manifest.json"));
+		assertThat(after).doesNotContain("academia_minima");
+		// Only the pinned commit differs: the field changes nothing else in the copy.
+		assertThat(after.replace(manifest().path("source").path("versionRef").asString(), "X"))
+			.isEqualTo(before.replace(withoutField, "X"));
+	}
+
+	@Test void aMalformedAcademiaMinimaIsAFinding() throws Exception {
+		curso.put("academia_minima", "1.1");
+		assertPartFindings("curso.json: academia_minima (1.1) must be MAJOR.MINOR.PATCH, for example 1.1.0");
+	}
+
+	void cleanOutput() throws Exception {
+		try (var paths = Files.walk(output)) {
+			for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) Files.delete(path);
+		}
+		Files.deleteIfExists(report);
+	}
+
 	// --- fixtures and process helpers ---
 
 	JsonNode manifest() throws Exception {

@@ -3,10 +3,23 @@ package dev.codeacademy.content;
 import java.util.List;
 import java.util.Map;
 
-/** content/<course>/manifest.json, as described in docs/manifiesto.md. */
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+/**
+ * content/<course>/manifest.json, as described in docs/manifiesto.md. {@code parts} is optional in schema 2 (H12) and
+ * is never written when null, so the manifest of a course without parts keeps the bytes it had before.
+ */
 public record Manifest(Integer schemaVersion, Source source, Course course, List<Phase> phases, List<Lesson> lessons,
 		List<Resource> resources, List<SourceLink> sourceToId, List<Stage> projectStages, Provenance provenance,
-		List<Document> documents) {
+		List<Document> documents, @JsonInclude(JsonInclude.Include.NON_NULL) List<Part> parts) {
+
+	/** Without parts (before H12, or a course that has none). */
+	public Manifest(Integer schemaVersion, Source source, Course course, List<Phase> phases, List<Lesson> lessons,
+			List<Resource> resources, List<SourceLink> sourceToId, List<Stage> projectStages, Provenance provenance,
+			List<Document> documents) {
+		this(schemaVersion, source, course, phases, lessons, resources, sourceToId, projectStages, provenance, documents,
+			null);
+	}
 
 	/** Without course documents (before H8, or a course that has none). */
 	public Manifest(Integer schemaVersion, Source source, Course course, List<Phase> phases, List<Lesson> lessons,
@@ -90,6 +103,13 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 	public record Phase(String id, String title, Integer position) {
 	}
 
+	/**
+	 * A named stretch of the course (curso.json {@code partes}; H12): its phases in the order it lists them. It holds
+	 * no learner progress, so an update may retitle it, add it, remove it or move a phase to another part.
+	 */
+	public record Part(String id, String title, Integer position, List<String> phaseIds) {
+	}
+
 	public record Lesson(String id, String title, Integer position, String phaseId, String sourcePath,
 			Boolean sourceAvailable, Boolean available, String bodyPath, List<Exercise> exercises) {
 	}
@@ -97,9 +117,21 @@ public record Manifest(Integer schemaVersion, Source source, Course course, List
 	public record Exercise(String id, String lessonId, String title) {
 	}
 
-	/** Exactly one owner: {@code lessonId}, {@code stageId} or {@code documentId}. */
+	/**
+	 * Exactly one owner: {@code lessonId}, {@code stageId} or {@code documentId}. {@code executable} (H12, T7) is true
+	 * only for a file whose mode in the Git tree of the pinned commit is 100755; otherwise it is absent, never written
+	 * as false, so the manifest of a course without executables keeps the bytes it had before.
+	 */
 	public record Resource(String resourceId, String lessonId, String sourcePath, String localPath, String mediaType,
-			String stageId, String kind, String fileName, List<String> memberResourceIds, String documentId) {
+			String stageId, String kind, String fileName, List<String> memberResourceIds, String documentId,
+			@JsonInclude(JsonInclude.Include.NON_NULL) Boolean executable) {
+		/** Not executable (before H12, or a file committed as 100644). */
+		public Resource(String resourceId, String lessonId, String sourcePath, String localPath, String mediaType,
+				String stageId, String kind, String fileName, List<String> memberResourceIds, String documentId) {
+			this(resourceId, lessonId, sourcePath, localPath, mediaType, stageId, kind, fileName, memberResourceIds,
+				documentId, null);
+		}
+
 		public Resource(String resourceId, String lessonId, String sourcePath, String localPath, String mediaType,
 				String stageId, String kind, String fileName, List<String> memberResourceIds) {
 			this(resourceId, lessonId, sourcePath, localPath, mediaType, stageId, kind, fileName, memberResourceIds, null);

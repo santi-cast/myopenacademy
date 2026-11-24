@@ -32,16 +32,19 @@ final class ContentImportSource implements AutoCloseable {
 	private final NavigableSet<String> others;
 	/** Every folder that holds at least one regular blob, with its trailing slash. */
 	private final Set<String> directories;
+	/** The regular blobs whose tree mode is 100755: the only source of the executable bit (H12, T7). */
+	private final Set<String> executables;
 	private final Process batch;
 	private final OutputStream requests;
 	private final InputStream replies;
 
 	private ContentImportSource(String commit, NavigableMap<String, String> blobs,
-			NavigableSet<String> others, Set<String> directories, Process batch) {
+			NavigableSet<String> others, Set<String> directories, Set<String> executables, Process batch) {
 		this.commit = commit;
 		this.blobs = blobs;
 		this.others = others;
 		this.directories = directories;
+		this.executables = executables;
 		this.batch = batch;
 		this.requests = batch.getOutputStream();
 		this.replies = new BufferedInputStream(batch.getInputStream(), 1 << 16);
@@ -79,6 +82,7 @@ final class ContentImportSource implements AutoCloseable {
 		NavigableMap<String, String> blobs = new TreeMap<>();
 		NavigableSet<String> others = new TreeSet<>();
 		Set<String> directories = new TreeSet<>();
+		Set<String> executables = new TreeSet<>();
 		for (String entry : new String(listing, StandardCharsets.UTF_8).split("\u0000")) {
 			if (entry.isEmpty()) continue;
 			int tab = entry.indexOf('\t');
@@ -87,6 +91,7 @@ final class ContentImportSource implements AutoCloseable {
 			if (header.length == 3 && header[1].equals("blob")
 					&& (header[0].equals("100644") || header[0].equals("100755"))) {
 				blobs.put(path, header[2]);
+				if (header[0].equals("100755")) executables.add(path);
 				// One pass over the whole tree: every folder above a regular file becomes an exact folder answer.
 				for (int slash = path.indexOf('/'); slash >= 0; slash = path.indexOf('/', slash + 1)) {
 					directories.add(path.substring(0, slash + 1));
@@ -96,7 +101,7 @@ final class ContentImportSource implements AutoCloseable {
 				others.add(path);
 			}
 		}
-		return new ContentImportSource(commit, blobs, others, Set.copyOf(directories),
+		return new ContentImportSource(commit, blobs, others, Set.copyOf(directories), Set.copyOf(executables),
 			// The shared reader only returns complete output, so the streaming object reader starts its own process.
 			ContentUpdateComparison.gitProcess(repository, "cat-file", "--batch").start());
 	}
@@ -107,6 +112,14 @@ final class ContentImportSource implements AutoCloseable {
 
 	boolean file(String path) {
 		return blobs.containsKey(path);
+	}
+
+	/**
+	 * Whether a regular blob is committed as 100755. The rule «Lo que manda es Git, no el disco»: the bit comes from the
+	 * tree of the pinned commit, never from a file on disk.
+	 */
+	boolean executable(String path) {
+		return executables.contains(path);
 	}
 
 	boolean directory(String path) {

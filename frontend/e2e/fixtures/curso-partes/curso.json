@@ -1,0 +1,76 @@
+{
+  "formato": 1,
+  "tipo": "curso",
+  "id": "partes",
+  "titulo": "Curso con partes",
+  "descripcion": "Un curso pequeño con dos partes y tres fases, para las pruebas de navegador de la academia.",
+  "version": "1.0.0",
+  "idioma": "es",
+  "repositorio": "https://github.com/myopenacademy/curso-partes",
+  "conviene_saber_antes": [],
+  "partes": [
+    { "id": "partes.parte.primeros-pasos", "titulo": "Primeros pasos", "fases": ["partes.fase.empezar", "partes.fase.seguir"] },
+    { "id": "partes.parte.mas-alla", "titulo": "Más allá", "fases": ["partes.fase.profundizar"] }
+  ],
+  "fases": [
+    {
+      "id": "partes.fase.empezar",
+      "carpeta": "fase-01-empezar",
+      "titulo": "Empezar",
+      "modulos": [
+        {
+          "id": "partes.ficheros-y-carpetas",
+          "fichero": "fase-01-empezar/01-ficheros-y-carpetas.md",
+          "titulo": "Ficheros y carpetas",
+          "ejercicios": [{ "id": "partes.ficheros-y-carpetas.una-carpeta-nueva", "titulo": "Una carpeta nueva" }]
+        },
+        {
+          "id": "partes.la-terminal",
+          "fichero": "fase-01-empezar/02-la-terminal.md",
+          "titulo": "La terminal",
+          "ejercicios": [{ "id": "partes.la-terminal.tu-primera-orden", "titulo": "Tu primera orden" }]
+        }
+      ]
+    },
+    {
+      "id": "partes.fase.seguir",
+      "carpeta": "fase-02-seguir",
+      "titulo": "Seguir",
+      "modulos": [
+        {
+          "id": "partes.el-editor",
+          "fichero": "fase-02-seguir/01-el-editor.md",
+          "titulo": "El editor",
+          "ejercicios": [{ "id": "partes.el-editor.abrir-un-fichero", "titulo": "Abrir un fichero" }]
+        },
+        {
+          "id": "partes.buscar-y-reemplazar",
+          "fichero": "fase-02-seguir/02-buscar-y-reemplazar.md",
+          "titulo": "Buscar y reemplazar",
+          "ejercicios": [{ "id": "partes.buscar-y-reemplazar.cambiar-un-nombre", "titulo": "Cambiar un nombre" }]
+        }
+      ]
+    },
+    {
+      "id": "partes.fase.profundizar",
+      "carpeta": "fase-03-profundizar",
+      "titulo": "Profundizar",
+      "modulos": [
+        {
+          "id": "partes.scripts",
+          "fichero": "fase-03-profundizar/01-scripts.md",
+          "titulo": "Scripts",
+          "ejercicios": [{ "id": "partes.scripts.tu-primer-script", "titulo": "Tu primer script" }]
+        },
+        {
+          "id": "partes.automatizar",
+          "fichero": "fase-03-profundizar/02-automatizar.md",
+          "titulo": "Automatizar",
+          "disponible": false,
+          "ejercicios": []
+        }
+      ]
+    }
+  ],
+  "equivalencias": []
+}

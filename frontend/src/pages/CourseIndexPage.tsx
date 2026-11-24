@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router'
 import { apiGet } from '../api/client'
 import type { DocumentEntry, LessonEntry, Progress, Syllabus } from '../api/types'
-import { groupByPhase, type SyllabusRow } from '../syllabus'
+import { partProgressText, phaseProgressText } from '../progress'
+import { countLessons, countRows, groupByPart, groupByPhase, type PhaseGroup, type SyllabusRow } from '../syllabus'
 import { LoadFailure } from './LoadFailure'
 import { ProgressSummary } from './ProgressSummary'
 import { useLoad } from './useApi'
@@ -107,11 +108,27 @@ export function CourseIndexPage() {
   const completed = new Set(progress.lessonStates.filter((state) => state.state === 'completed').map((state) => state.lessonId))
   const continuation = syllabus.lessons.find((lesson) => lesson.id === progress.continuation.lastOpenedLessonId)
   const phases = groupByPhase(syllabus.phases, syllabus.lessons)
+  // A course with parts groups its phases by part (H12, S5); one without parts keeps them as they were (S1).
+  const { parts, rest } = groupByPart(syllabus.parts, phases)
   const documents = syllabus.documents ?? []
   // The course-wide documents (FORMATO.md 4 and 9), in this order, when the course has them.
   const courseDocuments = (['ruta', 'ruta-minima', 'chuleta', 'glosario'] as const)
     .map((kind) => documents.find((document) => document.kind === kind))
     .filter((document): document is DocumentEntry => document !== undefined)
+  const phaseTable = (phase: PhaseGroup) => {
+    const availability = `${phase.rows.filter(({ lesson }) => lesson.available).length} de ${phase.rows.length} ${phase.rows.length === 1 ? 'disponible' : 'disponibles'}`
+    return (
+      <LessonTable
+        key={phase.key}
+        caption={phase.label}
+        count={`${availability} · ${phaseProgressText(countRows(phase.rows, completed))}`}
+        rows={phase.rows}
+        completed={completed}
+        challenges={documents.find((document) => document.kind === 'retos' && document.phaseId === phase.key)}
+        projectLessonId={syllabus.project?.kind === 'modulo' ? syllabus.project.lessonId : null}
+      />
+    )
+  }
 
   return (
     <div className="index">
@@ -139,19 +156,23 @@ export function CourseIndexPage() {
       </div>
       <ProjectLink courseId={courseId} syllabus={syllabus} />
       <p hidden id={PENDING_DESCRIPTION_ID}>Lección pendiente: todavía no disponible, no se puede abrir.</p>
-      <div className="phase-grid">
-        {phases.map((phase) => (
-          <LessonTable
-            key={phase.key}
-            caption={phase.label}
-            count={`${phase.rows.filter(({ lesson }) => lesson.available).length} de ${phase.rows.length} ${phase.rows.length === 1 ? 'disponible' : 'disponibles'}`}
-            rows={phase.rows}
-            completed={completed}
-            challenges={documents.find((document) => document.kind === 'retos' && document.phaseId === phase.key)}
-            projectLessonId={syllabus.project?.kind === 'modulo' ? syllabus.project.lessonId : null}
-          />
-        ))}
-      </div>
+      {parts.length === 0
+        ? <div className="phase-grid">{phases.map(phaseTable)}</div>
+        : <>
+          {parts.map((part) => {
+            const headingId = `part-${part.key}`
+            return (
+              <section key={part.key} className="part-block" aria-labelledby={headingId}>
+                <div className="part-head">
+                  <h2 id={headingId}>{part.label}</h2>
+                  <p className="part-progress">{partProgressText(countLessons(part.phases.flatMap((phase) => phase.rows.map(({ lesson }) => lesson)), completed))}</p>
+                </div>
+                <div className="phase-grid">{part.phases.map(phaseTable)}</div>
+              </section>
+            )
+          })}
+          {rest.length > 0 && <div className="phase-grid">{rest.map(phaseTable)}</div>}
+        </>}
     </div>
   )
 }

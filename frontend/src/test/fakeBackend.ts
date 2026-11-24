@@ -120,7 +120,7 @@ function defaultRoutes(): Record<string, Handler | Reply> {
       status: 200,
       body: { courseId: 'java', added: true, continuation: { lastOpenedLessonId: null }, progress: counts(0, 1, 199) },
     })),
-    'GET /api/courses/java': authenticated(() => ({ status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons, project: { kind: 'etapas', title: 'Mi Biblioteca', lessonId: null } } })),
+    'GET /api/courses/java': authenticated(() => ({ status: 200, body: { course: javaCourse, phases: javaPhases, lessons: javaLessons, project: { kind: 'etapas', title: 'Mi Biblioteca', lessonId: null }, parts: [] } })),
     'GET /api/me/courses/java/progress': authenticated(() => ({ status: 200, body: notAddedProgress() })),
     'GET /api/lessons/java-02.01': authenticated(() => ({
       status: 200,

@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -462,10 +463,12 @@ final class LessonPipeline {
 		for (Link link : links) rewrite(lesson, part.label(), link, hrefs, usedResources);
 		Set<String> imageSources = new HashSet<>();
 		for (Image image : images) rewriteImage(lesson, part.label(), image, imageSources, usedResources);
-		String html = Markdown.render(part.document(), lesson.headingIds);
+		// A new marker for every render: only the task list checkboxes Markdown emits carry it (H12, T13).
+		String taskMarker = UUID.randomUUID().toString();
+		String html = Markdown.render(part.document(), lesson.headingIds, taskMarker);
 		List<String> removed = new ArrayList<>();
 		String clean = ContentSanitizer.sanitize(html, headingIdsIn(part.document(), lesson.headingIds), hrefs,
-				imageSources, removed);
+				imageSources, taskMarker, removed);
 		for (String item : removed) {
 			// Only an inert formatting tag is a reported finding; anything else the sanitizer would alter still fails.
 			if (ContentSanitizer.inert(item)) warnings.add(lesson.sourcePath + ": sanitizer removed " + item);

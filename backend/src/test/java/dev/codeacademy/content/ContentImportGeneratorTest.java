@@ -9,6 +9,7 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Pure source-inventory rules of the offline generator: Markdown parsing, GitHub anchors, table inventory and media
@@ -151,6 +152,20 @@ class ContentImportGeneratorTest {
 			new TreeMap<>(Map.of("carpeta/a/Uno.java", List.of("demo.01.01-r-uno"))),
 			List.of("carpeta/b/"), Function.identity());
 		assertThat(members).containsOnly(Map.entry("carpeta/b/", List.of()));
+	}
+
+	/**
+	 * H12, T16 (S18): a folder inside a Maven or Gradle project takes the project's archive plan. The importer registers
+	 * the project before it marks the folder, so a missing plan is a broken invariant, never a bare NullPointerException.
+	 */
+	@Test
+	void aFolderInsideAProjectTakesTheProjectPlanOrFailsWithAClearInvariant() {
+		Map<String, String> plans = Map.of("codigo/tienda/", "plan de tienda");
+		assertThat(ContentImportGenerator.projectPlan("codigo/tienda/src/", "codigo/tienda/", plans))
+			.isEqualTo("plan de tienda");
+		assertThatThrownBy(() -> ContentImportGenerator.projectPlan("codigo/otro/src/", "codigo/otro/", plans))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessage("folder codigo/otro/src/ is inside project codigo/otro/, which has no folder plan");
 	}
 
 	@Test

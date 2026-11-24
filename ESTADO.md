@@ -179,13 +179,38 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 - ~~**Antes de publicar**~~ **Hecho en H11** (`../PLAN.md`, apartado 8.6): rutas absolutas en `odd/tasks/` (las de `PLAN.md` se quitaron al reescribirlo); README desactualizado y con voseo; `gitleaks` sobre todo el historial; licencias de las dependencias (elkjs, dompurify); el nombre MyOpenAcademy en un solo sitio (hoy «Code Academy» está en `index.html`, `src/layout/Layouts.tsx` y `e2e/stages.spec.ts`).
 - ~~**`content/` fuera de Git**~~ **Hecho** en H7, T3 (9 de noviembre de 2026). El historial sigue guardando la copia de Java: el autor decide antes de H11 si se reescribe (ver «Preguntas abiertas»).
 
+## H12, academia 1.1.0 (24 de noviembre de 2026)
+
+En la rama `feat/h12-partes` (sin integrar ni `push`); el detalle está en `odd/tasks/h12-partes.md` (S1 a S20, L1 a L30).
+
+**Hecho, con pruebas y con revisión externa cuando le tocaba:**
+- partes, con las reglas del kit `44a8e32` (validación, manifiesto, API y pantallas), y avance por fase en todos los cursos;
+- pruebas de navegador con y sin partes;
+- permiso de ejecución de Git en los ZIP;
+- ZIP del proyecto Maven o Gradle más exterior dentro de `codigo/`, con la regla del kit `774aeaa`;
+- teclas `<kbd>` y listas de tareas;
+- T15, `academia_minima`, y T17, Gradle sin settings y solo la `codigo/` de una fase o de `proyecto/`, con las reglas del kit 1.1.0 (`v1.1.0`);
+- T18, puerto por defecto 8070 (`.env.example`, commit del autor `ee993ec`);
+- T6, versión 1.1.0 en `backend/pom.xml` y `frontend/package.json`, `CHANGELOG.md`, `README.md` y la nota `docs/notas-de-version/1.1.0.md` (con cómo seguir en el 8080), salvo la etiqueta y la *release*.
+
+Con T15 y T17, `./mvnw -B verify` da 964 pruebas sin fallos ni saltadas; las de navegador, 6 de 6. El curso inicial `v1.0.0` sale idéntico byte a byte, y lo comprueba `StarterCourseGoldenTest`. Con `870e1b0f`, el curso de Java da 0 hallazgos.
+
+**Lo que falta, en este orden:**
+1. ~~`.env.example` con el 8070~~ **Hecho** por el autor (`ee993ec`): la política de seguridad del entorno no deja al agente leerlo ni editarlo.
+2. ~~Revisión en el navegador~~ **Hecha** (24 de noviembre de 2026) por el autor y la raíz, sin hallazgos: partes, «Vas por», avance por fase, ZIP del proyecto con `mvnw` 755, multimódulo, listas de tareas, `<kbd>` y sin errores. Instancia de prueba `myopenacademy-demo-111` desmontada.
+3. **Integrar y publicar**, con la orden del autor (24 de noviembre de 2026): `--no-ff` en `main`, batería completa en `main`, etiqueta `v1.1.0`, `push` y *release* «MyOpenAcademy 1.1.0».
+
+**Decidido:** el curso de Java se publica después de la academia 1.1.0, con su README diciendo que la necesita y `"academia_minima": "1.1.0"` en su `curso.json`.
+
+**Pendiente para después de la 1.1.0** (`PLAN.md`, apartado 5): subir el límite de tiempo de una prueba (revisión de T12); quitar la forma de `Markdown.render` sin marcador y probar una lista de tareas con líneas en blanco entre sus elementos (revisión de T13); que el enlace al `README.md` de otro curso lleve a su página.
+
 ## Curso de Java: qué admite la academia 1.0.0 (23 de noviembre de 2026)
 
 Pedido por la raíz, sin cambiar código. Pruebas con el JAR recompilado desde `main` (`55879ee`, mismo código que `v1.0.0`), en carpetas temporales y sin Docker:
 
 - **Campos desconocidos en `curso.json`:** se ignoran. Lo comprobé con una copia del curso inicial `v1.0.0` que lleva `ruta_minima` arriba, un campo extra en una fase y otro en un módulo: `content-import generate` escribe la candidata (31 lecciones y 613 recursos) sin hallazgos ni avisos. En el código, `CourseDescriptor` solo lee los campos que conoce. `formato` distinto de `1` sí es un error.
 - **El curso de Java desde su commit `e777853`** (`curso.json` provisional): 199 lecciones procesadas en 11 s, con 1,1 GB de memoria; la candidata no se escribe por **252 hallazgos, todos por la misma causa**: 88 títulos de ejercicio con formato Markdown, que en `FORMATO.md` 3.2 tienen que ser texto plano. Cada uno da dos hallazgos (encabezado y `curso.json` no coinciden), y además salen 76 anclas `#ejercicio-…` rotas que nacen de esos títulos. Es la fila «176 títulos con formato» de la lista de partida del curso. Avisos: 3 `<i>` y 4 `.env` de `codigo/`, que se excluyen.
-- **`<template>` del 13.02:** la academia 1.0.0 no da ningún hallazgo ni aviso en ese módulo. El fallo lo marca `formato_academia.py` del kit. Queda por ver cómo se muestra la línea 4264 en la instalación de prueba.
+- **`<template>` del 13.02:** la academia 1.0.0 no da ningún hallazgo ni aviso en ese módulo. El fallo lo marca `formato_academia.py` del kit. **Era del kit** (23 de noviembre de 2026): una comilla invertida sin cerrar le hacía empezar el código a mitad de tramo. Ya sigue la regla de CommonMark (`afcf745`, rama `feat/kit-1-1-0`). El kit ha comprobado también que la academia 1.0.0 instala un curso con `ruta_minima` y `RUTA-MINIMA.plantilla.md` con 0 hallazgos.
 - **Lo que admite:**
   - las 14 etapas del proyecto (`proyecto.tipo: "etapas"`, con su página y su avance);
   - los enlaces al curso inicial (se resuelven dentro de la academia si está instalado; si no, van a GitHub);
@@ -207,7 +232,9 @@ Pedido por la raíz, sin cambiar código. Pruebas con el JAR recompilado desde `
 | Curso inicial | Que la academia instale `.github/` dentro de `codigo/` (plantilla de issue de la fase 7) y la meta en el ZIP | Fase 7 (07.02 y reto 3) | **Confirmado** (16 de noviembre de 2026, H8 L7): solo se protege el nombre exacto `.git`; prueba nueva con `.github/ISSUE_TEMPLATE/` instalado y en el ZIP byte a byte. Nada que cambiar |
 | Kit | Avisar de los enlaces de correo fuera de código (opción c del autor) | Que los cursos no lleguen con `mailto:` | **Hecho** por el kit en `e44174e` (16 de noviembre de 2026; `FORMATO.md` 10.7). Respondido al kit: la academia no enlaza los correos sueltos (sin `< >`), porque no usa la extensión de enlaces automáticos de GitHub; GitHub sí los enlaza. El kit avisa también del correo suelto desde `cf6c46d`; el curso inicial da 0 avisos y los cursos de ejemplo no cambian (nada que traer) |
 | Kit | Lo mismo para los cursos de ejemplo no hace falta (el E2E los etiqueta en su repositorio temporal); sí, decir en `FORMATO.md` 11.1 o en la guía del kit **cuándo** se etiqueta (al cerrar una versión, después de verificar el commit) | Que los cursos lleguen etiquetados | Pedido el 16 de noviembre de 2026 |
-| Curso de Java | Un commit sin la fase 00 (paso 3) y con los títulos de ejercicio en texto plano | La instalación de prueba en la academia | Pedido el 23 de noviembre de 2026 |
+| Curso de Java | Un commit sin la fase 00 (paso 3) y con los títulos de ejercicio en texto plano | La instalación de prueba en la academia, en un proyecto de Compose aparte y con un alumno de usar y tirar (decisión del autor) | **Hecho** (24 de noviembre de 2026): `870e1b0f`, instalado en un proyecto de prueba aparte, fase 01 revisada por el autor y por la raíz, y prueba desmontada |
+| Kit | `academia_minima` (regla exacta: formato, mensaje y casos) y la decisión sobre `codigo/` dentro de un proyecto | H12 T15 y el tercer hallazgo de la revisión de T11 | Pedido el 24 de noviembre de 2026. **Hecho** (24 de noviembre de 2026): el kit las publicó en su `v1.1.0` (`FORMATO.md` 1.1 y 7: solo cuenta la `codigo/` de una fase o de `proyecto/`) y la academia las copió en H12 T15 y T17 |
+| Kit | En `FORMATO.md` 3.2 y en `formato_academia.py`, dentro de su 1.1.0: que una parte sin fases sea un error y que cada parte sea un tramo de fases seguidas en el orden del curso, con las partes una tras otra | Copiar esas dos reglas en H12, T1 (decisión del autor: primero el kit y después la academia) | Pedido el 23 de noviembre de 2026. **Hecho** (24 de noviembre de 2026): el kit las publicó en `44a8e32` (rama `feat/kit-1-1-0`) y la academia las copió en H12 T14. |
 
 | Otros esperan de la academia | Qué | Para | Estado |
 |---|---|---|---|

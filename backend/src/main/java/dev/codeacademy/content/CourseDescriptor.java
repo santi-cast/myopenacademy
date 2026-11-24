@@ -1,9 +1,12 @@
 package dev.codeacademy.content;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 import tools.jackson.core.JacksonException;
@@ -16,7 +19,7 @@ import tools.jackson.databind.json.JsonMapper;
  * declares. Only what the academy needs to build its manifest is checked here; the kit checks the whole format.
  */
 record CourseDescriptor(int format, String id, String title, String description, String version, String repository,
-		List<String> recommended, List<Phase> phases, Project project) {
+		List<String> recommended, List<Phase> phases, Project project, List<Part> parts) {
 
 	static final String PATH = "curso.json";
 	static final String INDEX = "00-indice.md";
@@ -25,6 +28,12 @@ record CourseDescriptor(int format, String id, String title, String description,
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 	private static final Pattern COURSE_ID = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*");
 	private static final Pattern PLAIN_ID = Pattern.compile("[a-z0-9]+([.-][a-z0-9]+)*");
+	private static final Set<String> PART_FIELDS = Set.of("id", "titulo", "fases");
+	/**
+	 * Markdown in a title (FORMATO.md 3.2, «Los títulos son texto plano»): the same patterns, in the same order, as
+	 * FORMATO_EN_TITULO of the kit's formato_academia.py; {@code \w} is Unicode there, as here.
+	 */
+	private static final Map<Pattern, String> MARKDOWN_IN_TITLE = markdownInTitle();
 
 	record Phase(String id, String folder, String title, String challenges, boolean challengesAvailable,
 			List<Module> modules) {
@@ -43,8 +52,17 @@ record CourseDescriptor(int format, String id, String title, String description,
 	record Stage(String id, String file, String title, boolean available) {
 	}
 
+	/** One named stretch of the course (FORMATO.md 3.2, {@code partes}): its phase IDs in the order it lists them. */
+	record Part(String id, String title, List<String> phases) {
+	}
+
 	/** Parses and checks a descriptor; every problem is added to {@code problems} and the result is then null. */
-	static CourseDescriptor parse(byte[] bytes, List<String> problems) {
+	static CourseDescriptor parse(byte[] bytes, List<String> problems, List<String> warnings) {
+		return parse(bytes, AcademyVersion.current(), problems, warnings);
+	}
+
+	/** As {@link #parse(byte[], List, List)}, for an academy of this version (academia_minima). */
+	static CourseDescriptor parse(byte[] bytes, String academy, List<String> problems, List<String> warnings) {
 		JsonNode root;
 		try {
 			root = JSON.readTree(bytes);
@@ -68,6 +86,7 @@ record CourseDescriptor(int format, String id, String title, String description,
 		}
 		String title = required(root, "titulo", found);
 		String version = required(root, "version", found);
+		academiaMinima(root, academy, found);
 		Ids ids = new Ids(id, found);
 		List<Phase> phases = new ArrayList<>();
 		Set<String> files = new HashSet<>();
@@ -96,6 +115,7 @@ record CourseDescriptor(int format, String id, String title, String description,
 				node.path("retos_disponibles").asBoolean(true), List.copyOf(modules)));
 		}
 		if (phases.isEmpty()) found.add(PATH + ": fases must list at least one phase");
+		List<Part> parts = parts(root, phases, ids, found, warnings);
 		Project project = null;
 		JsonNode projectNode = root.path("proyecto");
 		if (projectNode.isObject()) {
@@ -120,7 +140,157 @@ record CourseDescriptor(int format, String id, String title, String description,
 			return null;
 		}
 		return new CourseDescriptor(format, id, title, text(root, "descripcion"), version, text(root, "repositorio"),
-			List.copyOf(recommended), List.copyOf(phases), project);
+			List.copyOf(recommended), List.copyOf(phases), project, parts);
+	}
+
+	/**
+	 * The optional {@code partes} (FORMATO.md 3.2), checked case by case as {@code comprobar_partes} of the kit: each
+	 * parte is an object with an {@code id} like any other of the course, a plain-text {@code titulo} and the list of
+	 * its {@code fases}; each fase exists and is in one parte only, and with partes every fase is in one. An unknown
+	 * field is a warning. Then each parte is a stretch, as {@code comprobar_tramos_de_partes} of the kit (revision 1.1).
+	 */
+	private static List<Part> parts(JsonNode root, List<Phase> phases, Ids ids, List<String> found,
+			List<String> warnings) {
+		if (!root.has("partes")) return List.of();
+		Set<String> phaseIds = new HashSet<>();
+		for (Phase phase : phases) phaseIds.add(phase.id());
+		Map<String, String> seen = new HashMap<>();
+		List<Part> parts = new ArrayList<>();
+		List<Stretch> stretches = new ArrayList<>();
+		JsonNode list = root.get("partes");
+		if (!list.isArray()) found.add(PATH + ": partes must be a list");
+		int position = 0;
+		for (JsonNode node : list.isArray() ? list : List.<JsonNode>of()) {
+			position++;
+			if (!node.isObject()) {
+				found.add(PATH + ": each parte must be an object");
+				continue;
+			}
+			String id = ids.add(text(node, "id"), "parte");
+			String where = "parte " + (id != null ? id : "#" + position);
+			for (String field : new TreeSet<>(node.propertyNames())) {
+				if (!PART_FIELDS.contains(field)) warnings.add(PATH + ": " + where + ": unknown field «" + field + "» (ignored)");
+			}
+			String title = text(node, "titulo");
+			if (!node.has("titulo")) found.add(PATH + ": missing titulo in " + where);
+			else if (title == null) found.add(PATH + ": titulo must be a non-empty text in " + where);
+			else {
+				String markdown = markdown(title);
+				if (markdown != null) {
+					found.add(PATH + ": " + where + ": titulo «" + title + "» has Markdown formatting (" + markdown
+						+ "); titles are plain text");
+				}
+			}
+			List<String> listed = new ArrayList<>();
+			List<String> named = new ArrayList<>();
+			JsonNode fases = node.get("fases");
+			if (fases == null) found.add(PATH + ": missing fases in " + where);
+			else if (!fases.isArray()) found.add(PATH + ": fases must be a list in " + where);
+			else {
+				for (JsonNode fase : fases) {
+					String phaseId = fase.isString() ? fase.asString() : fase.toString();
+					if (fase.isString()) named.add(phaseId);
+					if (!fase.isString() || !phaseIds.contains(phaseId)) {
+						found.add(PATH + ": " + where + ": fase " + phaseId + " does not exist");
+					}
+					else if (seen.containsKey(phaseId)) {
+						found.add(PATH + ": " + where + ": fase " + phaseId + " is already in parte " + seen.get(phaseId)
+							+ " (each fase goes in only one)");
+					}
+					else {
+						seen.put(phaseId, id != null ? id : "#" + position);
+						listed.add(phaseId);
+					}
+				}
+				stretches.add(new Stretch(id != null ? id : "#" + position, where, fases.isEmpty(), named));
+			}
+			parts.add(new Part(id, title, List.copyOf(listed)));
+		}
+		for (Phase phase : phases) {
+			if (phase.id() != null && !seen.containsKey(phase.id())) {
+				found.add(PATH + ": fase " + phase.id() + " is in no parte (with partes, each fase goes in one)");
+			}
+		}
+		stretches(stretches, phases, seen, found);
+		return List.copyOf(parts);
+	}
+
+	/** A parte with a list of fases, for the stretch rules: its owner key in {@code seen} and the fases it names. */
+	private record Stretch(String key, String where, boolean empty, List<String> named) {
+	}
+
+	/**
+	 * Each parte is a stretch of consecutive fases in the course order, and the partes follow each other (FORMATO.md
+	 * 3.2, revision 1.1), as {@code comprobar_tramos_de_partes} of the kit: a parte is seen only with the fases that
+	 * exist and are its own (the others already have their finding); an out-of-order parte is not also checked for
+	 * gaps; the order of the partes compares the first fase of each with that of the previous parte with fases.
+	 */
+	private static void stretches(List<Stretch> stretches, List<Phase> phases, Map<String, String> seen,
+			List<String> found) {
+		List<String> order = new ArrayList<>();
+		Map<String, Integer> position = new HashMap<>();
+		for (Phase phase : phases) {
+			if (phase.id() != null) position.put(phase.id(), order.size());
+			order.add(phase.id());
+		}
+		String previous = null;
+		int previousFirst = -1;
+		for (Stretch stretch : stretches) {
+			if (stretch.empty()) {
+				found.add(PATH + ": " + stretch.where() + " has no fases (each parte groups at least one)");
+				continue;
+			}
+			List<String> own = stretch.named().stream()
+				.filter(f -> position.containsKey(f) && stretch.key().equals(seen.get(f))).toList();
+			if (own.isEmpty()) continue;
+			int disorder = -1;
+			for (int i = 1; i < own.size() && disorder < 0; i++) {
+				if (position.get(own.get(i)) < position.get(own.get(i - 1))) disorder = i;
+			}
+			if (disorder > 0) {
+				found.add(PATH + ": " + stretch.where() + ": its fases are not in the course order (fase "
+					+ own.get(disorder - 1) + " is listed before fase " + own.get(disorder) + ")");
+			}
+			else {
+				for (int i = 1; i < own.size(); i++) {
+					int before = position.get(own.get(i - 1));
+					if (position.get(own.get(i)) != before + 1) {
+						String between = order.get(before + 1);
+						String of = seen.containsKey(between) ? ", of parte " + seen.get(between) : "";
+						found.add(PATH + ": " + stretch.where() + ": its fases are not consecutive (between fase "
+							+ own.get(i - 1) + " and fase " + own.get(i) + " is fase " + between + of + ")");
+						break;
+					}
+				}
+			}
+			int first = own.stream().mapToInt(position::get).min().getAsInt();
+			if (previous != null && first < previousFirst) {
+				found.add(PATH + ": parte " + previous + " comes before " + stretch.where()
+					+ " in partes, but its fases come after");
+			}
+			previous = stretch.key();
+			previousFirst = first;
+		}
+	}
+
+	/** What Markdown formatting a title carries, or null for plain text (formato_en_titulo of the kit). */
+	static String markdown(String title) {
+		for (Map.Entry<Pattern, String> entry : MARKDOWN_IN_TITLE.entrySet()) {
+			if (entry.getKey().matcher(title).find()) return entry.getValue();
+		}
+		return null;
+	}
+
+	private static Map<Pattern, String> markdownInTitle() {
+		Map<Pattern, String> patterns = new java.util.LinkedHashMap<>();
+		patterns.put(Pattern.compile("`"), "code in backticks");
+		patterns.put(Pattern.compile("\\*"), "bold or italics with *");
+		patterns.put(Pattern.compile("__|(^|[^\\w])_[^_\\s]([^_]*[^_\\s])?_($|[^\\w])", Pattern.UNICODE_CHARACTER_CLASS),
+			"bold or italics with _");
+		patterns.put(Pattern.compile("~~"), "strikethrough");
+		patterns.put(Pattern.compile("\\[[^\\]]*\\]\\([^)]*\\)"), "a link");
+		patterns.put(Pattern.compile("<[a-zA-Z/][^>]*>"), "HTML");
+		return java.util.Collections.unmodifiableMap(patterns);
 	}
 
 	/** Stages of an {@code etapas} project, or none. */
@@ -152,6 +322,45 @@ record CourseDescriptor(int format, String id, String title, String description,
 			if (!seen.add(id)) problems.add(PATH + ": id " + id + " is declared twice");
 			return id;
 		}
+	}
+
+	/**
+	 * The optional {@code academia_minima} (FORMATO.md 3.2, revision 1.1; kit 1.1.0): a JSON text MAJOR.MINOR.PATCH.
+	 * A course that asks for a later academy is refused. Without the field, nothing; it never goes to the manifest.
+	 */
+	private static void academiaMinima(JsonNode root, String academy, List<String> found) {
+		if (!root.has("academia_minima")) return;
+		JsonNode value = root.get("academia_minima");
+		if (!value.isString() || !AcademyVersion.SEMVER.matcher(value.asString()).matches()) {
+			found.add(PATH + ": academia_minima (" + visible(value) + ") must be MAJOR.MINOR.PATCH, for example 1.1.0");
+		}
+		else if (AcademyVersion.compare(value.asString(), academy) > 0) {
+			found.add(PATH + ": course requires academy " + value.asString() + " or later; this academy is " + academy);
+		}
+	}
+
+	/**
+	 * A value in a message as valor_visible of the kit: a text as it is; as in JSON when it is not a text or would not be
+	 * seen whole (empty, with spaces before or after, or with line breaks or other non-printable characters).
+	 */
+	static String visible(JsonNode value) {
+		if (value.isString()) {
+			String text = value.asString();
+			if (!text.isEmpty() && text.equals(text.strip()) && text.codePoints().allMatch(CourseDescriptor::printable)) {
+				return text;
+			}
+		}
+		return JSON.writeValueAsString(value);
+	}
+
+	/** str.isprintable of Python: no control, format, private-use, unassigned or separator character but the space. */
+	private static boolean printable(int codePoint) {
+		if (codePoint == ' ') return true;
+		return switch (Character.getType(codePoint)) {
+			case Character.CONTROL, Character.FORMAT, Character.SURROGATE, Character.PRIVATE_USE, Character.UNASSIGNED,
+				Character.SPACE_SEPARATOR, Character.LINE_SEPARATOR, Character.PARAGRAPH_SEPARATOR -> false;
+			default -> true;
+		};
 	}
 
 	private static String text(JsonNode node, String field) {

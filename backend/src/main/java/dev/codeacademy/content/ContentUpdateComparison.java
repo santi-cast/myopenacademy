@@ -21,6 +21,9 @@ import tools.jackson.databind.json.JsonMapper;
 /** Pure comparison of prepared copies, using the runtime loader and immutable Git blobs. */
 final class ContentUpdateComparison {
     private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final String PART = "part";
+    /** A folder ZIP: generated from its members, it holds no learner progress (H12, T11). */
+    private static final String ZIP = "zip";
     private final Copy base;
     private final Copy candidate;
     private final List<String> conflicts;
@@ -45,15 +48,22 @@ final class ContentUpdateComparison {
         // Every course whose commit is in this source is verified against it, and so is every course the update
         // changes. A course from another repository can only be carried byte for byte: nothing here can verify it.
         Set<String> updated = updatedCourses(base, next, conflicts);
-        verifySource(base, paths.source(), "active", updated, conflicts);
-        verifySource(next, paths.source(), "candidate", updated, conflicts);
+        verifySource(base, paths.source(), "active", updated, false, conflicts);
+        // The executable bit is checked on what the update installs: it must be the mode of the pinned tree (H12, T7).
+        // A course carried unchanged is not installed again, so a copy from before 1.1.0, without the flag, stays
+        // updatable; it keeps its ZIPs until it is updated or reinstalled (H12, T8).
+        verifySource(next, paths.source(), "candidate", updated, true, conflicts);
         List<String> changes = new ArrayList<>();
         for (var entry : base.entities().entrySet()) {
             String id = entry.getKey();
             Entity old = entry.getValue();
             Entity replacement = next.entities().get(id);
-            if (replacement == null) { conflicts.add("removal " + id); continue; }
-            if (!old.kind().equals(replacement.kind())) conflicts.add("identity kind change " + id);
+            // A part holds no learner progress (H12): removing it, or reusing its ID for something else, is a change.
+            boolean part = old.kind().equals(PART);
+            // Nor does a folder ZIP: when a link now resolves to another archive (the whole project's, H12, T11), the
+            // one it no longer uses goes away as a change. A removed file resource is still a conflict.
+            if (replacement == null) { (part || old.kind().equals(ZIP) ? changes : conflicts).add("removal " + id); continue; }
+            if (!old.kind().equals(replacement.kind())) (part ? changes : conflicts).add("identity kind change " + id);
             // The ID is the identity (curso.json): a new title is a change, not a conflict (FORMATO.md 11.2).
             if (!old.title().equals(replacement.title())) {
                 changes.add("retitle " + id + ": «" + old.title() + "» -> «" + replacement.title() + "»");
@@ -150,6 +160,8 @@ final class ContentUpdateComparison {
             refs.put(owner, m.source().versionRef());
             add(entities, owner, "course", m.course().title(), "", "", true, m.course());
             for (var phase : m.phases()) add(entities, phase.id(), "phase", phase.title(), owner, "", true, phase);
+            // A phase does not record its part, so moving it to another part changes only the parts it leaves and joins.
+            if (m.parts() != null) for (var part : m.parts()) add(entities, part.id(), PART, part.title(), owner, "", true, part);
             for (var lesson : m.lessons()) {
                 safeSource(lesson.sourcePath());
                 add(entities, lesson.id(), "lesson", lesson.title(), owner, lesson.sourcePath(), lesson.available(), lesson);
@@ -175,7 +187,7 @@ final class ContentUpdateComparison {
                 safeSource(zip ? sourcePath.substring(0, sourcePath.length() - 1) : sourcePath);
                 String resourceOwner = resource.lessonId() != null ? resource.lessonId()
                     : resource.stageId() != null ? resource.stageId() : resource.documentId();
-                add(entities, resource.resourceId(), "resource", "", resourceOwner, sourcePath, true, resource);
+                add(entities, resource.resourceId(), zip ? ZIP : "resource", "", resourceOwner, sourcePath, true, resource);
                 managed(managed, resource.localPath(), zip ? null : sourcePath);
             }
             for (var link : m.sourceToId()) {
@@ -283,8 +295,8 @@ final class ContentUpdateComparison {
         return updated;
     }
 
-    private static void verifySource(Copy copy, Path source, String label, Set<String> updated, List<String> conflicts)
-            throws IOException {
+    private static void verifySource(Copy copy, Path source, String label, Set<String> updated, boolean modes,
+            List<String> conflicts) throws IOException {
         for (CourseContent course : copy.courses()) {
             Manifest m = course.manifest();
             String ref = m.source().versionRef();
@@ -301,6 +313,10 @@ final class ContentUpdateComparison {
             if (m.projectStages() != null) m.projectStages().stream().filter(Manifest.Stage::available)
                 .forEach(s -> sources.put(s.bodyPath(), s.sourcePath()));
             m.resources().stream().filter(r -> !"zip".equals(r.kind())).forEach(r -> sources.put(r.localPath(), r.sourcePath()));
+            Map<String, Boolean> executable = new TreeMap<>();
+            m.resources().stream().filter(r -> !"zip".equals(r.kind()))
+                .forEach(r -> executable.put(r.localPath(), Boolean.TRUE.equals(r.executable())));
+            boolean checkModes = modes && updated.contains(m.course().id());
             for (var file : sources.entrySet()) {
                 byte[] listing = git(source, "ls-tree", "-z", "--full-tree", ref, "--", file.getValue());
                 String entry = listing == null ? "" : new String(listing, StandardCharsets.UTF_8);
@@ -313,6 +329,10 @@ final class ContentUpdateComparison {
                 byte[] bytes = git(source, "cat-file", "blob", blob);
                 if (bytes == null || !sha(bytes).equals(copy.files().get(file.getKey()))) {
                     conflicts.add(label + ": source bytes differ " + file.getKey() + " at " + ref);
+                }
+                else if (checkModes && executable.containsKey(file.getKey())
+                    && executable.get(file.getKey()) != entry.startsWith("100755 blob ")) {
+                    conflicts.add(label + ": source mode differs " + file.getKey() + " at " + ref);
                 }
             }
         }

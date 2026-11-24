@@ -25,6 +25,8 @@ final class ContentSanitizer {
 	// Unicode letters and digits; lesson, stage, document and course IDs stay ASCII, and no form admits '/', '%' or spaces.
 	static final Pattern HREF = Pattern.compile(
 			"(/(?:lessons|stages|documents)/[A-Za-z0-9._-]+(#[^\\s\"<>]+)?|/courses/[A-Za-z0-9._-]+|/api/resources/[\\p{L}\\p{N}._-]+|#[^\\s\"<>]+|https?://[^\\s\"<>]+)");
+	/** The marker of a task list checkbox for one render: a UUID, so it needs no escaping in an attribute. */
+	static final Pattern TASK_MARKER = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 	static final String EXTERNAL_TARGET = "_blank";
 	static final String EXTERNAL_REL = "noopener noreferrer";
 
@@ -76,11 +78,32 @@ final class ContentSanitizer {
 	/** Image URLs must come from resolved Markdown nodes; raw HTML is checked separately without this permission. */
 	static String sanitize(String html, Set<String> headingIds, Set<String> hrefs, Set<String> imageSources,
 			List<String> removed) {
+		return sanitize(html, headingIds, hrefs, imageSources, null, removed);
+	}
+
+	/**
+	 * As above, and with a {@code taskMarker} the checkbox of a Markdown task list item survives (H12, T13): only
+	 * {@code <input type="checkbox" disabled="">}, optionally {@code checked=""}, carrying that render's marker, which
+	 * is then removed from the output. Raw HTML cannot know the marker, so any input it writes, and any input that is
+	 * enabled, of another type or without the marker, is removed and reported as before; another attribute on the
+	 * marked checkbox is reported too, so the load fails.
+	 */
+	static String sanitize(String html, Set<String> headingIds, Set<String> hrefs, Set<String> imageSources,
+			String taskMarker, List<String> removed) {
 		HtmlPolicyBuilder builder = new HtmlPolicyBuilder();
 		if (!imageSources.isEmpty()) {
 			builder.allowElements("img")
 				.allowAttributes("src").matching(imageSources::contains).onElements("img")
 				.allowAttributes("alt").onElements("img");
+		}
+		String markerAttribute = null;
+		if (taskMarker != null) {
+			if (!TASK_MARKER.matcher(taskMarker).matches()) throw new IllegalArgumentException("bad task marker");
+			markerAttribute = " " + Markdown.TASK_MARKER_ATTRIBUTE + "=\"" + taskMarker + "\"";
+			builder.allowAttributes("type").matching(false, "checkbox").onElements("input")
+				.allowAttributes("disabled", "checked").matching(false, "").onElements("input")
+				.allowAttributes(Markdown.TASK_MARKER_ATTRIBUTE).matching(taskMarker::equals).onElements("input")
+				.allowElements((name, attributes) -> taskCheckbox(attributes, taskMarker) ? name : null, "input");
 		}
 		PolicyFactory policy = builder
 			.allowElements(TEXT_ELEMENTS)
@@ -110,7 +133,20 @@ final class ContentSanitizer {
 			}
 		}, removed);
 		reportDroppedAttributes(html, removed);
-		return clean;
+		return markerAttribute == null ? clean : clean.replace(markerAttribute, "");
+	}
+
+	/** What survived the attribute policies is the extension's checkbox: checkbox, disabled and this render's marker. */
+	private static boolean taskCheckbox(List<String> attributes, String taskMarker) {
+		boolean checkbox = false, disabled = false, marked = false;
+		for (int i = 0; i < attributes.size(); i += 2) {
+			String name = attributes.get(i), value = attributes.get(i + 1);
+			if (name.equals("type")) checkbox = value.equals("checkbox");
+			else if (name.equals("disabled")) disabled = value.isEmpty();
+			else if (name.equals(Markdown.TASK_MARKER_ATTRIBUTE)) marked = value.equals(taskMarker);
+			else if (!name.equals("checked")) return false;
+		}
+		return checkbox && disabled && marked;
 	}
 
 	/**

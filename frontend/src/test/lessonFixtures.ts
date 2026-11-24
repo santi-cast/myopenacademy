@@ -79,7 +79,7 @@ export function addedProgress(exerciseStates: ExerciseState[] = []): Progress {
 /** Routes for lesson 02.01 (and a plain 02.02) with the given payload and progress. */
 export function routeLesson(backend: FakeBackend, view: LessonView = lessonView(), progress: Progress = notAddedProgress()) {
   const ok = (body: unknown): Reply => ({ status: 200, body })
-  backend.route('GET /api/courses/java', ok({ course: javaCourse, phases: javaPhases, lessons: lessonsWithNext }))
+  backend.route('GET /api/courses/java', ok({ course: javaCourse, phases: javaPhases, lessons: lessonsWithNext, parts: [] }))
   backend.route('GET /api/me/courses/java/progress', ok(progress))
   backend.route('GET /api/lessons/java-02.01', ok(view))
   backend.route('GET /api/lessons/java-02.02', ok({

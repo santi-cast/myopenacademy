@@ -118,6 +118,53 @@
   color: var(--text-muted);
 }
 
+/* The second count of a phase (its availability) sits right after its progress. */
+.ph-count + .ph-count {
+  margin-left: 0;
+}
+
+/* A part of the course (H12, S6): a disclosure button over its phases. */
+.part-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  margin: var(--space-2) 0 var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 0;
+  border-bottom: var(--border-width) solid var(--border);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+  text-align: left;
+  color: var(--heading);
+  cursor: pointer;
+}
+
+.part-toggle::before {
+  content: "";
+  flex: none;
+  margin-top: var(--space-1);
+  border-left: var(--caret-size) solid var(--text-muted);
+  border-top: var(--caret-size-small) solid transparent;
+  border-bottom: var(--caret-size-small) solid transparent;
+  transition: transform 0.15s;
+}
+
+.part-toggle[aria-expanded="true"]::before {
+  transform: rotate(90deg);
+}
+
+.part-toggle:hover {
+  background: var(--surface-2);
+}
+
+.part-body {
+  padding-left: var(--space-2);
+}
+
 .phase-nav ol {
   list-style: none;
   margin: var(--space-0) 0 var(--space-2);
@@ -354,6 +401,29 @@
   background: var(--surface-2);
   padding: var(--space-0) var(--space-1);
   border-radius: var(--radius-sm);
+}
+
+/* A key the learner presses (<kbd>Ctrl</kbd>): drawn like a keycap, with a thicker lower edge (H12). */
+.reading kbd {
+  font-size: var(--code-inline-size);
+  color: var(--code-text);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border-strong);
+  border-bottom-width: var(--border-width-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-0) var(--space-1);
+  white-space: nowrap;
+}
+
+/* A Markdown task list item («- [ ]», «- [x]»): the disabled checkbox takes the place of the bullet (H12, T13). */
+.reading li:has(> input[type="checkbox"]:first-child) {
+  list-style: none;
+}
+
+.reading li > input[type="checkbox"]:first-child {
+  margin: 0 var(--space-1) 0 0;
+  vertical-align: middle;
+  accent-color: var(--accent);
 }
 
 .reading table {

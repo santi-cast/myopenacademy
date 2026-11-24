@@ -84,7 +84,7 @@ final class ContentImportGenerator {
 			for (CourseContent course : installed) {
 				baseRefs.put(course.manifest().course().id(), course.manifest().source().versionRef());
 			}
-			CourseDescriptor descriptor = descriptor(source, findings);
+			CourseDescriptor descriptor = descriptor(source, findings, reported);
 			if (descriptor == null) {
 				return new Result(false, List.copyOf(findings), List.copyOf(reported), 0, 0, 0,
 					report(paths, baseRefs, 0, 0, 0, 0, false, findings, reported));
@@ -163,22 +163,26 @@ final class ContentImportGenerator {
 		}
 		Manifest finished = new Manifest(skeleton.schemaVersion(), skeleton.source(), skeleton.course(), skeleton.phases(),
 			skeleton.lessons(), skeleton.resources(), skeleton.sourceToId(), skeleton.projectStages(),
-			new Manifest.Provenance(List.copyOf(copies), List.copyOf(generated)), skeleton.documents());
+			new Manifest.Provenance(List.copyOf(copies), List.copyOf(generated)), skeleton.documents(), skeleton.parts());
 		Files.writeString(output.resolve(skeleton.course().id() + "/manifest.json"),
 			JSON.writerWithDefaultPrettyPrinter().writeValueAsString(finished) + "\n",
 			StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
 	}
 
 	/** The course's own curso.json at the pinned commit, or null with the reasons among the findings. */
-	private static CourseDescriptor descriptor(ContentImportSource source, Set<String> findings) throws IOException {
+	private static CourseDescriptor descriptor(ContentImportSource source, Set<String> findings, Set<String> reported)
+			throws IOException {
 		byte[] bytes = source.read(CourseDescriptor.PATH);
 		if (bytes == null) {
 			findings.add("source has no " + CourseDescriptor.PATH + " at " + source.commit());
 			return null;
 		}
 		List<String> problems = new ArrayList<>();
-		CourseDescriptor descriptor = CourseDescriptor.parse(bytes, problems);
+		List<String> warnings = new ArrayList<>();
+		CourseDescriptor descriptor = CourseDescriptor.parse(bytes, problems, warnings);
 		findings.addAll(problems);
+		// Non-blocking: an unknown field of curso.json the academy ignores (for now, inside a parte).
+		reported.addAll(warnings);
 		return descriptor;
 	}
 
@@ -251,6 +255,19 @@ final class ContentImportGenerator {
 		}
 		members.replaceAll((folder, ids) -> List.copyOf(ids));
 		return members;
+	}
+
+	/**
+	 * The plan of the project a folder inside a Maven or Gradle project takes its archive from (H12, T11 and T16). The
+	 * importer claims the project folder before it marks the linked folder, and a project path is a prefix of the folder,
+	 * so it passes every path check the folder passes: a missing plan is a broken invariant, not a course finding.
+	 */
+	static <T> T projectPlan(String folder, String project, Map<String, T> plans) {
+		T plan = plans.get(project);
+		if (plan == null) {
+			throw new IllegalStateException("folder " + folder + " is inside project " + project + ", which has no folder plan");
+		}
+		return plan;
 	}
 
 	/** One course plan: its manifest, its copies, its object stream and the bytes and hashes already read for it. */
@@ -647,11 +664,20 @@ final class ContentImportGenerator {
 		/**
 		 * A linked folder is copied recursively, including dotfiles. Every owner that claims it keeps its own files, the
 		 * folder entry lists every file claimed beneath it, and the sorted-first owner ID owns its single archive.
+		 * Inside a Maven or Gradle project (H12, T11; {@link CodeProjects}), the owner claims the whole project, decided
+		 * from the pinned tree, and the folder entry is decorated with the project's archive instead of one of its own,
+		 * so every link into one project shares one archive.
 		 */
 		private void claimFolder(String folder, String owner) {
 			// A registered folder keeps its trailing slash; its plain path is what containment rules check.
 			String plain = folder.substring(0, folder.length() - 1);
 			if (!allowed(plain)) return;
+			String project = CodeProjects.root(folder, source::file);
+			if (project != null && !project.equals(folder)) {
+				// The project root is its own outermost project, so this claims it as a plain folder.
+				claimFolder(project, owner);
+				folders.computeIfAbsent(folder, FolderPlan::new).project = project;
+			}
 			FolderPlan plan = folders.computeIfAbsent(folder, FolderPlan::new);
 			if (plan.files.containsKey(owner)) return;
 			if (!plan.owners.isEmpty() && plan.owners.stream()
@@ -684,6 +710,8 @@ final class ContentImportGenerator {
 			private final String sourcePath;
 			private final Set<String> owners = new TreeSet<>();
 			private final Map<String, List<String>> files = new TreeMap<>();
+			/** The project folder whose archive this folder uses (H12, T11), or null when it has its own. */
+			private String project;
 
 			FolderPlan(String sourcePath) {
 				this.sourcePath = sourcePath;
@@ -715,10 +743,13 @@ final class ContentImportGenerator {
 				ResourcePlan plan = entry.getValue();
 				resourceEntries.add(new Resource(plan.id(), "lesson".equals(plan.kind()) ? plan.owner() : null,
 					entry.getKey().path(), plan.localPath(), plan.mediaType(), "stage".equals(plan.kind()) ? plan.owner() : null,
-					FILE, null, null, "document".equals(plan.kind()) ? plan.owner() : null));
+					FILE, null, null, "document".equals(plan.kind()) ? plan.owner() : null,
+					// Only a 100755 file says so: the field is absent otherwise, so the manifest keeps its bytes.
+					source.executable(entry.getKey().path()) ? Boolean.TRUE : null));
 			}
 			for (FolderPlan folder : folders.values()) {
-				if (folder.owners.isEmpty()) continue;
+				// A folder inside a project has no archive of its own: it uses the project's.
+				if (folder.owners.isEmpty() || folder.project != null) continue;
 				String plain = folder.sourcePath().substring(0, folder.sourcePath().length() - 1);
 				String owner = folder.owner();
 				String kind = kind(owner);
@@ -750,13 +781,26 @@ final class ContentImportGenerator {
 			}
 			for (FolderPlan folder : folders.values()) {
 				if (folder.owners.isEmpty()) continue;
+				FolderPlan archive = folder.project == null ? folder
+					: projectPlan(folder.sourcePath(), folder.project, folders);
+				// A project that could not be claimed is already a finding: nothing is written.
+				if (archive.owners.isEmpty()) continue;
 				links.add(new SourceLink(folder.sourcePath(), null, null, null, members.get(folder.sourcePath()), null, null,
-					folder.zipId()));
+					archive.zipId()));
 			}
 			links.sort(Comparator.comparing(SourceLink::sourcePath));
 			List<Manifest.Phase> phases = new ArrayList<>();
 			for (CourseDescriptor.Phase phase : descriptor.phases()) {
 				phases.add(new Manifest.Phase(phase.id(), phase.title(), phases.size() + 1));
+			}
+			// A course without partes has no parts field at all, so its manifest keeps the bytes it had before H12.
+			List<Manifest.Part> parts = null;
+			if (!descriptor.parts().isEmpty()) {
+				parts = new ArrayList<>();
+				for (CourseDescriptor.Part part : descriptor.parts()) {
+					parts.add(new Manifest.Part(part.id(), part.title(), parts.size() + 1, part.phases()));
+				}
+				parts = List.copyOf(parts);
 			}
 			return new Manifest(2, new Manifest.Source(descriptor.title(), source.commit(), tag, descriptor.version(),
 				descriptor.repository()),
@@ -765,7 +809,7 @@ final class ContentImportGenerator {
 						: new Manifest.Project(descriptor.project().type(), descriptor.project().title(),
 							descriptor.project().module())),
 				List.copyOf(phases), List.copyOf(lessons), List.copyOf(resourceEntries), List.copyOf(links),
-				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()), List.copyOf(courseDocuments));
+				List.copyOf(stages), new Manifest.Provenance(List.of(), List.of()), List.copyOf(courseDocuments), parts);
 		}
 
 		/** Exercises, links and fragments are validated before anything is written, with the runtime pipeline. */
