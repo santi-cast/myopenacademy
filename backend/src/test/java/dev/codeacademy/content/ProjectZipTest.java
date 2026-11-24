@@ -136,13 +136,21 @@ class ProjectZipTest {
 	void outsideAnyProjectAndNeverAboveCodigoTheArchiveIsTheLinkedFolder() throws Exception {
 		Path output = generate(withProjects(false), "contenido");
 		JsonNode manifest = ExecutableZipTest.manifest(output);
-		// A Gradle subproject without settings above it is not a project for this rule; neither is a pom.xml at the
-		// course root, in the phase folder or in codigo/ itself, nor a project outside codigo/.
-		for (String folder : List.of(LOOSE + "src/main/java/es/s/", OUTSIDE + "src/main/java/es/f/")) {
-			JsonNode zip = zipOf(manifest, folder);
-			assertThat(zip.path("sourcePath").asString()).isEqualTo(PHASE + folder);
-			assertThat(names(Files.readAllBytes(output.resolve(zip.path("localPath").asString())))).containsExactly("Main.java");
-		}
+		// Neither a pom.xml at the course root, in the phase folder or in codigo/ itself, nor a project outside codigo/.
+		JsonNode zip = zipOf(manifest, OUTSIDE + "src/main/java/es/f/");
+		assertThat(zip.path("sourcePath").asString()).isEqualTo(PHASE + OUTSIDE + "src/main/java/es/f/");
+		assertThat(names(Files.readAllBytes(output.resolve(zip.path("localPath").asString())))).containsExactly("Main.java");
+	}
+
+	@Test
+	void aGradleBuildWithoutSettingsOnThePathIsTheProject() throws Exception {
+		Path output = generate(withProjects(false), "contenido");
+		// H12, T17 (kit 1.1.0): the settings.gradle in codigo/ itself is not on the path, so build.gradle counts.
+		JsonNode zip = zipOf(ExecutableZipTest.manifest(output), LOOSE + "src/main/java/es/s/");
+		assertThat(zip.path("sourcePath").asString()).isEqualTo(PHASE + LOOSE);
+		assertThat(names(Files.readAllBytes(output.resolve(zip.path("localPath").asString()))))
+			.containsExactly("build.gradle", "src/main/java/es/s/Main.java");
+		assertThat(ContentLoader.loadAll(output)).hasSize(1);
 	}
 
 	@Test
