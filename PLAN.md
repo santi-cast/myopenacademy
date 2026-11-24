@@ -120,6 +120,7 @@ Aprobado por el autor el 23 de noviembre de 2026 (decisión 15 y apartado 4 de `
 | T12 | Los seis hallazgos de la revisión de T9, solo en pruebas. Después se cierran las rondas de revisión sobre esa prueba: lo que saque la revisión de T12 queda pendiente para después de la 1.1.0, salvo un fallo real del producto (decisión del autor). |
 | T13 | Listas de tareas de Markdown (`- [ ]`, `- [x]`), con la extensión de commonmark-java y las casillas desactivadas en el saneador (petición del autor; el curso de Java tiene unas 100). Sale de «Después del 1.0». |
 | T14 | Las reglas de las partes del kit 1.1.0 (`44a8e32`): sin fases vacías, fases en el orden del curso y seguidas, y partes una tras otra. |
+| T16 | Dos hallazgos de la revisión de T11 (decisión del autor): probar el rechazo, al cargar, del ZIP de un proyecto cuyo dueño no reclama la carpeta, y convertir en hallazgo la consulta sin comprobar del plan del proyecto. |
 | T15 | `academia_minima` en `curso.json` (`FORMATO.md` 1.1; decisión del autor): si el curso pide una academia más nueva, la candidata no se escribe, con un error claro. Sin el campo, todo igual. |
 | T6 | Documentación, `CHANGELOG.md` y nota de la versión 1.1.0. Etiqueta y *release*, solo con la orden del autor y después de la instalación de prueba del curso de Java. |
 
