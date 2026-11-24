@@ -22,6 +22,8 @@ import tools.jackson.databind.json.JsonMapper;
 final class ContentUpdateComparison {
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final String PART = "part";
+    /** A folder ZIP: generated from its members, it holds no learner progress (H12, T11). */
+    private static final String ZIP = "zip";
     private final Copy base;
     private final Copy candidate;
     private final List<String> conflicts;
@@ -58,7 +60,9 @@ final class ContentUpdateComparison {
             Entity replacement = next.entities().get(id);
             // A part holds no learner progress (H12): removing it, or reusing its ID for something else, is a change.
             boolean part = old.kind().equals(PART);
-            if (replacement == null) { (part ? changes : conflicts).add("removal " + id); continue; }
+            // Nor does a folder ZIP: when a link now resolves to another archive (the whole project's, H12, T11), the
+            // one it no longer uses goes away as a change. A removed file resource is still a conflict.
+            if (replacement == null) { (part || old.kind().equals(ZIP) ? changes : conflicts).add("removal " + id); continue; }
             if (!old.kind().equals(replacement.kind())) (part ? changes : conflicts).add("identity kind change " + id);
             // The ID is the identity (curso.json): a new title is a change, not a conflict (FORMATO.md 11.2).
             if (!old.title().equals(replacement.title())) {
@@ -183,7 +187,7 @@ final class ContentUpdateComparison {
                 safeSource(zip ? sourcePath.substring(0, sourcePath.length() - 1) : sourcePath);
                 String resourceOwner = resource.lessonId() != null ? resource.lessonId()
                     : resource.stageId() != null ? resource.stageId() : resource.documentId();
-                add(entities, resource.resourceId(), "resource", "", resourceOwner, sourcePath, true, resource);
+                add(entities, resource.resourceId(), zip ? ZIP : "resource", "", resourceOwner, sourcePath, true, resource);
                 managed(managed, resource.localPath(), zip ? null : sourcePath);
             }
             for (var link : m.sourceToId()) {

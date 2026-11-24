@@ -37,6 +37,8 @@ final class ManifestValidator {
 	private final Set<String> ids = new HashSet<>();
 	private String prefix = "";
 	private int folderPasses;
+	/** The source paths of the registered file resources, built on the first folder decorated by a project archive. */
+	private Set<String> registeredFiles;
 
 	private ManifestValidator(Manifest manifest) {
 		this.manifest = manifest;
@@ -607,8 +609,16 @@ final class ManifestValidator {
 		}
 		if (link.zipResourceId() != null) {
 			Resource zip = resources.get(link.zipResourceId());
-			if (zip == null || !"zip".equals(zip.kind()) || !folder.equals(zip.sourcePath())) {
+			if (zip == null || !"zip".equals(zip.kind())
+					|| (!folder.equals(zip.sourcePath()) && !zip.sourcePath().equals(project(folder, resources)))) {
 				problems.add("folder ZIP does not match ordered members: " + folder);
+				return;
+			}
+			// Inside a project (H12, T11), the folder uses the project's archive, which its own entry already checks.
+			if (!folder.equals(zip.sourcePath())) {
+				if (!claims.contains(owner(zip))) {
+					problems.add("folder ZIP must be owned by an owner that claims the folder: " + folder);
+				}
 				return;
 			}
 			// A shared folder keeps one archive: its members are a subset of the listed files of its owners.
@@ -629,6 +639,21 @@ final class ManifestValidator {
 				problems.add("folder ZIP must be owned by an owner that claims the folder: " + folder);
 			}
 		}
+	}
+
+	/**
+	 * The outermost Maven or Gradle project of a folder among the registered files (H12, T11): the archive of a folder
+	 * inside one must be the project's. The registered files are the source paths of the file resources, built once.
+	 */
+	private String project(String folder, Map<String, Resource> resources) {
+		if (registeredFiles == null) {
+			folderPasses++;
+			registeredFiles = new HashSet<>();
+			for (Resource resource : resources.values()) {
+				if (!"zip".equals(resource.kind())) registeredFiles.add(resource.sourcePath());
+			}
+		}
+		return CodeProjects.root(folder, registeredFiles::contains);
 	}
 
 	private static String owner(Resource resource) {

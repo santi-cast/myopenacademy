@@ -391,6 +391,18 @@ class ContentUpdateCliTest {
         rejected("apply", "comparison contains conflicts");
     }
 
+    /** H12, T11 (PRESERVE): only a folder ZIP that disappears became a change; a file resource that does is a conflict. */
+    @Test void aFileResourceThatDisappearsIsStillAConflict() throws Exception {
+        candidate.editManifest(m -> {
+            ContentFixture.resource(m, "demo.01.01-r-solo").put("resourceId", "demo.01.01-r-solo2");
+            ContentFixture.link(m, "fase-01/codigo/solo/Solo.java").put("resourceId", "demo.01.01-r-solo2");
+            ((tools.jackson.databind.node.ArrayNode) ContentFixture.link(m, "fase-01/codigo/solo/").path("resourceIds"))
+                .set(0, "demo.01.01-r-solo2");
+        });
+        assertThat(run("compare")).isEqualTo(new Result(3, "Comparison written; conflicts: 2\n", ""));
+        assertThat(Files.readString(report)).contains("\"removal demo.01.01-r-solo\"", "ambiguous identity");
+    }
+
     @Test void anExistingExerciseCanChangeItsTitleWithNewSourceBytes() throws Exception {
         candidate.replace(ContentFixture.INTRO, "Primer ejercicio", "Changed exercise");
         candidate.editManifest(m -> ((tools.jackson.databind.node.ObjectNode)

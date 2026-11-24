@@ -651,11 +651,20 @@ final class ContentImportGenerator {
 		/**
 		 * A linked folder is copied recursively, including dotfiles. Every owner that claims it keeps its own files, the
 		 * folder entry lists every file claimed beneath it, and the sorted-first owner ID owns its single archive.
+		 * Inside a Maven or Gradle project (H12, T11; {@link CodeProjects}), the owner claims the whole project, decided
+		 * from the pinned tree, and the folder entry is decorated with the project's archive instead of one of its own,
+		 * so every link into one project shares one archive.
 		 */
 		private void claimFolder(String folder, String owner) {
 			// A registered folder keeps its trailing slash; its plain path is what containment rules check.
 			String plain = folder.substring(0, folder.length() - 1);
 			if (!allowed(plain)) return;
+			String project = CodeProjects.root(folder, source::file);
+			if (project != null && !project.equals(folder)) {
+				// The project root is its own outermost project, so this claims it as a plain folder.
+				claimFolder(project, owner);
+				folders.computeIfAbsent(folder, FolderPlan::new).project = project;
+			}
 			FolderPlan plan = folders.computeIfAbsent(folder, FolderPlan::new);
 			if (plan.files.containsKey(owner)) return;
 			if (!plan.owners.isEmpty() && plan.owners.stream()
@@ -688,6 +697,8 @@ final class ContentImportGenerator {
 			private final String sourcePath;
 			private final Set<String> owners = new TreeSet<>();
 			private final Map<String, List<String>> files = new TreeMap<>();
+			/** The project folder whose archive this folder uses (H12, T11), or null when it has its own. */
+			private String project;
 
 			FolderPlan(String sourcePath) {
 				this.sourcePath = sourcePath;
@@ -724,7 +735,8 @@ final class ContentImportGenerator {
 					source.executable(entry.getKey().path()) ? Boolean.TRUE : null));
 			}
 			for (FolderPlan folder : folders.values()) {
-				if (folder.owners.isEmpty()) continue;
+				// A folder inside a project has no archive of its own: it uses the project's.
+				if (folder.owners.isEmpty() || folder.project != null) continue;
 				String plain = folder.sourcePath().substring(0, folder.sourcePath().length() - 1);
 				String owner = folder.owner();
 				String kind = kind(owner);
@@ -756,8 +768,11 @@ final class ContentImportGenerator {
 			}
 			for (FolderPlan folder : folders.values()) {
 				if (folder.owners.isEmpty()) continue;
+				FolderPlan archive = folder.project == null ? folder : folders.get(folder.project);
+				// A project that could not be claimed is already a finding: nothing is written.
+				if (archive.owners.isEmpty()) continue;
 				links.add(new SourceLink(folder.sourcePath(), null, null, null, members.get(folder.sourcePath()), null, null,
-					folder.zipId()));
+					archive.zipId()));
 			}
 			links.sort(Comparator.comparing(SourceLink::sourcePath));
 			List<Manifest.Phase> phases = new ArrayList<>();
