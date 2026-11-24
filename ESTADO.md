@@ -179,6 +179,20 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 - ~~**Antes de publicar**~~ **Hecho en H11** (`../PLAN.md`, apartado 8.6): rutas absolutas en `odd/tasks/` (las de `PLAN.md` se quitaron al reescribirlo); README desactualizado y con voseo; `gitleaks` sobre todo el historial; licencias de las dependencias (elkjs, dompurify); el nombre MyOpenAcademy en un solo sitio (hoy «Code Academy» está en `index.html`, `src/layout/Layouts.tsx` y `e2e/stages.spec.ts`).
 - ~~**`content/` fuera de Git**~~ **Hecho** en H7, T3 (9 de noviembre de 2026). El historial sigue guardando la copia de Java: el autor decide antes de H11 si se reescribe (ver «Preguntas abiertas»).
 
+## H12, academia 1.1.0 (24 de noviembre de 2026)
+
+En la rama `feat/h12-partes`, sin integrar ni publicar; el detalle está en `odd/tasks/h12-partes.md`. **Hecho, con pruebas y revisión:**
+- partes (validación, manifiesto, API y pantallas) y avance por fase en todos los cursos;
+- pruebas de navegador con y sin partes;
+- permiso de ejecución de Git en los ZIP;
+- teclas `<kbd>` y listas de tareas.
+
+El curso inicial `v1.0.0` sigue saliendo idéntico byte a byte; una prueba lo compara con lo que instaló la 1.0.0.
+
+**En espera del kit (su `FORMATO.md` 1.1):** las dos reglas de las partes (sin fases vacías y por tramos seguidos) y T11, el ZIP del proyecto Maven o Gradle más exterior dentro de `codigo/`. Después, cerrar T6 (nota de la versión) y la revisión del autor antes de integrar.
+
+**Pendiente para después de la 1.1.0:** los hallazgos que se dejaron para más tarde de las revisiones de T12 y T13 (`PLAN.md`, apartado 5).
+
 ## Curso de Java: qué admite la academia 1.0.0 (23 de noviembre de 2026)
 
 Pedido por la raíz, sin cambiar código. Pruebas con el JAR recompilado desde `main` (`55879ee`, mismo código que `v1.0.0`), en carpetas temporales y sin Docker:

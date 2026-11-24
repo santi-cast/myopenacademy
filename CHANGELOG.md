@@ -8,7 +8,14 @@ Qué cambia en cada versión de la academia, de la más nueva a la más antigua.
 
 ## Sin publicar
 
-Nada todavía.
+Para la 1.1.0 (en preparación; falta lo que mande el kit para su `FORMATO.md` 1.1):
+
+- **Partes de los cursos.** Un curso puede dividirse en partes (`partes` en `curso.json`). El índice y el menú de las lecciones se agrupan por parte, con el avance de cada una; en el menú solo está abierta la parte en la que estás. «Mis cursos» dice por qué parte vas. Los cursos sin partes se ven como antes.
+- **Avance por fase** en el índice y en el menú, en todos los cursos.
+- **Listas de tareas** (`- [ ]`, `- [x]`) dibujadas como casillas desactivadas. Las teclas (`<kbd>`) se ven como teclas.
+- **Los ZIP de código conservan el permiso de ejecución** de los ficheros que en Git son ejecutables (`mvnw`, `gradlew`), así que `./mvnw` funciona al descomprimir en Linux y macOS. El permiso sale de Git, nunca del disco. Los ZIP de un curso sin ejecutables salen idénticos byte a byte a los de la 1.0.0.
+- **Manifiesto:** dos campos opcionales en el formato 2, `parts` y `executable`; los cursos instalados con la 1.0.0 siguen cargando sin reinstalar. Un curso instalado antes con ficheros ejecutables gana el permiso al actualizarlo o reinstalarlo.
+- El temario de la API (`GET /api/courses/{courseId}`) devuelve `parts`.
 
 ## 1.0.0 — 16 de noviembre de 2026
 
