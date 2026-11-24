@@ -415,6 +415,17 @@
   white-space: nowrap;
 }
 
+/* A Markdown task list item («- [ ]», «- [x]»): the disabled checkbox takes the place of the bullet (H12, T13). */
+.reading li:has(> input[type="checkbox"]:first-child) {
+  list-style: none;
+}
+
+.reading li > input[type="checkbox"]:first-child {
+  margin: 0 var(--space-1) 0 0;
+  vertical-align: middle;
+  accent-color: var(--accent);
+}
+
 .reading table {
   display: block;
   overflow-x: auto;
