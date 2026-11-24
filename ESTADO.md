@@ -179,24 +179,25 @@ Ya recogidos en los hitos de `PLAN.md`; se quedan aquí como recordatorio.
 - ~~**Antes de publicar**~~ **Hecho en H11** (`../PLAN.md`, apartado 8.6): rutas absolutas en `odd/tasks/` (las de `PLAN.md` se quitaron al reescribirlo); README desactualizado y con voseo; `gitleaks` sobre todo el historial; licencias de las dependencias (elkjs, dompurify); el nombre MyOpenAcademy en un solo sitio (hoy «Code Academy» está en `index.html`, `src/layout/Layouts.tsx` y `e2e/stages.spec.ts`).
 - ~~**`content/` fuera de Git**~~ **Hecho** en H7, T3 (9 de noviembre de 2026). El historial sigue guardando la copia de Java: el autor decide antes de H11 si se reescribe (ver «Preguntas abiertas»).
 
-## H12, academia 1.1.0 (24 de noviembre de 2026; sesión cerrada hasta que el kit publique su 1.1.0)
+## H12, academia 1.1.0 (24 de noviembre de 2026)
 
-En la rama `feat/h12-partes` (20 commits sobre `main`, sin integrar ni `push`); el detalle está en `odd/tasks/h12-partes.md` (S1 a S18, L1 a L24).
+En la rama `feat/h12-partes` (sin integrar ni `push`); el detalle está en `odd/tasks/h12-partes.md` (S1 a S20, L1 a L30).
 
 **Hecho, con pruebas y con revisión externa cuando le tocaba:**
 - partes, con las reglas del kit `44a8e32` (validación, manifiesto, API y pantallas), y avance por fase en todos los cursos;
 - pruebas de navegador con y sin partes;
 - permiso de ejecución de Git en los ZIP;
 - ZIP del proyecto Maven o Gradle más exterior dentro de `codigo/`, con la regla del kit `774aeaa`;
-- teclas `<kbd>` y listas de tareas.
+- teclas `<kbd>` y listas de tareas;
+- T15, `academia_minima`, y T17, Gradle sin settings y solo la `codigo/` de una fase o de `proyecto/`, con las reglas del kit 1.1.0 (`v1.1.0`);
+- T18, puerto por defecto 8070, salvo `.env.example`;
+- T6, versión 1.1.0 en `backend/pom.xml` y `frontend/package.json`, `CHANGELOG.md`, `README.md` y la nota `docs/notas-de-version/1.1.0.md` (con cómo seguir en el 8080), salvo la etiqueta y la *release*.
 
-`./mvnw -B verify` da 946 pruebas y las de navegador, 6 de 6. El curso inicial `v1.0.0` sale idéntico byte a byte, y lo comprueba `StarterCourseGoldenTest`. Con `870e1b0f`, el curso de Java da 0 hallazgos.
+Con T15 y T17, `./mvnw -B verify` da 964 pruebas sin fallos ni saltadas; las de navegador, 6 de 6. El curso inicial `v1.0.0` sale idéntico byte a byte, y lo comprueba `StarterCourseGoldenTest`. Con `870e1b0f`, el curso de Java da 0 hallazgos.
 
 **Lo que falta, en este orden:**
-1. **T15, `academia_minima`:** el diseño está aprobado por el autor (S17 de `odd/tasks/h12-partes.md`). Espera la regla exacta del kit: formato, mensaje y casos.
-2. **Duda de `codigo/` dentro de un proyecto** (tercer hallazgo de la revisión de T11). La decide el kit. Propuesta del autor: solo cuenta la `codigo/` que cuelga directamente de una fase o de `proyecto/`. Cuando el kit decida, la academia la copia con sus casos.
-3. **T6:** la nota `docs/notas-de-version/1.1.0.md`, la versión 1.1.0 en `backend/pom.xml` y `frontend/package.json`, y repasar `CHANGELOG.md` y `README.md`, ya adelantados.
-4. **Revisión del autor en el navegador antes de integrar** en `main` con `--no-ff`. Después, la etiqueta `v1.1.0` y la *release*, solo con su orden.
+1. **`.env.example` con el 8070** (T18): lo cambia el autor, porque la política de seguridad del entorno no deja al agente leerlo ni editarlo.
+2. **Revisión del autor en el navegador antes de integrar** en `main` con `--no-ff`. Después, la etiqueta `v1.1.0` y la *release*, solo con su orden.
 
 **Decidido:** el curso de Java se publica después de la academia 1.1.0, con su README diciendo que la necesita y `"academia_minima": "1.1.0"` en su `curso.json`.
 
@@ -231,7 +232,7 @@ Pedido por la raíz, sin cambiar código. Pruebas con el JAR recompilado desde `
 | Kit | Avisar de los enlaces de correo fuera de código (opción c del autor) | Que los cursos no lleguen con `mailto:` | **Hecho** por el kit en `e44174e` (16 de noviembre de 2026; `FORMATO.md` 10.7). Respondido al kit: la academia no enlaza los correos sueltos (sin `< >`), porque no usa la extensión de enlaces automáticos de GitHub; GitHub sí los enlaza. El kit avisa también del correo suelto desde `cf6c46d`; el curso inicial da 0 avisos y los cursos de ejemplo no cambian (nada que traer) |
 | Kit | Lo mismo para los cursos de ejemplo no hace falta (el E2E los etiqueta en su repositorio temporal); sí, decir en `FORMATO.md` 11.1 o en la guía del kit **cuándo** se etiqueta (al cerrar una versión, después de verificar el commit) | Que los cursos lleguen etiquetados | Pedido el 16 de noviembre de 2026 |
 | Curso de Java | Un commit sin la fase 00 (paso 3) y con los títulos de ejercicio en texto plano | La instalación de prueba en la academia, en un proyecto de Compose aparte y con un alumno de usar y tirar (decisión del autor) | **Hecho** (24 de noviembre de 2026): `870e1b0f`, instalado en un proyecto de prueba aparte, fase 01 revisada por el autor y por la raíz, y prueba desmontada |
-| Kit | `academia_minima` (regla exacta: formato, mensaje y casos) y la decisión sobre `codigo/` dentro de un proyecto | H12 T15 y el tercer hallazgo de la revisión de T11 | Pedido el 24 de noviembre de 2026 |
+| Kit | `academia_minima` (regla exacta: formato, mensaje y casos) y la decisión sobre `codigo/` dentro de un proyecto | H12 T15 y el tercer hallazgo de la revisión de T11 | Pedido el 24 de noviembre de 2026. **Hecho** (24 de noviembre de 2026): el kit las publicó en su `v1.1.0` (`FORMATO.md` 1.1 y 7: solo cuenta la `codigo/` de una fase o de `proyecto/`) y la academia las copió en H12 T15 y T17 |
 | Kit | En `FORMATO.md` 3.2 y en `formato_academia.py`, dentro de su 1.1.0: que una parte sin fases sea un error y que cada parte sea un tramo de fases seguidas en el orden del curso, con las partes una tras otra | Copiar esas dos reglas en H12, T1 (decisión del autor: primero el kit y después la academia) | Pedido el 23 de noviembre de 2026. **Hecho** (24 de noviembre de 2026): el kit las publicó en `44a8e32` (rama `feat/kit-1-1-0`) y la academia las copió en H12 T14. |
 
 | Otros esperan de la academia | Qué | Para | Estado |
